@@ -330,8 +330,10 @@ void print_help( void)
 	fprintf( stdout, "\t--gaps  [gaps file]        : Assembly gap coordinates in BED3 format.\n");
 	fprintf( stdout, "\t--dups  [dups file]        : Segmental duplication coordinates in BED3 format.\n");
 	fprintf( stdout, "\t--reps  [reps file]        : RepeatMasker annotation coordinates in BED6 format. See manual for details.\n");
-	fprintf( stdout, "\t--mei   [\"Alu:L1Hs:SVA\"]   : List of mobile element names.\n");
-	fprintf( stdout, "\t--10x                      : Take into account 10x barcode info of the read pairs\n");
+	fprintf( stdout, "\t--mei   [\"Alu:L1HS:SVA\"]   : List of mobile element names.\n");
+	/* not yet tested
+	  fprintf( stdout, "\t--10x                      : Take into account 10x barcode info of the read pairs\n"); */
+	
 	/*
 	fprintf( stdout, "\t--xx                       : Sample is male.\n");
 	fprintf( stdout, "\t--xy                       : Sample is female.\n");
