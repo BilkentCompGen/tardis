@@ -22,22 +22,22 @@ Tardis Features
 * lorem ipsum
 
 
--------------
+--------------------
 Tardis More Features
--------------
+--------------------
 
 lorem ipsum 
 
 * lorem ipsum
 
-			   | lorem ipsum
+   | lorem ipsum
 
 * lorem ipsum
 
-			   | lorem ipsum
+   | lorem ipsum
 
 * lorem ipsum
 
-			   | lorem ipsum
+   | lorem ipsum
 
 * lorem ipsum
