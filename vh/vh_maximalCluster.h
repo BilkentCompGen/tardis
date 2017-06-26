@@ -34,10 +34,10 @@ typedef struct ClustersFound
 } ClustersFound;
 
 
-void vh_initializeReadMapping_Deletion (char *, int);
-void vh_initializeReadMapping_Inversion (char *, int);
-void vh_initializeReadMapping_Insertion (char *, int);
-void vh_initializeReadMapping_TDup (char *, int);
+void vh_initializeReadMapping_Deletion (char *, int, sonic *);
+void vh_initializeReadMapping_Inversion (char *, int, sonic *);
+void vh_initializeReadMapping_Insertion (char *, int, sonic *);
+void vh_initializeReadMapping_TDup (char *, int, sonic *);
 void vh_finalizeReadMapping (char *, int);
 void vh_createDeletionClusters (int);
 void vh_createInversionClusters (int);
@@ -61,7 +61,6 @@ void vh_createIntersectingIntervals (int, int);
 int vh_notBothDirections (struct ClustersFound *);
 
 extern struct MappingOnGenome **g_genomeIndexStart;
-extern struct MappingOnGenome **g_genomeIndexEnd;
 extern struct RightBrkPointInterval *g_listRightBrkPointIntr;
 extern struct RightBrkPointInterval *g_tempListRightBrkPointIntr;
 extern int g_maxListBrkPointIntr;

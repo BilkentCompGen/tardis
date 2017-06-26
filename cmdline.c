@@ -12,8 +12,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 {
 	int index;
 	int o;
-	static int run_vh = 0, run_ns = 0, run_rd = 0, run_sr = 0, run_all = 0, sensitive = 0, no_soft_clip = 0;
-	static int skip_fastq = 0, skip_sort = 0, skip_remap = 0, skip_cluster = 0, quick = 0, ten_x =0, output_hs=0;
+	static int run_vh = 0, run_ns = 0, run_rd = 0, run_sr = 0, run_all = 1, sensitive = 0, no_soft_clip = 0;
+	static int skip_fastq = 0, skip_sort = 0, skip_remap = 0, skip_cluster = 0, quick = 0, ten_x = 0, output_hs = 0;
 	static int make_sonic = 0;
 	static int load_sonic = 0;
 	static int do_remap = 0;
@@ -35,6 +35,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"out"    , required_argument,	 0, 'o'},
 			{"make-sonic"    , required_argument,	 0, 'c'},
 			{"sonic"    , required_argument,	 0, 's'},
+			{"sonic-info"    , required_argument,	 0, 'n'},
 			{"first-chrom", required_argument, 0, FIRST_CHROM},
 			{"last-chrom", required_argument, 0, LAST_CHROM},
 			{"rd-ratio", required_argument, 0, 'a'},
@@ -42,10 +43,12 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"rp", required_argument, 0, 'j'},
 			{"vh"     , no_argument, &run_vh,     1 },
 			{"no-soft-clip"     , no_argument, &no_soft_clip,     1 },
+			/*
 			{"rd"     , no_argument, &run_rd,     1 },
 			{"ns"     , no_argument, &run_ns,     1 },
 			{"sr"     , no_argument, &run_sr,     1 },
 			{"all"    , no_argument, &run_all,    1 },
+			*/
 			{"sensitive"    , no_argument, &sensitive,    1 },
 			{"skip-fastq", no_argument, &skip_fastq,  1 },
 			{"skip-sort" , no_argument, &skip_sort,  1 },
@@ -64,7 +67,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		return 0;
 	}
 
-	while( ( o = getopt_long( argc, argv, "hvb:i:f:g:d:r:o:m:c:s:a:e:j", long_options, &index)) != -1)
+	while( ( o = getopt_long( argc, argv, "hvb:i:f:g:d:r:o:m:c:s:a:e:n:j", long_options, &index)) != -1)
 	{
 		switch( o)
 		{
@@ -91,12 +94,12 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			break;
 
 		case 's':
-			set_str( &( params->sonic), optarg);
+			set_str( &( params->sonic_file), optarg);
 			load_sonic = 1;
 			break;
 
 		case 'c':
-			set_str( &( params->sonic), optarg);
+			set_str( &( params->sonic_file), optarg);
 			make_sonic = 1;
 			break;
 
@@ -110,6 +113,10 @@ int parse_command_line( int argc, char** argv, parameters* params)
 
 		case 'm':
 			set_str( &( params->mei), optarg);
+			break;
+
+		case 'n':
+			set_str( &( params->sonic_info), optarg);
 			break;
 
 		case 'o':
@@ -168,16 +175,13 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		quick = 0;
 	}
 
-	/* TODO
-	if (load_sonic){
-		params->load_sonic = load_sonic;
-		return RETURN_SUCCESS;
-		} */
-
+	
 
 	/* TODO: check parameter validity */
 
 	/* check algorithms to run; run_all is the default */	
+
+	/*
 	if( !run_vh && !run_rd && !run_sr && !run_ns)
 	{
 		run_all = 1;
@@ -186,7 +190,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	if( run_all)
 	{
 		run_vh = 1; run_rd=1; run_sr = 1; run_ns = 1;
-	}
+		} */
+	
 
 	/* check if outprefix is given */
 	if( params->outprefix == NULL && !make_sonic)
@@ -220,27 +225,34 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	}
 
 	/* check if --gaps  is invoked */
-	if( params->gaps == NULL)
+	if( params->gaps == NULL && !load_sonic)
 	{
 		fprintf( stderr, "[TARDIS CMDLINE ERROR] Please enter the assembly gaps file (BED) using the --gaps option.\n");
 		return EXIT_PARAM_ERROR;
 	}
 
 	/* check if --reps  is invoked */
-	if( params->reps == NULL)
+	if( params->reps == NULL && !load_sonic)
 	{
 		fprintf( stderr, "[TARDIS CMDLINE ERROR] Please enter the repeats file (RepeaMasker) using the --reps option.\n");
 		return EXIT_PARAM_ERROR;
 	}
 
 	/* check if --dups  is invoked */
-	if( params->dups == NULL)
+	if( params->dups == NULL && !load_sonic)
 	{
 		fprintf( stderr, "[TARDIS CMDLINE ERROR] Please enter the segmental duplications file (BED) using the --dups option.\n");
 		return EXIT_PARAM_ERROR;
 	}
 
-	/* check if --mei is invoked. If not, set Alu:L1Hs:SVA as default */
+	/* check if --sonic  is invoked */
+	if( params->sonic_file == NULL && load_sonic)
+	{
+		fprintf( stderr, "[TARDIS CMDLINE ERROR] Please enter the SONIC file (BED) using the --sonic option.\n");
+		return EXIT_PARAM_ERROR;
+	}
+
+	/* check if --mei is invoked. If not, set Alu:L1HS:SVA as default */
 	if( params->mei == NULL)
 	{
 		set_str( &( params->mei), "Alu:L1:SVA");
@@ -315,6 +327,14 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	else
 		running_mode = SENSITIVE;
 
+	if (load_sonic)
+		params->load_sonic = load_sonic;
+
+	if ( params->sonic_info == NULL)
+	  set_str( &(params->sonic_info), params->ref_genome);
+
+
+	
 	return RETURN_SUCCESS;
 
 }
@@ -322,32 +342,40 @@ int parse_command_line( int argc, char** argv, parameters* params)
 void print_help( void)
 {  
 	fprintf( stdout, "\nTARDIS: Toolkit for Automated and Rapid DIscovery of Structural variants.\n");
-	fprintf( stdout, "Version %s\n\tLast update: %s, build date: %s\n\n", TARDIS_VERSION, TARDIS_UPDATE, BUILD_DATE);	
+	fprintf( stdout, "Version %s\n\tLast update: %s, build date: %s\n\n", TARDIS_VERSION, TARDIS_UPDATE, BUILD_DATE);
+	fprintf( stdout, "\tParameters:\n\n");
 	fprintf( stdout, "\t--bamlist   [bamlist file] : A text file that lists input BAM files one file per line.\n");
 	fprintf( stdout, "\t--input [BAM files]        : Input files in sorted and indexed BAM format. You can pass multiple BAMs using multiple --input parameters.\n");
 	fprintf( stdout, "\t--out   [output prefix]    : Prefix for the output file names.\n");
 	fprintf( stdout, "\t--ref   [reference genome] : Reference genome in FASTA format.\n");
-	fprintf( stdout, "\t--gaps  [gaps file]        : Assembly gap coordinates in BED3 format.\n");
-	fprintf( stdout, "\t--dups  [dups file]        : Segmental duplication coordinates in BED3 format.\n");
-	fprintf( stdout, "\t--reps  [reps file]        : RepeatMasker annotation coordinates in BED6 format. See manual for details.\n");
-	fprintf( stdout, "\t--mei   [\"Alu:L1HS:SVA\"]   : List of mobile element names.\n");
-	/* not yet tested
-	  fprintf( stdout, "\t--10x                      : Take into account 10x barcode info of the read pairs\n"); */
-	
+	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n");	
+	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]     : List of mobile element names.\n");
+	fprintf( stdout, "\t--10x                      : Take into account 10x barcode info of the read pairs\n");
+	fprintf( stdout, "\t--no-soft-clip             : Skip soft clip remapping.\n");
 	/*
 	fprintf( stdout, "\t--xx                       : Sample is male.\n");
 	fprintf( stdout, "\t--xy                       : Sample is female.\n");
-
 	fprintf( stdout, "\t--vh                       : Run VariationHunter/CommonLAW (read pair + read depth).\n");
-	/* not  yet implemented, hide the parameters
+	/* not  yet implemented, hide the parameters. No need for these anyway.
 	fprintf( stdout, "\t--ns                       : Run NovelSeq (read pair + assembly).\n");
 	fprintf( stdout, "\t--sr                       : Run SPLITREAD (split read).\n");
 	fprintf( stdout, "\t--all                      : Run all three algorithms above [DEFAULT].\n");
 	 */
-	fprintf( stdout, "\t--no-soft-clip              : Skip Soft Clipping and run read pair and read depth only.\n");
-	fprintf( stdout, "\t--skip-fastq               : Skip FASTQ dump for discordants. Use this only if you are regenerating the calls.\n");
-	fprintf( stdout, "\t--skip-sort                : Skip FASTQ sort for discordants. Use this only if you are regenerating the calls.\n");
-	fprintf( stdout, "\t--skip-remap               : Skip FASTQ remapping for discordants. Use this only if you are regenerating the calls.\n");
+	fprintf( stdout, "\n\tAdditional parameters for sensitive mode:\n\n");
+	fprintf( stdout, "\t--sensitive                : Sensitive mode that uses all map locations. Requires mrFAST remapping.\n");
+	fprintf( stdout, "\t--skip-fastq               : Skip FASTQ dump for discordants. Use this only if you are regenerating the calls. Sensitive mode only.\n");
+	fprintf( stdout, "\t--skip-sort                : Skip FASTQ sort for discordants. Use this only if you are regenerating the calls. Sensitive mode only. \n");
+	fprintf( stdout, "\t--skip-remap               : Skip FASTQ remapping for discordants. Use this only if you are regenerating the calls. Sensitive mode only\n");
+	fprintf( stdout, "\t--threads                  : Number of threads for mrFAST to remap discordant reads.\n");
+
+	fprintf( stdout, "\n\tAdditional parameters to build SONIC file within TARDIS:\n\n");
+	fprintf( stdout, "\t--make-sonic [sonic file]  : SONIC file that will contain the assembly annotations.\n");
+	fprintf( stdout, "\t--sonic-info [\"string\"]    : SONIC information string to be used as the reference genome name.\n");
+	fprintf( stdout, "\t--gaps  [gaps file]        : Assembly gap coordinates in BED3 format.\n");
+	fprintf( stdout, "\t--dups  [dups file]        : Segmental duplication coordinates in BED3 format.\n"); 
+	fprintf( stdout, "\t--reps  [reps file]        : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.\n");
+
+	fprintf( stdout, "\n\tInformation:\n");
 	fprintf( stdout, "\t--version                  : Print version and exit.\n");
 	fprintf( stdout, "\t--help                     : Print this help screen and exit.\n\n");
 	fprintf( stdout, "It is bigger on the inside!\n\n");

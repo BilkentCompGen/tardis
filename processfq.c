@@ -361,7 +361,7 @@ void create_fastq_library( struct library_properties* in_lib, char* sample_name,
                         /*If 10x flag is on, concatenate it encoded to the qname*/
                         if (params->ten_x == 1){
                             ten_x_barcode = encode_ten_x_barcode(bam_aux_get(bam_alignment, "BX"));
-                            sprintf(qname + strlen(qname), "%020lu\0", ten_x_barcode); // 20 is the number of digits in the largest unsigned long value
+                            sprintf(qname + strlen(qname), "%020lu", ten_x_barcode); // 20 is the number of digits in the largest unsigned long value
                         }
                         
 			/* Line 2: Sequence */

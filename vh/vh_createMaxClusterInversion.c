@@ -8,7 +8,7 @@
 
 
 
-void vh_addToGenomeIndex_Inversion (char *chroName)
+void vh_addToGenomeIndex_Inversion (char *chromosome_name)
 {
 	LibraryInfo *libInfo;
 	DivetRow *divetReadMappingPtr;
@@ -20,35 +20,25 @@ void vh_addToGenomeIndex_Inversion (char *chroName)
 		divetReadMappingPtr = libInfo->head;
 		while (divetReadMappingPtr != NULL)
 		{
-			if (strcmp (divetReadMappingPtr->chroName, chroName) == 0 && divetReadMappingPtr->svType == 'V'
+			if (strcmp (divetReadMappingPtr->chromosome_name, chromosome_name) == 0 && divetReadMappingPtr->svType == 'V'
 					&& (divetReadMappingPtr->locMapRightStart - divetReadMappingPtr->locMapLeftEnd < maxInversionLen))
 			{
 				newEl = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
-				newEl2 = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
+				newEl2 = (MappingOnGenome *) getMem (sizeof (MappingOnGenome)); 
 				newEl->readMappingPtr = divetReadMappingPtr;
-				newEl2->readMappingPtr = divetReadMappingPtr;
+				newEl2->readMappingPtr = divetReadMappingPtr; 
 				if (divetReadMappingPtr->orientationLeft == 'F' && divetReadMappingPtr->orientationRight == 'F')
 				{
 					newEl->next = g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd];
 					leftWindowEnd = divetReadMappingPtr->locMapLeftEnd + libInfo->maxDelta;
-					newEl2->next = g_genomeIndexEnd[leftWindowEnd];
 					g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd] = newEl;
-					g_genomeIndexEnd[leftWindowEnd] = newEl2;
 				}
 				else if (divetReadMappingPtr->orientationLeft == 'R' && divetReadMappingPtr->orientationRight == 'R')
 				{
 					leftWindowStart = vh_max (divetReadMappingPtr->locMapLeftStart - libInfo->maxDelta, 0);
 					newEl->next = g_genomeIndexStart[leftWindowStart];
-					newEl2->next = g_genomeIndexEnd[divetReadMappingPtr->locMapLeftStart];
 					g_genomeIndexStart[leftWindowStart] = newEl;
-					g_genomeIndexEnd[divetReadMappingPtr->locMapLeftStart] = newEl2;
 				}
-				/*
-		newEl->next=g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd];
-		leftWindowEnd=divetReadMappingPtr->locMapLeftEnd+libInfo->maxDelta;
-		newEl2->next=g_genomeIndexEnd[leftWindowEnd];
-		g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd]=newEl;
-		g_genomeIndexEnd[leftWindowEnd]=newEl2;*/
 			}
 			divetReadMappingPtr = divetReadMappingPtr->next;
 		}
@@ -57,7 +47,7 @@ void vh_addToGenomeIndex_Inversion (char *chroName)
 
 }
 
-void vh_initializeReadMapping_Inversion (char *chroName, int chroSize)
+void vh_initializeReadMapping_Inversion (char *chromosome_name, int chroSize, sonic *this_sonic)
 {
 	//Gap info is global
 	LibraryInfo *libInfoPtr = g_libInfo;
@@ -66,14 +56,12 @@ void vh_initializeReadMapping_Inversion (char *chroName, int chroSize)
 
 	//Initing the Genome Array
 	g_genomeIndexStart = (MappingOnGenome **) getMem (chroSize * sizeof (MappingOnGenome *));
-	g_genomeIndexEnd = (MappingOnGenome **) getMem (chroSize * sizeof (MappingOnGenome *));
 
-	if (g_genomeIndexStart == NULL || g_genomeIndexEnd == NULL)
+	if (g_genomeIndexStart == NULL)
 		vh_logWarning ("Memory Problem");
 	for (genomeIndexId = 0; genomeIndexId < chroSize; genomeIndexId++)
 	{
 		g_genomeIndexStart[genomeIndexId] = NULL;
-		g_genomeIndexEnd[genomeIndexId] = NULL;
 	}
 	//Initing the List of begin and end of right side break point ranges
 	g_listRightBrkPointIntr = (RightBrkPointInterval *) getMem (g_maxListBrkPointIntr * sizeof (RightBrkPointInterval));
@@ -84,7 +72,7 @@ void vh_initializeReadMapping_Inversion (char *chroName, int chroSize)
 		g_tempListRightBrkPointIntr[i].readMappingPtr = NULL;
 	}
 	g_listRightBrkPointIntrCount = 0;
-	vh_addToGenomeIndex_Inversion (chroName);
+	vh_addToGenomeIndex_Inversion (chromosome_name);
 
 	/////Malocing the intersectingInterval (intersectinterval) heap
 	g_intersectInterval = (Heap *) getMem (sizeof (Heap));
@@ -180,7 +168,6 @@ int vh_createBreakPointIntervals_Inversion (int brkPointLeft)
 
 	if (g_listRightBrkPointIntrCount > 0)
 	{
-		ptrMappingOnGenome = g_genomeIndexEnd[brkPointLeft];
 		//TODO: Can this be made more efficient using a Heap?
 		while (listRightBrkPointIntrId < g_listRightBrkPointIntrCount)
 		{

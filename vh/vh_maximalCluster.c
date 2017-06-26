@@ -4,7 +4,6 @@
 #include "vh_setcover.h"
 
 MappingOnGenome **g_genomeIndexStart;
-MappingOnGenome **g_genomeIndexEnd;
 RightBrkPointInterval *g_listRightBrkPointIntr;
 RightBrkPointInterval *g_tempListRightBrkPointIntr;
 int g_maxListBrkPointIntr;
@@ -93,8 +92,9 @@ void vh_freeLinkedList (MappingOnGenome * cur)
 	}
 }
 
-void vh_finalizeReadMapping (char *chroName, int chroSize)
+void vh_finalizeReadMapping (char *chromosome_name, int chroSize)
 {
+
 	//Free g_genomeIndexStart and g_genomeIndexEnd and their linked list
 	int i;
 
@@ -102,25 +102,21 @@ void vh_finalizeReadMapping (char *chroName, int chroSize)
 	ClustersFound *ptrToOldClusterList = g_listPotClusterFound;
 	while (ptrToOldClusterList != NULL)
 	{
-		tempPtrOldCluster = ptrToOldClusterList;
+		tempPtrOldCluster = ptrToOldClusterList->next;
 		free (ptrToOldClusterList->readMappingPtrArray);
 		free (ptrToOldClusterList->readMappingIdArray);
-		free(ptrToOldClusterList);
-		ptrToOldClusterList = tempPtrOldCluster->next;
+		free (ptrToOldClusterList);
+		ptrToOldClusterList = tempPtrOldCluster;
 	}
 	g_listPotClusterFound = NULL;
 
 	for (i = 0; i < chroSize; i++)
 	{
-		vh_freeLinkedList (g_genomeIndexEnd[i]);
-		g_genomeIndexEnd[i] = NULL;
 		vh_freeLinkedList (g_genomeIndexStart[i]);
 		g_genomeIndexStart[i] = NULL;
 	}
 	free (g_genomeIndexStart);
 	g_genomeIndexStart = NULL;
-	free (g_genomeIndexEnd);
-	g_genomeIndexEnd = NULL;
 
 	//Free g_listRightBrkPointIntrCount and set the g_listRightBrkPointIntrCount
 	free (g_listRightBrkPointIntr);
@@ -134,6 +130,7 @@ void vh_finalizeReadMapping (char *chroName, int chroSize)
 	//Free g_intersectInterval -> Heap AND set the heapsize
 	free (g_intersectInterval);
 	g_intersectInterval = NULL;
+
 }
 
 void vh_copyElBrkPointIntr (int dest, int src)
@@ -306,9 +303,9 @@ int vh_outputCluster (ClustersFound * cluster, int SVtype)
 			{
 				if (ten_x_flag != 1 && output_hs_flag != 1){
 					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->readName->readName);
-					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chroName);
+					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chromosome_name);
 					fprintf (fileOutput, "%i ", cluster->readMappingPtrArray[readMapCount]->locMapLeftEnd);
-					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chroName);
+					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chromosome_name);
 					fprintf (fileOutput, "%i ", cluster->readMappingPtrArray[readMapCount]->locMapRightStart);
 					fprintf (fileOutput, "%i ", SVtype);
 					fprintf (fileOutput, "%g ", cluster->readMappingPtrArray[readMapCount]->phredScore);
@@ -319,11 +316,12 @@ int vh_outputCluster (ClustersFound * cluster, int SVtype)
 					fprintf (fileOutput, "%c ", cluster->readMappingPtrArray[readMapCount]->orientationRight);
 					fprintf (fileOutput, "%d ", cluster->readMappingPtrArray[readMapCount]->mQual1);
 					fprintf (fileOutput, "%d ", cluster->readMappingPtrArray[readMapCount]->mQual2);
-				} else {
+				}
+				else {
 					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->readName->readName);
-					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chroName);
+					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chromosome_name);
 					fprintf (fileOutput, "%i ", cluster->readMappingPtrArray[readMapCount]->locMapLeftEnd);
-					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chroName);
+					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chromosome_name);
 					fprintf (fileOutput, "%i ", cluster->readMappingPtrArray[readMapCount]->locMapRightStart);
 					fprintf (fileOutput, "%i ", SVtype);
 					fprintf (fileOutput, "%g ", cluster->readMappingPtrArray[readMapCount]->phredScore);
@@ -344,7 +342,6 @@ int vh_outputCluster (ClustersFound * cluster, int SVtype)
 			}
 		}
 	}
-	//printf("Done\n");
 	fprintf (fileOutput, "END\n");
 	cluster_count++;
 }
@@ -362,7 +359,7 @@ void vh_createIntersectingIntervals (int leftBreakPoint, int SVtype)
 		if (g_listRightBrkPointIntr[countIntrEndPoints].keyLorR == 'L')
 		{
 			newElAdded = 1;
-			vh_addToHeap (g_listRightBrkPointIntr[countIntrEndPoints].readMappingPtr,g_listRightBrkPointIntr[countIntrEndPoints].locBrkPointRight, g_intersectInterval);
+			vh_addToHeap (g_listRightBrkPointIntr[countIntrEndPoints].readMappingPtr, g_listRightBrkPointIntr[countIntrEndPoints].locBrkPointRight, g_intersectInterval);
 		}
 		else if (g_listRightBrkPointIntr[countIntrEndPoints].keyLorR == 'R')
 		{
@@ -373,7 +370,6 @@ void vh_createIntersectingIntervals (int leftBreakPoint, int SVtype)
 					vh_addToPotentialOutput (leftBreakPoint, g_intersectInterval, SVtype);
 					newElAdded = 0;
 				}
-				//writeHeap(g_intersectInterval);
 				vh_heap_remove_top (g_intersectInterval);
 			}
 			else
@@ -383,10 +379,9 @@ void vh_createIntersectingIntervals (int leftBreakPoint, int SVtype)
 			}
 		}
 	}
-	/*if (leftBreakPoint>500 && leftBreakPoint<1500)
-    printf("%i %i\n", leftBreakPoint, g_intersectInterval->heapSize);
-	 */
+
 	g_intersectInterval->heapSize = 0;
+
 }
 
 int vh_notBothDirections (ClustersFound * cluster)

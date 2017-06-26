@@ -23,7 +23,8 @@ void init_params( parameters** params)
 	/* initialize parameters */
 	*params = ( parameters*) getMem( sizeof( parameters));
 	( *params)->ref_genome = NULL;
-	( *params)->sonic = NULL;
+	( *params)->sonic_file = NULL;
+	( *params)->this_sonic = NULL;
 	( *params)->reps = NULL;
 	( *params)->dups = NULL;
 	( *params)->bam_files = NULL;
@@ -48,6 +49,7 @@ void init_params( parameters** params)
 	( *params)->last_chrom = -1;
 	( *params)->make_sonic = 0;
 	( *params)->load_sonic = 0;
+	( *params)->sonic_info = NULL;
 	( *params)->quick = 1;
 
 
@@ -67,17 +69,12 @@ void print_params( parameters* params)
 		fprintf( logFile,"%-30s%s\n","BAM input:",params->bam_file_list[i]);
 	}
 	printf( "%-30s%s\n","Reference genome:", params->ref_genome);
-	printf( "%-30s%s\n","Repeat coordinates:", params->reps);
-	printf( "%-30s%s\n","Duplication coordinates:", params->dups);
-	printf( "%-30s%s\n","Assembly Gap coordinates:", params->gaps);
+	printf( "%-30s%s\n","SONIC file:", params->sonic_file);
 	printf( "%-30s%s\n","Mobile Elements:", params->mei);
 
 	fprintf( logFile, "%-30s%s\n","Reference genome:", params->ref_genome);
-	fprintf( logFile, "%-30s%s\n","Repeat coordinates:", params->reps);
-	fprintf( logFile, "%-30s%s\n","Duplication coordinates:", params->dups);
-	fprintf( logFile, "%-30s%s\n","Assembly Gap coordinates:", params->gaps);
+	fprintf( logFile, "%-30s%s\n","SONIC file:", params->sonic_file);
 	fprintf( logFile, "%-30s%s\n","Mobile Elements:", params->mei);
-
 	fprintf( logFile, "%-30s%d\n","10x Tag:", params->ten_x);
 	fprintf( logFile, "%-30s%d\n","First chrom:", params->first_chrom);
 	fprintf( logFile, "%-30s%d\n","Last chrom:", params->last_chrom);
@@ -405,68 +402,31 @@ int hammingDistance( char *str1, char *str2, int len)
 	return dist;
 }
 
-
-
-int find_chr_index_ref(ref_genome* ref, char* chroName)
+int find_chr_index_bam( ref_genome* ref, char* chromosome_name, bam_hdr_t* bam_header)
 {
-	int i;
-	char *tmp;
-
-	for( i = 0; i < ref->chrom_count; i++)
-	{
-		tmp = (char*) malloc( sizeof( char) * 100);
-		/* Eliminate chromosomes with _ and GL for now */
-		if( strstr( chroName, "_") || strstr( chroName, "GL") || strstr( chroName, "MT") || strstr( chroName, "M"))
-			return -1;
-
-		/* Check if the chromosome name is in reference genome */
-		if( !strcmp( chroName, ref->chrom_names[i]))
-		{
-			free(tmp);
-			return i;
-		}
-
-		/* Check if the chromosome name with chr added to the beginning is in reference genome */
-		strcpy(tmp, "chr");
-		strcat(tmp, ref->chrom_names[i]);
-
-		if( !strcmp( chroName, tmp))
-		{
-			free(tmp);
-			return i;
-		}
-		free(tmp);
-
-	}
-	return -1;
-}
-
-int find_chr_index_bam(ref_genome* ref, char* chroName, bam_hdr_t* bam_header)
-{
-	int i;
+	int i, len;
 	char *tmp;
 
 	for(i = 0; i < bam_header->n_targets; i++)
 	{
-		if( strcmp(chroName, bam_header->target_name[i]) == 0)
+		if( strcmp( chromosome_name, bam_header->target_name[i]) == 0)
 			return i;
 
 		/* Check if the chromosome name contains chr at the beginning */
-		tmp = (char*) malloc( sizeof( char) * 100);
-		strcpy(tmp, "chr");
-		strcat(tmp, chroName);
+		len = strlen( chromosome_name) + 4;
+		tmp = ( char*) getMem( sizeof( char) * len);
+		strcpy( tmp, "chr");
+		strcat( tmp, chromosome_name);
 
-		//fprintf(stderr, "%s - %s\n", tmp, bam_header->target_name[i]);
 		if( strcmp( tmp, bam_header->target_name[i]) == 0)
 		{
-			free(tmp);
+			free( tmp);
 			return i;
 		}
-		free(tmp);
+		free( tmp);
 	}
 	return -1;
 }
-
 
 
 unsigned long encode_ten_x_barcode(char* source){

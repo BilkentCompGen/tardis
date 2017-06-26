@@ -6,6 +6,7 @@
 #include <htslib/hts.h>
 #include <zlib.h>
 #include <stdbool.h>
+#include "sonic/sonic.h"
 
 /* Exit Codes */
 #define EXIT_SUCCESS 0
@@ -76,27 +77,26 @@ typedef struct _params
 	int ten_x; /*boolean for whether we're using 10x data*/
 	int output_hs; /*boolean for whether to record the homogeneity score (HS) in VCF regardless whether HS is used in set cover or not*/
 	int make_sonic; /*make SONIC file and exit*/
-	int load_sonic; /*load SONIC file and exit*/
+	int load_sonic; /*load SONIC file*/
+        char *sonic_info; /* SONIC reference information string for building */
 	int first_chrom; /*the first chromosome as indexed in the ref to be computer for. 0 by default*/
 	int last_chrom; /*the last chromosome as indexed in the ref to be computer for. ref->chrom_count by default*/
 	int rd_threshold; /* Threshold is used in RD filtering, calWeight() in vh_setcover.c */
 	int mq_threshold; /* Minimum mapping quality */
 	int rp_threshold; /* Minimum read pair support */
-	char *sonic; /* SONIC file name */
+        char *sonic_file; /* SONIC file name */
+	sonic *this_sonic; /* SONIC */
 } parameters;
 
 
 typedef struct _ref_genome
 {
 	char* ref_name; /* name of the chromosome */
-	int chrom_count; /* number of chromosomes */
-	int* chrom_lengths; /* lengths of the chromosomes */
-	char** chrom_names; /* names of the chromosomes */
-	long gen_length; /* total number of base-pairs in the reference genome - total genome length up to chromosome 22 */
-	float** gc; /* gc profile for each chromosome */
-	float* gc_per_chr;	/* gc profile per chromosome */
-	int* window_count; /* number of windows for each chromosome */
-	bool* in_bam; /* if the chromosome is available in the bam file */
+        bool* in_bam; /* if the chromosome is available in the bam file */
+  /* the following don't seem to be necessary any more. load_refgen now just copies the pointer from sonic to avoid substantial refactoring */
+        int chrom_count; /* number of chromosomes */
+        int* chrom_lengths; /* lengths of the chromosomes */
+        char** chrom_names; /* names of the chromosomes */
 }ref_genome;
 
 /* Parameter related TARDIS functions */
@@ -125,8 +125,7 @@ void reverse_string( char* str);
 /* Misc. Utility */
 int compare_size_int( const void* p, const void* q);
 void print_quote( void);
-int find_chr_index_ref(ref_genome* ref, char* chroName);
-int find_chr_index_bam(ref_genome* ref, char* chroName, bam_hdr_t* bam_header);
+int find_chr_index_bam(ref_genome*, char*, bam_hdr_t*);
 int max( int x, int y);
 int min( int x, int y);
 int hammingDistance( char *str1, char *str2, int len);

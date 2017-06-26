@@ -61,7 +61,7 @@ void vh_pruneAndNormalizeDivets (struct LibraryInfo *lib, double preProsPrune, i
 			struct DivetRow *toBeDeleted = cursor->next;
 			cursor->next = cursor->next->next;
 			lib->size--;
-			free (toBeDeleted->chroName);
+			free (toBeDeleted->chromosome_name);
 			free (toBeDeleted);
 		}
 		else
@@ -93,14 +93,9 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 
 	g_maxListBrkPointIntr = MAXLISTBRKPOINTINTR;
 
-	/* Reads the bed files */
-	vh_readGapTable (gapFileName);
-	vh_readRepeatTable (repeatFileName,params->mei);
-	vh_writeMeiIndices(ref);
 
 	/*Hold the libraries in a linked list*/
 	g_libInfo = NULL;
-
 
 	for (k = 0; k < num_bams; k++)
 	{
@@ -149,7 +144,7 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 	for (; cursor; cursor = cursor->next)
 	{
 		vh_logInfo ("Reading Divet Files ...");
-		vh_loadDivetFile (cursor);
+		vh_loadDivetFile (cursor, params->this_sonic);
 		sprintf (g_loggerMsgBuffer, "%d rows loaded successfully.",cursor->size);
 		vh_logInfo (g_loggerMsgBuffer);
 		fprintf(logFile,"There are %d divet rows - ",cursor->size);
@@ -178,9 +173,10 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 		{
 			indexStart = vh_exportToArray(cursor->hash, allReadNameList, indexStart);
 		}
+
 		qsort (allReadNameList, totalNumUniqueReads, sizeof (char *),vh_cmprReadNameStr);
-		fprintf (fileOutputReadName, "%i\n", totalNumUniqueReads + 1);
-		fprintf (logFile, "There are %d unique reads \n", totalNumUniqueReads + 1);
+		fprintf (fileOutputReadName, "%i\n", totalNumUniqueReads);
+		fprintf (logFile, "There are %d unique reads \n", totalNumUniqueReads);
 
 		for (count = 0; count < totalNumUniqueReads; count++)
 		{
@@ -200,11 +196,11 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 	struct LibraryInfo *cursor, *t;
 
 	/* Initialization function */
-	fprintf( stderr,"10x flag inside vh_clustering: %d\n", ten_x_flag);
+
 	vh_init(in_bams, ref, params, preProsPrune, outputFile, outputRead, overMapLimit);
 
 	/* MEI Filtering */
-	mei_count=mei_filtering(ref);
+	mei_count=mei_filtering(ref, params);
 	fprintf(logFile,"%d mobile elements filtered\n",mei_count);
 	sprintf (g_loggerMsgBuffer, "%d mobile elements filtered.",mei_count);
 	vh_logInfo (g_loggerMsgBuffer);
@@ -220,7 +216,7 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 		fflush(stderr);
 
 		/* Deletion */
-		vh_initializeReadMapping_Deletion (ref->chrom_names[i], ref->chrom_lengths[i]);
+		vh_initializeReadMapping_Deletion (ref->chrom_names[i], ref->chrom_lengths[i], params->this_sonic);
 		fprintf(stderr, ".");
 		fflush(stderr);
 		vh_createDeletionClusters (ref->chrom_lengths[i]);
@@ -231,7 +227,7 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 		fflush(stderr);
 
 		/* Inversion */
-		vh_initializeReadMapping_Inversion (ref->chrom_names[i], ref->chrom_lengths[i]);
+		vh_initializeReadMapping_Inversion (ref->chrom_names[i], ref->chrom_lengths[i], params->this_sonic);
 		fprintf(stderr, ".");
 		fflush(stderr);
 		vh_createInversionClusters (ref->chrom_lengths[i]);
@@ -242,7 +238,7 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 		fflush(stderr);
 
 		/* Insertion */
-		vh_initializeReadMapping_Insertion (ref->chrom_names[i], ref->chrom_lengths[i]);
+		vh_initializeReadMapping_Insertion (ref->chrom_names[i], ref->chrom_lengths[i], params->this_sonic);
 		fprintf(stderr, ".");
 		fflush(stderr);
 		vh_createInsertionClusters (ref->chrom_lengths[i]);
@@ -252,8 +248,9 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 		fprintf(stderr, ".");
 		fflush(stderr);
 
-		/* Tandem Duplication */
-		vh_initializeReadMapping_TDup (ref->chrom_names[i], ref->chrom_lengths[i]);
+		/* Tandem Duplication 
+		vh_initializeReadMapping_TDup (ref->chrom_names[i], ref->chrom_lengths[i], params->this_sonic);
+
 		fprintf(stderr, ".");
 		fflush(stderr);
 		vh_createTDupClusters (ref->chrom_lengths[i]);
@@ -261,7 +258,8 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 		fflush(stderr);
 		vh_finalizeReadMapping (ref->chrom_names[i], ref->chrom_lengths[i]);
 		fprintf(stderr, ".");
-		fflush(stderr);
+
+		fflush(stderr); */
 
 		/* Mei */
 		vh_initializeReadMapping_MEI (in_bams, params, ref->chrom_names[i], ref->chrom_lengths[i]);

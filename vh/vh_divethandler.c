@@ -11,22 +11,22 @@
 struct LibraryInfo *g_libInfo = NULL;
 
 struct DivetRow *createDivetRow (
-        struct ReadName *hash[], 
-        char *readName, 
-        char *chroName,
-        char *locMapLeftStart,
-        char *locMapLeftEnd,
-        char *orientationLeft,
-        char *locMapRightStart,
-        char *locMapRightEnd,
-        char *orientationRight,
-        char *svType,
-        char *editDistance,
-        char *avgQual,	//skip
-	char *phredScore,
-        unsigned long ten_x_barcode,
-        struct LibraryInfo *libInfo,
-        int id)
+		struct ReadName *hash[],
+		char *readName,
+		char *chromosome_name,
+		char *locMapLeftStart,
+		char *locMapLeftEnd,
+		char *orientationLeft,
+		char *locMapRightStart,
+		char *locMapRightEnd,
+		char *orientationRight,
+		char *svType,
+		char *editDistance,
+		char *avgQual,	//skip
+		char *phredScore,
+		unsigned long ten_x_barcode,
+		struct LibraryInfo *libInfo,
+		int id)
 {
 	struct DivetRow *newRow = (DivetRow *) getMem (sizeof (DivetRow));
 	if (newRow == NULL)
@@ -38,12 +38,9 @@ struct DivetRow *createDivetRow (
 	newRow->readName = NULL;
 	newRow->next = NULL;
 
-	int len;
+	newRow->chromosome_name = NULL;
 
-	len = strlen (chroName);
-	newRow->chroName = (char *) getMem (sizeof (char) * len + 1);
-
-	strcpy (newRow->chroName, chroName);
+	set_str ( &(newRow->chromosome_name), chromosome_name);
 
 
 	int mls = atoi (locMapLeftStart);
@@ -68,7 +65,7 @@ struct DivetRow *createDivetRow (
 		newRow->orientationRight = orientationRight[0];
 	}
 
-        newRow->ten_x_barcode = ten_x_barcode;
+	newRow->ten_x_barcode = ten_x_barcode;
 	newRow->avgQual = atof (avgQual);
 	newRow->editDistance = atof (editDistance);
 	newRow->phredScore = atof (phredScore);
@@ -76,7 +73,6 @@ struct DivetRow *createDivetRow (
 
 	newRow->libInfo = libInfo;
 
-	len = strlen (readName);
 	struct ReadName *r = vh_addReadName (hash, readName, newRow->editDistance, newRow->phredScore);
 	newRow->readName = r;
 	newRow->divetRowId = id;
@@ -88,23 +84,23 @@ struct DivetRow *createDivetRow (
 struct DivetRow *vh_loadDivetRowFromString (struct ReadName *hash[], char *line, struct LibraryInfo *libInfo, int id)
 {
 	char *readName = strtok (line, DIVET_ROW_DELIMITERS);
-        unsigned long ten_x_barcode = -1;
+	unsigned long ten_x_barcode = -1;
 
-        
-        if (ten_x_flag || output_hs_flag){
-            sscanf(readName + strlen(readName) - 20, "%020lu%0", &ten_x_barcode); // 20 is the number of digits in the largest unsigned long value. All read names have ten-x barcode info as a 20 digit, 0-padded suffix
-            if (ten_x_barcode != (unsigned long)-1){
-                ten_x_barcode = ten_x_barcode | ((unsigned long)libInfo->libId << (sizeof(unsigned long)-1)*8); //use the last byte of the ten x barcode to make sure no two libraries share a barcode
-            }
-        }
-        
-	char *chroName = strtok (NULL, DIVET_ROW_DELIMITERS);
+
+	if (ten_x_flag || output_hs_flag){
+		sscanf(readName + strlen(readName) - 20, "%020lu%0", &ten_x_barcode); // 20 is the number of digits in the largest unsigned long value. All read names have ten-x barcode info as a 20 digit, 0-padded suffix
+		if (ten_x_barcode != (unsigned long)-1){
+			ten_x_barcode = ten_x_barcode | ((unsigned long)libInfo->libId << (sizeof(unsigned long)-1)*8); //use the last byte of the ten x barcode to make sure no two libraries share a barcode
+		}
+	}
+
+	char *chromosome_name = strtok (NULL, DIVET_ROW_DELIMITERS);
 
 	char *locMapLeftStart = strtok (NULL, DIVET_ROW_DELIMITERS);	//skip
 	char *locMapLeftEnd = strtok (NULL, DIVET_ROW_DELIMITERS);
 	char *orientationLeft = strtok (NULL, DIVET_ROW_DELIMITERS);
 
-	char *chroName2 = strtok (NULL, DIVET_ROW_DELIMITERS);	// This is the same as chroName for IDVE (indicated by =) and for T it is another chr name (We are not deadling with it here)
+	char *chromosome_name2 = strtok (NULL, DIVET_ROW_DELIMITERS);	// This is the same as chromosome_name for IDVE (indicated by =) and for T it is another chr name (We are not deadling with it here)
 
 	char *locMapRightStart = strtok (NULL, DIVET_ROW_DELIMITERS);
 	char *locMapRightEnd = strtok (NULL, DIVET_ROW_DELIMITERS);	//skip
@@ -118,40 +114,38 @@ struct DivetRow *vh_loadDivetRowFromString (struct ReadName *hash[], char *line,
 
 
 	struct DivetRow *newRow = createDivetRow (
-                        hash, 
-                        readName, 
-                        chroName,
+			hash,
+			readName,
+			chromosome_name,
 			locMapLeftStart, 
-                        locMapLeftEnd,
+			locMapLeftEnd,
 			orientationLeft,
 			locMapRightStart, 
-                        locMapRightEnd,
+			locMapRightEnd,
 			orientationRight,
 			svType,
 			editDistance, 
-                        avgQual, 
-                        phredScore,
-                        ten_x_barcode,
+			avgQual,
+			phredScore,
+			ten_x_barcode,
 			libInfo, 
-                        id);
+			id);
 
 
 	return newRow;
 }
 
-DivetRow *createDivetRowNew( ReadName *hash[], unsigned long ten_x_barcode, char *readName, char *chroName, int locMapLeftStart, int locMapLeftEnd, char orientationLeft,
+DivetRow *createDivetRowNew( ReadName *hash[], unsigned long ten_x_barcode, char *readName, char *chromosome_name, int locMapLeftStart, int locMapLeftEnd, char orientationLeft,
 		int locMapRightStart, int locMapRightEnd, char orientationRight, char svType, int editDistance, int mQual1, int mQual2, float
 		avgQual, float phredScore,  LibraryInfo *libInfo, int id)
 {
-	int len;
-	DivetRow *newRow = ( DivetRow*) getMem( sizeof (DivetRow));
+	DivetRow *newRow = ( DivetRow*) getMem( sizeof( DivetRow));
 
 	newRow->readName = NULL;
 	newRow->next = NULL;
 
-	len = strlen( chroName);
-	newRow->chroName = ( char*) getMem( sizeof( char) * ( len + 1));
-	strcpy( newRow->chroName, chroName);
+	newRow->chromosome_name = NULL;
+	set_str( &(newRow->chromosome_name), chromosome_name);
 
 	newRow->ten_x_barcode = ten_x_barcode;
 
@@ -175,7 +169,6 @@ DivetRow *createDivetRowNew( ReadName *hash[], unsigned long ten_x_barcode, char
 
 	newRow->libInfo = libInfo;
 
-	len = strlen( readName);
 	ReadName *r = vh_addReadName( hash, readName, newRow->editDistance, newRow->phredScore);
 	newRow->readName = r;
 
@@ -192,7 +185,7 @@ void vh_freeDivets (struct LibraryInfo *libInfo)
 	while (temp != NULL)
 	{
 		//Don't free the readName, as it is shared between more than one divet row
-		free (temp->chroName);
+		free (temp->chromosome_name);
 		libInfo->head = temp->next;
 		free (temp);
 		temp = libInfo->head;
@@ -206,7 +199,7 @@ void vh_freeDivets (struct LibraryInfo *libInfo)
  * Divet file is read and loaded into the linked lists
  * After running this method, the values of g_headDivet, g_tailDivet and g_divetRowLinkedListSize are set
  */
-DivetRow *vh_loadDivetFile (LibraryInfo * libInfo)
+DivetRow *vh_loadDivetFile (LibraryInfo * libInfo, sonic *this_sonic)
 {
 	FILE *divetFile = safe_fopen (libInfo->libFileAdrs, "r");
 	int i;
@@ -222,7 +215,7 @@ DivetRow *vh_loadDivetFile (LibraryInfo * libInfo)
 		vh_quitProgram (EXIT_CODE_DIVET_ERROR);
 	}
 
-	
+
 	//Initializing the linked list of divet rows
 	libInfo->head = NULL;
 	libInfo->tail = NULL;
@@ -232,7 +225,7 @@ DivetRow *vh_loadDivetFile (LibraryInfo * libInfo)
 	while (!feof (divetFile))
 	{
 
-	        return_value = fgets (line, LINE_READING_LENGTH, divetFile);
+		return_value = fgets (line, LINE_READING_LENGTH, divetFile);
 
 		if (line == NULL)
 			continue;
@@ -254,7 +247,9 @@ DivetRow *vh_loadDivetFile (LibraryInfo * libInfo)
 
 		//fixOrientation(newRow);
 
-		if (vh_notInRepeat (newRow) == 1)
+		//		if (vh_notInRepeat (newRow) == 1)
+		if (!sonic_is_satellite(this_sonic, newRow->chromosome_name, newRow->locMapLeftStart, newRow->locMapLeftEnd) &&
+		    !sonic_is_satellite(this_sonic, newRow->chromosome_name, newRow->locMapRightStart, newRow->locMapRightEnd) )
 		{
 			if (libInfo->head == NULL || libInfo->tail == NULL)
 			{
@@ -281,11 +276,11 @@ DivetRow *vh_loadDivetFile (LibraryInfo * libInfo)
 	return libInfo->head;
 }
 
-DivetRow *vh_loadDivetRowFromBam(discordantReadMapping_Info *discordantReadPtr, LibraryInfo *libInfo, int counterDivetRow)
+DivetRow *vh_loadDivetRowFromBam(discordantMapping *discordantReadPtr, LibraryInfo *libInfo, int counterDivetRow)
 {
 	if( discordantReadPtr->svType == 'E' || discordantReadPtr->svType == 'I' || discordantReadPtr->svType == 'D' || discordantReadPtr->svType == 'V')
 	{
-		DivetRow *newRow = createDivetRowNew (libInfo->hash, discordantReadPtr->ten_x_barcode, discordantReadPtr->readName, discordantReadPtr->chroName,
+		DivetRow *newRow = createDivetRowNew (libInfo->hash, discordantReadPtr->ten_x_barcode, discordantReadPtr->readName, discordantReadPtr->chromosome_name,
 				discordantReadPtr->pos1, discordantReadPtr->pos1_End, discordantReadPtr->orient1,
 				discordantReadPtr->pos2, discordantReadPtr->pos2_End, discordantReadPtr->orient2,
 				discordantReadPtr->svType, discordantReadPtr->editDistance, discordantReadPtr->mQual1, discordantReadPtr->mQual2, 0, 0, libInfo, counterDivetRow);
@@ -318,8 +313,8 @@ DivetRow *vh_loadDivetRowFromBamSoftClip(softClip *ptrSoftClip, posMapSoftClip *
 			pos2_1 = ptrPosMapSoftClip->posMap;
 			pos2_2 = ptrPosMapSoftClip->posMap + segLen2;
 
-			//printf("%s %s %d %d  %d %d %d %d\n", ptrSoftClip->readName, ptrSoftClip->chroName, pos1_1, pos1_2, pos2_1, pos2_2, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, counterDivetRow);
-			DivetRow * newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chroName, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'D', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
+			//printf("%s %s %d %d  %d %d %d %d\n", ptrSoftClip->readName, ptrSoftClip->chromosome_name, pos1_1, pos1_2, pos2_1, pos2_2, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, counterDivetRow);
+			DivetRow * newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chromosome_name, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'D', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
 			return newRow;
 
 		}
@@ -330,7 +325,7 @@ DivetRow *vh_loadDivetRowFromBamSoftClip(softClip *ptrSoftClip, posMapSoftClip *
 			pos2_1 = ptrSoftClip->pos;
 			pos2_2 = ptrSoftClip->pos + segLen1;
 
-			DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chroName, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'D', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
+			DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chromosome_name, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'D', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
 			return newRow;
 		}
 	}
@@ -354,7 +349,7 @@ DivetRow *vh_loadDivetRowFromBamSoftClip(softClip *ptrSoftClip, posMapSoftClip *
 			pos2_1 = ptrPosMapSoftClip->posMap;
 			pos2_2 = ptrPosMapSoftClip->posMap + segLen2;
 
-			DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chroName, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'D', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
+			DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chromosome_name, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'D', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
 			return newRow;
 		}
 		else if(ptrPosMapSoftClip->posMap < ptrSoftClip->pos && ptrPosMapSoftClip->posMap + segLen2 <=  ptrSoftClip->pos)
@@ -364,7 +359,7 @@ DivetRow *vh_loadDivetRowFromBamSoftClip(softClip *ptrSoftClip, posMapSoftClip *
 			pos2_1 = ptrSoftClip->pos;
 			pos2_2 = ptrSoftClip->pos + segLen1;
 
-			DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chroName, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'D', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
+			DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chromosome_name, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'D', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
 			return newRow;
 		}
 		//Deletion
@@ -383,7 +378,7 @@ DivetRow *vh_loadDivetRowFromBamSoftClip(softClip *ptrSoftClip, posMapSoftClip *
 				pos2_1 = ptrPosMapSoftClip->posMap;
 				pos2_2 = ptrPosMapSoftClip->posMap + segLen2;
 
-				DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chroName, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1-SOFTCLIP_WRONGMAP_WINDOW, pos2_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', 'V', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
+				DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chromosome_name, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1-SOFTCLIP_WRONGMAP_WINDOW, pos2_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', 'V', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
 				return newRow;
 			}
 			else if( ptrPosMapSoftClip->posMap < ptrSoftClip->pos && ptrPosMapSoftClip->posMap + segLen2 <=  ptrSoftClip->pos)
@@ -393,7 +388,7 @@ DivetRow *vh_loadDivetRowFromBamSoftClip(softClip *ptrSoftClip, posMapSoftClip *
 				pos2_1 = ptrSoftClip->pos;
 				pos2_2 = ptrSoftClip->pos + segLen1;
 
-				DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chroName, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1-SOFTCLIP_WRONGMAP_WINDOW, pos2_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', 'V', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
+				DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chromosome_name, pos1_1-SOFTCLIP_WRONGMAP_WINDOW, pos1_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', pos2_1-SOFTCLIP_WRONGMAP_WINDOW, pos2_2-SOFTCLIP_WRONGMAP_WINDOW, 'F', 'V', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
 				return newRow;
 			}
 		}
@@ -409,7 +404,7 @@ DivetRow *vh_loadDivetRowFromBamSoftClip(softClip *ptrSoftClip, posMapSoftClip *
 				pos2_1 = ptrPosMapSoftClip->posMap;
 				pos2_2 = ptrPosMapSoftClip->posMap + segLen2;
 
-				DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chroName, pos1_1+SOFTCLIP_WRONGMAP_WINDOW, pos1_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'V', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
+				DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chromosome_name, pos1_1+SOFTCLIP_WRONGMAP_WINDOW, pos1_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'V', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
 				return newRow;
 			}
 			else if( ptrPosMapSoftClip->posMap < ptrSoftClip->pos && ptrPosMapSoftClip->posMap + segLen2 <=  ptrSoftClip->pos)
@@ -419,7 +414,7 @@ DivetRow *vh_loadDivetRowFromBamSoftClip(softClip *ptrSoftClip, posMapSoftClip *
 				pos2_1 = ptrSoftClip->pos;
 				pos2_2 = ptrSoftClip->pos + segLen1;
 
-				DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chroName, pos1_1+SOFTCLIP_WRONGMAP_WINDOW, pos1_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'V', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
+				DivetRow *newRow = createDivetRowNew (libInfo->hash, 0, ptrSoftClip->readName, ptrSoftClip->chromosome_name, pos1_1+SOFTCLIP_WRONGMAP_WINDOW, pos1_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', pos2_1+SOFTCLIP_WRONGMAP_WINDOW, pos2_2+SOFTCLIP_WRONGMAP_WINDOW, 'R', 'V', 0, ptrSoftClip->qual, ptrPosMapSoftClip->mapq, 0, 0, libInfo, counterDivetRow);
 				return newRow;
 			}
 		}
@@ -427,19 +422,18 @@ DivetRow *vh_loadDivetRowFromBamSoftClip(softClip *ptrSoftClip, posMapSoftClip *
 	return NULL;
 }
 
-int read_Divet_bam( discordantReadMapping_Info *discordantReadPtr, parameters *params, ref_genome* ref, LibraryInfo * libInfo, int chr_index, int counterDivetRow)
+int read_Divet_bam( discordantMapping *discordantReadPtr, parameters *params, ref_genome* ref, LibraryInfo * libInfo, int chr_index, int counterDivetRow)
 {
-	int notRepeat;
+	int is_satellite;
 
 	struct DivetRow *newRow = NULL;
 
-	newRow = ( DivetRow *) getMem( sizeof (DivetRow));
-
 	while( discordantReadPtr != NULL)
 	{
-		notRepeat = notInRepeat( discordantReadPtr->chroName , discordantReadPtr->pos1) && notInRepeat( discordantReadPtr->chroName , discordantReadPtr->pos2);
-		if ( notRepeat == 1 && discordantReadPtr->mQual1 > params->mq_threshold && discordantReadPtr->mQual2 > params->mq_threshold
-				&& strcmp(discordantReadPtr->chroName, ref->chrom_names[chr_index]) == 0 && discordantReadPtr->pos1 > 0
+	  is_satellite = sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos1, discordantReadPtr->pos1_End)
+	    && sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End);
+	  if ( is_satellite == 0 && discordantReadPtr->mQual1 > params->mq_threshold && discordantReadPtr->mQual2 > params->mq_threshold
+				&& strcmp(discordantReadPtr->chromosome_name, ref->chrom_names[chr_index]) == 0 && discordantReadPtr->pos1 > 0
 				&& discordantReadPtr->pos2 > 0 && discordantReadPtr->pos2 < ref->chrom_lengths[chr_index])
 		{
 			newRow = vh_loadDivetRowFromBam( discordantReadPtr, libInfo, counterDivetRow);
@@ -482,23 +476,22 @@ int read_Divet_bam( discordantReadMapping_Info *discordantReadPtr, parameters *p
 
 int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, ref_genome* ref, LibraryInfo * libInfo, int chr_index, int read_len, int divet_row_count)
 {
-	int notRepeat;
+	int is_satellite;
 	struct DivetRow *newRow = NULL;
 	posMapSoftClip *ptrPosMapSoftClip;
-
-	newRow = ( DivetRow *) getMem( sizeof (DivetRow));
 
 	while( ptrSoftClip != NULL)
 	{
 		ptrPosMapSoftClip = ptrSoftClip->ptrPosMapSoftClip;
 		while( ptrPosMapSoftClip != NULL)
 		{
-			notRepeat = notInRepeat( ptrSoftClip->chroName, ptrSoftClip->pos) && notInRepeat( ptrSoftClip->chroName, ptrPosMapSoftClip->posMap);
-			if ( notRepeat == 1 && ptrSoftClip->qual > params->mq_threshold	&& strcmp(ptrSoftClip->chroName, ref->chrom_names[chr_index]) == 0
-					&& ptrPosMapSoftClip->mapq > 0 && ptrSoftClip->pos > 0 && ptrPosMapSoftClip->posMap > 0)
-			{
-				newRow = vh_loadDivetRowFromBamSoftClip( ptrSoftClip, ptrPosMapSoftClip, libInfo, read_len, divet_row_count);
-				if( newRow == NULL)
+		  is_satellite = sonic_is_satellite( params->this_sonic, ptrSoftClip->chromosome_name, ptrSoftClip->pos, ptrSoftClip->pos+1 )
+		    && sonic_is_satellite( params->this_sonic, ptrSoftClip->chromosome_name, ptrPosMapSoftClip->posMap, ptrPosMapSoftClip->posMap+1);
+		  if ( is_satellite == 0 && ptrSoftClip->qual > params->mq_threshold	&& strcmp(ptrSoftClip->chromosome_name, ref->chrom_names[chr_index]) == 0
+		       && ptrPosMapSoftClip->mapq > 0 && ptrSoftClip->pos > 0 && ptrPosMapSoftClip->posMap > 0)
+		    {
+		      newRow = vh_loadDivetRowFromBamSoftClip( ptrSoftClip, ptrPosMapSoftClip, libInfo, read_len, divet_row_count);
+		      if( newRow == NULL)
 					;//fprintf( stderr, "ERROR loading divet from bam (soft clip)\n");
 				else
 				{
@@ -531,7 +524,7 @@ void vh_printDivet (DivetRow * divetRow)
 	char msg[LINE_READING_LENGTH];
 	sprintf (msg, "%s %s %d %d %c %d %d %c %f %f %g %lu\n",
 			divetRow->readName->readName,
-			divetRow->chroName,
+			divetRow->chromosome_name,
 			divetRow->locMapLeftEnd,
 			divetRow->locMapLeftStart,
 			divetRow->orientationLeft,
@@ -539,9 +532,9 @@ void vh_printDivet (DivetRow * divetRow)
 			divetRow->locMapRightEnd,
 			divetRow->orientationRight,
 			divetRow->editDistance,
-                        divetRow->avgQual,
-                        divetRow->phredScore,
-                        divetRow->ten_x_barcode);
+			divetRow->avgQual,
+			divetRow->phredScore,
+			divetRow->ten_x_barcode);
 
 	vh_logOutput (msg);
 }

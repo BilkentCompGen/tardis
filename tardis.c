@@ -10,7 +10,7 @@
 #include "vh.h"
 #include "tardis.h"
 #include "bamonly.h"
-
+#include "sonic/sonic.h"
 
 FILE *logFile = NULL;
 
@@ -21,7 +21,7 @@ int main( int argc, char** argv)
 	configuration* cfg;
 	ref_genome* refgen;
 	int return_value;
-	char username[MAX_SEQ];
+	char* username;
 	int i;
 	time_t rawtime;
 	struct tm * timeinfo;
@@ -62,12 +62,14 @@ int main( int argc, char** argv)
 	print_quote();
 
 
-	/* make_sonic is standalone. Execute and return.  TODO
+	/* make_sonic is standalone. Execute and return.  */
 	if ( params->make_sonic)
 	{
-		return make_sonic(params);
-		} */
+	  return sonic_build(params->ref_genome, params->gaps, params->reps, params->dups, params->sonic_info, params->sonic_file );
+	} 
 
+	/* Load SONIC */
+	params->this_sonic = sonic_load(params->sonic_file);
 
 	/* Load reference genome properties*/
 	return_value = load_refgen( &refgen, params);
@@ -77,7 +79,7 @@ int main( int argc, char** argv)
 	}
 
 	if (params->last_chrom < params->first_chrom){
-		params->last_chrom = refgen->chrom_count - 1;
+		params->last_chrom = params->this_sonic->number_of_chromosomes - 1;
 	}
 
 	/* Read BAM files and calculate the median/avg/std of fragment sizes per library */
@@ -94,21 +96,24 @@ int main( int argc, char** argv)
 	output_hs_flag = params->output_hs;
 
 	print_quote();
-	fprintf( stderr,"\nStructural Variation Detection\n");
 	fprintf( stderr, "\n\tRun. Run, you clever boy... And remember.\n");
 
 	/* Sensitive Mode */
 	if( running_mode == SENSITIVE)
 	{
-		fprintf( stderr, "\nTardis is running in Sensitive Mode - using mrFast...\n\n");
-		fprintf( logFile, "(Running in sensitive mode - using mrFast)\n\n");
+		fprintf( stderr, "\nTARDIS is running in Sensitive Mode - using mrFAST...\n\n");
+		fprintf( logFile, "(Running in sensitive mode - using mrFAST)\n\n");
 
 		/* Extract FASTQs of discordants, OEAs, and orphans */
-		for( i = 0; i < params->num_bams; i++){
-			create_fastq( in_bams[i], params->bam_file_list[i], params);
+		if( params->skip_fastq == 0){
+		  for( i = 0; i < params->num_bams; i++){
+		    create_fastq( in_bams[i], params->bam_file_list[i], params);
+		  }
+		  fprintf( stderr, "All FASTQ files ready for remapping.\n");
 		}
-		fprintf( stderr, "All FASTQ files ready for remapping.\n");
-
+		else
+		  fprintf( stderr, "Skipping FASTQ creation.\n");
+	       
 
 		/* Remap with mrFAST */
 		if( params->skip_remap == 0)
@@ -124,34 +129,36 @@ int main( int argc, char** argv)
 
 		/* Read depth calculation */
 		fprintf( logFile,"\n--> Read Depth Method\n\n");
-		fprintf( stderr, "\nRunning Read Depth Method...\n");
 		return_value = run_rd( in_bams, params, refgen);
 		if( return_value != RETURN_SUCCESS)
 			return EXIT_EXTERNAL_PROG_ERROR;
 
 		/* Read pair calculation */
 		fprintf( logFile,"--> Read Pair Method\n\n");
-		fprintf( stderr, "\nRunning Read Pair Method (VariationHunter/CommonLAW)...\n");
 		return_value = run_vh( refgen, params, in_bams);
 		if( return_value != RETURN_SUCCESS)
 			return EXIT_EXTERNAL_PROG_ERROR;
 
-		free_all( in_bams, params, refgen);
+		free_sensitive( in_bams, params, refgen);
 	}
 	/* Quick Mode */
 	else
 	{
-		fprintf( stderr, "\nTardis is running in Quick Mode - using BWA...\n\n");
-		fprintf( logFile, "(Running in quick mode - using BWA)\n\n");
+		fprintf( stderr, "\nTARDIS is running in Quick Mode\n\n");
+		fprintf( logFile, "(Running in quick mode)\n\n");
 		return_value = bamonly_run( refgen, params, in_bams);
 		if ( return_value != RETURN_SUCCESS)
-			return EXIT_EXTERNAL_PROG_ERROR;
+		  return EXIT_EXTERNAL_PROG_ERROR;
+
+		free_quick( in_bams, params, refgen);
 	}
 
-	getlogin_r( username, MAX_SEQ);
+	username = ( char*) getMem( MAX_SEQ * sizeof( char));
+	getlogin_r( username, (MAX_SEQ - 1));
 	fprintf( stderr, "\n%s, before I go, I just want to tell you: you were fantastic. Absolutely fantastic. And you know what? So was I.\n", username);
 
 	fclose( logFile);
 
+	free( username);
 	return EXIT_SUCCESS;
 }

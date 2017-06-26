@@ -21,7 +21,7 @@ typedef struct LibraryInfo
 	char indName[MAX_LIBNAME_LEN];
 	char libFileAdrs[MAX_FILENAME_LEN];
 	int libId;
-        int minDelta;
+	int minDelta;
 	int maxDelta;
 	int readLen;
 	int size;
@@ -38,8 +38,7 @@ typedef struct DivetRow
 {
 	struct ReadName *readName;
 
-	char *chroName;
-	char *rName;
+	char *chromosome_name;
 	int locMapLeftEnd;
 	int locMapLeftStart;
 	char orientationLeft;
@@ -65,7 +64,7 @@ typedef struct DivetRow
 
 struct DivetRow *createDivetRow (struct ReadName *hash[],
 		char *readName,
-		char *chroName,
+		char *chromosome_name,
 		char *locMapLeftStart,
 		char *locMapLeftEnd,
 		char *orientatinoLeft,
@@ -76,14 +75,78 @@ struct DivetRow *createDivetRow (struct ReadName *hash[],
 		char *editDistance,
 		char *avgQual,
 		char *phredScore,
-                unsigned long ten_x_barcode,
-                struct LibraryInfo *libInfo,
+		unsigned long ten_x_barcode,
+		struct LibraryInfo *libInfo,
 		int id);
+
+typedef struct discordantMapping // RR, FF, RF or FR (Ins>\delta)
+{
+	char *chromosome_name;
+	char *readName;
+	int pos1;
+	int pos1_End;// In most cases pos1_End=pos1+readLen (unless there is soft Clip);
+	int pos2;
+	int pos2_End;// In most cases pos2_End=pos2+readLen (unless there is soft Clip);
+	char orient1;
+	char orient2;
+	int mQual1; // mapping qual1
+	int mQual2;
+	int editDistance;
+	char svType;
+	unsigned long ten_x_barcode; // Only for 10x genomics data
+
+	struct discordantMapping *next;
+}discordantMapping;
+
+
+typedef struct discordantMappingMEI
+{
+	char *chromosome_name; // chromosome_name
+	char *readName;
+	char *subclass;
+	int pos; // the high quality end mapped
+	int pos_End;
+	int qual;
+	char orient; //the high quality end mapped
+	int MEI_Type; // 0: Alu +, 1: Alu -, 2: L1 +, 3: L1 -, 4: SVA +, 5: SVA -,
+	char* MEI_subclass;
+	unsigned long ten_x_barcode; // Only for 10x genomics data
+
+	struct discordantMappingMEI *next;
+}discordantMappingMEI;
+
+
+typedef struct posMapSoftClip{
+	int posMap;
+	char orient;
+	int mapq; // the mapq calculate based on number of mappings for this softclip + the distance
+
+	struct posMapSoftClip *next;
+}posMapSoftClip;
+
+
+typedef struct softClip
+{
+	char *readName;
+	char *chromosome_name;
+	int pos;
+	char orient;
+	int qual;
+	int op[5];
+	int opl[5];
+	int opCount;
+	char *softClipString;
+	int avgPhredQualSoftClip; // the average phred quality of the basepairs which have be cut (the soft clip part).
+	int numSoftClipInConcordance; // The total number of reads which have a soft clip +-10 from this read. Too high or too low indicates something is wrong and not interesting.
+
+	struct softClip *next;
+	posMapSoftClip *ptrPosMapSoftClip; // a linked list of all the positions that the soft clipped part of the read maps in the reference genome (chromosome_name:windowStart-windowEnd)
+}softClip;
 
 struct DivetRow *vh_loadDivetRowFromString (struct ReadName *hash[], char *line, struct LibraryInfo *libInfo, int id);
 void vh_freeDivets ();
-struct DivetRow *vh_loadDivetFile (struct LibraryInfo *);
-int read_Divet_bam( discordantReadMapping_Info *discordantReadPtr, parameters *params, ref_genome* ref, LibraryInfo * libInfo, int chr_index, int counterDivetRow);
+struct DivetRow *vh_loadDivetFile (struct LibraryInfo *, sonic *);
+int read_Divet_bam( discordantMapping *discordantReadPtr, parameters *params, ref_genome* ref, LibraryInfo * libInfo, int chr_index, int counterDivetRow);
 int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, ref_genome* ref, LibraryInfo * libInfo, int chr_index, int read_len, int divet_row_count);
 void vh_printDivet (struct DivetRow *);
 

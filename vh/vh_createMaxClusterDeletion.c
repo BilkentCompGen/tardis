@@ -4,35 +4,28 @@
 #include "vh_heap.h"
 #include "vh_maximalCluster.h"
 
-//#define NAME_STR_LEN 100
 int maxDelta;
 int minDelta;
 
-void vh_addToGenomeIndex_Deletion (char *chroName)
+void vh_addToGenomeIndex_Deletion (char *chromosome_name, sonic *this_sonic)
 {
 	LibraryInfo *libInfo;
 	DivetRow *divetReadMappingPtr;
 	MappingOnGenome *newEl, *newEl2;
-	int leftWindowEnd;
 	libInfo = g_libInfo;
 	while (libInfo != NULL)
 	{
 		divetReadMappingPtr = libInfo->head;
 		while (divetReadMappingPtr != NULL)
 		{
-			if (strcmp (divetReadMappingPtr->chroName, chroName) == 0 && divetReadMappingPtr->svType == 'D'
-					&& vh_noGap (chroName, divetReadMappingPtr->locMapLeftEnd, divetReadMappingPtr->locMapRightStart)
+			if (strcmp (divetReadMappingPtr->chromosome_name, chromosome_name) == 0 && divetReadMappingPtr->svType == 'D'
+			    && !sonic_is_gap ( this_sonic, chromosome_name, divetReadMappingPtr->locMapLeftEnd, divetReadMappingPtr->locMapRightStart)
 					&& (divetReadMappingPtr->locMapRightStart - divetReadMappingPtr->locMapLeftEnd < maxDeletionLen))
 			{
 				newEl = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
-				newEl2 = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
 				newEl->readMappingPtr = divetReadMappingPtr;
-				newEl2->readMappingPtr = divetReadMappingPtr;
 				newEl->next = g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd];
-				leftWindowEnd = divetReadMappingPtr->locMapLeftEnd + libInfo->maxDelta;
-				newEl2->next = g_genomeIndexEnd[leftWindowEnd];
 				g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd] = newEl;
-				g_genomeIndexEnd[leftWindowEnd] = newEl2;
 			}
 			divetReadMappingPtr = divetReadMappingPtr->next;
 		}
@@ -40,24 +33,21 @@ void vh_addToGenomeIndex_Deletion (char *chroName)
 	}
 }
 
-void vh_initializeReadMapping_Deletion (char *chroName, int chroSize)
+void vh_initializeReadMapping_Deletion (char *chromosome_name, int chroSize, sonic *this_sonic)
 {
 	//Gap info is global
 	LibraryInfo *libInfoPtr = g_libInfo;
 	int genomeIndexId;
 	int i;
 
-	//Initing the Genome Array - Make sure it is free-ed
 	g_genomeIndexStart = (MappingOnGenome **) getMem (chroSize * sizeof (MappingOnGenome *));
-	g_genomeIndexEnd = (MappingOnGenome **) getMem (chroSize * sizeof (MappingOnGenome *));
 
-	if (g_genomeIndexStart == NULL || g_genomeIndexEnd == NULL)
-		vh_logWarning ("Memory Problem in vh_createMaxClusterDeletion.c:55");
+	if (g_genomeIndexStart == NULL)
+		vh_logWarning ("Memory Problem in vh_createMaxClusterDeletion.c:48");
+
 	for (genomeIndexId = 0; genomeIndexId < chroSize; genomeIndexId++)
-	{
 		g_genomeIndexStart[genomeIndexId] = NULL;
-		g_genomeIndexEnd[genomeIndexId] = NULL;
-	}
+
 
 	//Initing the List of begin and end of right side break point ranges - make sure to free
 	g_listRightBrkPointIntr = (RightBrkPointInterval *) getMem (g_maxListBrkPointIntr * sizeof (RightBrkPointInterval));
@@ -68,7 +58,7 @@ void vh_initializeReadMapping_Deletion (char *chroName, int chroSize)
 		g_tempListRightBrkPointIntr[i].readMappingPtr = NULL;
 	}
 	g_listRightBrkPointIntrCount = 0;
-	vh_addToGenomeIndex_Deletion (chroName);
+	vh_addToGenomeIndex_Deletion (chromosome_name, this_sonic);
 
 	/////Mallocing the intersectingInterval (intersectinterval) heap
 	g_intersectInterval = (Heap *) getMem (sizeof (Heap));
@@ -115,33 +105,33 @@ int vh_createBreakPointIntervals_Deletion (int brkPointLeft)
 	int genomeId;
 	int maxDeltaTemp, minDeltaTemp;
 	int locBrkPointLeftTemp, locBrkPointRightTemp;	// These the left and right loci of the interval of the breakpoint on the right
-	int listRightBrkPointIntrId = 0, tempListRightBrkPointIntrId = 0;
+	int count = 0, tempListRightBrkPointIntrId = 0;
 	RightBrkPointInterval *temp;
 	MappingOnGenome *ptrMappingOnGenome;
 
 	if (g_listRightBrkPointIntrCount > 0)
 	{
-		ptrMappingOnGenome = g_genomeIndexEnd[brkPointLeft];
 		//TODO: Can this be made more efficient using a Heap?
-		while (listRightBrkPointIntrId < g_listRightBrkPointIntrCount)
+		while (count < g_listRightBrkPointIntrCount)
 		{
-			if (g_listRightBrkPointIntr[listRightBrkPointIntrId].readMappingPtr->locMapLeftEnd +
-					g_listRightBrkPointIntr[listRightBrkPointIntrId].readMappingPtr->libInfo->maxDelta == brkPointLeft)
+			if (g_listRightBrkPointIntr[count].readMappingPtr->locMapLeftEnd +
+					g_listRightBrkPointIntr[count].readMappingPtr->libInfo->maxDelta == brkPointLeft)
 			{
-				listRightBrkPointIntrId++;
-				//fprintf(stderr,"brkPointLeft=%d listRightBrkPointIntrId=%d, g_listRightBrkPointIntrCount=%d\n", brkPointLeft, listRightBrkPointIntrId, g_listRightBrkPointIntrCount);
+				count++;
+
 			}
 			else
 			{
-				vh_copyElBrkPointIntr (tempListRightBrkPointIntrId,listRightBrkPointIntrId); // increaseByOneRightBrkPointIntr(tempListRightBrkPointIntrId);
-				vh_reevaluate_Deletion (tempListRightBrkPointIntrId, brkPointLeft);
-				listRightBrkPointIntrId++;
+				vh_copyElBrkPointIntr( tempListRightBrkPointIntrId, count); // increaseByOneRightBrkPointIntr(tempListRightBrkPointIntrId);
+				vh_reevaluate_Deletion( tempListRightBrkPointIntrId, brkPointLeft);
+
+				count++;
 				tempListRightBrkPointIntrId++;
 			}
 		}
 	}
 	ptrMappingOnGenome = g_genomeIndexStart[brkPointLeft];
-	while (ptrMappingOnGenome != NULL)
+	while( ptrMappingOnGenome != NULL)
 	{
 		newElAdded = 1;
 		locBrkPointRightTemp = ptrMappingOnGenome->readMappingPtr->locMapRightStart -
@@ -155,14 +145,12 @@ int vh_createBreakPointIntervals_Deletion (int brkPointLeft)
 		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].keyLorR = 'L';
 		tempListRightBrkPointIntrId++;
 		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].locBrkPointRight = locBrkPointRightTemp;
-		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].locBrkPointLeft= locBrkPointLeftTemp;
+		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].locBrkPointLeft = locBrkPointLeftTemp;
 		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].key = locBrkPointRightTemp;
-		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].readMappingPtr= ptrMappingOnGenome->readMappingPtr;
+		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].readMappingPtr = ptrMappingOnGenome->readMappingPtr;
 		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].keyLorR = 'R';
 		tempListRightBrkPointIntrId++;
-		//fprintf(stderr,"%d\t%d\n",ptrMappingOnGenome->readMappingPtr->divetRowId, tempListRightBrkPointIntrId);
 		ptrMappingOnGenome = ptrMappingOnGenome->next;
-
 	}
 	temp = g_listRightBrkPointIntr;
 	g_listRightBrkPointIntr = g_tempListRightBrkPointIntr;
@@ -176,7 +164,6 @@ int vh_createBreakPointIntervals_Deletion (int brkPointLeft)
 void vh_createDeletionClusters (int chroSize)
 {
 	int leftBreakPoint;		// The value of the left breakpoint considered
-	int startLeftWindow, endLeftWindow;
 	g_listRightBrkPointIntrCount = 0;
 	int newElAdded = 0;
 
@@ -184,9 +171,9 @@ void vh_createDeletionClusters (int chroSize)
 	for (leftBreakPoint = 1; leftBreakPoint < chroSize; leftBreakPoint++)
 	{
 		newElAdded = 0;
-		newElAdded = vh_createBreakPointIntervals_Deletion (leftBreakPoint);
-		if (newElAdded)		// For deletion only when we have added new element we need to check
-			vh_createIntersectingIntervals (leftBreakPoint, 2);
+		newElAdded = vh_createBreakPointIntervals_Deletion( leftBreakPoint);
+		if( newElAdded)		// For deletion only when we have added new element we need to check
+			vh_createIntersectingIntervals( leftBreakPoint, 2);
 	}
 	vh_flushOut (g_listPotClusterFound, leftBreakPoint, 2);
 }

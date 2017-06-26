@@ -9,8 +9,9 @@ Requirements
  * zlib   (http://www.zlib.net)
  * mrfast (https://github.com/BilkentCompGen/mrfast)
  * htslib (included as submodule; http://htslib.org/)
+ * sonic  (included as submodule; https://github.com/calkan/sonic)
 
-Fetching tardis
+Fetching TARDIS
 ===============
 
 	git clone https://github.com/BilkentCompGen/tardis.git --recursive
@@ -25,53 +26,41 @@ Type:
 	cp tardis /path/to/your/favorite/binaries
 
 
-Auxiliary files
-===============
+SONIC file (annotations container)
+==================================
 
-GRCh37 annotations available under aux/
+SONIC files are available under aux/
 
- * build37.dups.bed: Segmental duplication coordinates.
- * build37.gaps.bed: Assembly gap coordinates.
- * build37.reps.bed: RepeatMasker annotations (as described below). This file is provided as compressed. Unzip it before use.
+ * human_g1k_v37.sonic: SONIC file for Human Reference Genome GRCh37 (1000 Genomes Project version)
+ 	* Also download the reference genome at: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz. 
+ * ucsc_hg19.sonic: SONIC file for the human reference genome, UCSC version build hg19.
+	* Also download the reference genome at: http://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz. Deflate the tar archive and concatenate all chromosomes into a single FASTA file.
+ * ucsc_hg38.sonic: SONIC file for the human reference genome build 38.
+	* Also download the reference genome at: http://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.chromFa.tar.gz. Deflate the tar archive and concatenate all chromosomes into a single FASTA file.
 
-Also download the reference genome from the UCSC Genome Browser. For GRCh37, this file is at: http://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz. Merge all FASTA files into a single file. Make sure that the same reference was used to align the reads beforehand (BAM file).
+Make sure that the same reference was used to align the reads beforehand (BAM file) and to create the SONIC file. The SONIC files and the reference FASTA files linked above are compatible.
 
-** Reference genome and its annotations should use the EXACT same names for the chromosomes. The example provided below use the 1000 Genomes Project naming convention. **
+Building the SONIC file
+=======================
 
-Building the repeats file
-=========================
+Please refer to the SONIC development repository: https://github.com/calkan/sonic/
 
-Download the RepeatMasker out files from the UCSC Genome Browser. For GRCh37 (hg19), this file is at: http://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/chromOut.tar.gz
+However, you can still build the SONIC file using TARDIS:
 
-Create a temp directory to make things easier to cleanup:
+	tardis --ref human_g1k_v37.fasta --make-sonic human_g1k_v37.sonic \
+		--dups human_g1k_v37.segmental_duplications.bed \
+		--gaps human_g1k_v37.assembly_gaps.bed \
+		--reps human_g1k_v37.repeatmasker.out 
 
-	mkdir rmasker
-	tar zxf chromOut.tar.gz -C rmasker
+	
 
-Concetanate all out files and get rid of unneeded information. Make sure that the chromosome names in the reference genome and the repeats file matches.
+Running TARDIS - QUICK mode
+===========================
 
-	cat `find rmasker -name *.out` \
-		| grep -v "matching\|begin"\
-		| awk '{OFS="\t"; if ($1 ~ /./) print $5,$6-1,$7,$9,$10,$11}'\
-		| sed s/chr// | sed s/Un_// | sed s/_random// | sed s/gl/GL/ | grep -v hap \
-		| sed s/\.\._// | sed s/._// \
-		| awk '{OFS="\t"; if ($1=="M") $1="MT"; if ($1 ~ /GL/) $1=$1".1"; print $0}'\
-		| sort -k 1,1 -k 2,2n > build37.reps.bed
-
-Remove unnecessary files:
-
-	rm chromOut.tar.gz
-	rm -fr rmasker
-
-
-Running tardis
-==============
-
-	tardis -i myinput.bam --ref human_g1k_v37.fasta --gaps build37.gap.bed \
-		--reps build37.reps.bed --dups build37_dups.bed --vh \
+	tardis -i myinput.bam --ref human_g1k_v37.fasta --sonic human_g1k_v37.sonic  \
 		--out myoutput
 
-Additional parameters, helpful when debugging:
+Additional parameters in SENSITIVE mode, helpful when debugging:
 
 	--skip-fastq --skip-sort --skip-remap
 
@@ -80,28 +69,39 @@ All parameters
 
 	--bamlist   [bamlist file] : A text file that lists input BAM files one file per line.
 	--input [BAM files]        : Input files in sorted and indexed BAM format. You can pass multiple BAMs using multiple --input parameters.
-	--out   [output prefix]    : Prefix for the output file names.Output will be 3 files:
-					<out>.vcf: Contains the predicted SV's
-					<out>.name: Contains read names of all read pairs. Each line a read name.
-					<out>.clusters: Contains all initially created SV clusters. Each line is a cluster.
-	--ref   [reference genome] : Reference genome in FASTA format. Use the same reference you used for aligning in the BAM file. Make sure it contains all chromosomal contigs as those present in the gaps bed file (like chr11_gl000202_random or chr7_gl000195_random). The reference genome MUST have a mrFAST index!
-	--gaps  [gaps file]        : Assembly gap coordinates in BED3 format. Choose the same version as that of the reference genome (hg19 or hg38).
-	--dups  [dups file]        : Segmental duplication coordinates in BED3 format. Choose the same version as that of the reference genome (hg19 or hg38).
-	--reps  [reps file]        : RepeatMasker annotation coordinates in BED6 format.
-	--mei   ["Alu:L1Hs:SVA"]   : List of mobile element names.
-	--skip-fastq               : Skip FASTQ dump for discordants. Use this only if you are regenerating the calls.
-	--skip-sort                : Skip FASTQ sort for discordants. Use this only if you are regenerating the calls.
-	--skip-remap               : Skip FASTQ remapping for discordants. Use this only if you are regenerating the calls.
+	--out   [output prefix]    : Prefix for the output file names.
+	--ref   [reference genome] : Reference genome in FASTA format.
+	--sonic [sonic file]       : SONIC file that contains assembly annotations.
+	--mei   ["Alu:L1:SVA"]     : List of mobile element names.
+	--no-soft-clip             : Skip soft clip remapping.
+
+	Additional parameters for sensitive mode:
+
+	--sensitive                : Sensitive mode that uses all map locations. Requires mrFAST remapping.
+	--skip-fastq               : Skip FASTQ dump for discordants. Use this only if you are regenerating the calls. Sensitive mode only.
+	--skip-sort                : Skip FASTQ sort for discordants. Use this only if you are regenerating the calls. Sensitive mode only. 
+	--skip-remap               : Skip FASTQ remapping for discordants. Use this only if you are regenerating the calls. Sensitive mode only
+	--threads                  : Number of threads for mrFAST to remap discordant reads.
+
+	Additional parameters to build SONIC file within TARDIS:
+
+	--make-sonic [sonic file]  : SONIC file that will contain the assembly annotations.
+	--sonic-info [\"string\"]  : SONIC information string to be used as the reference genome name.
+	--gaps  [gaps file]        : Assembly gap coordinates in BED3 format.
+	--dups  [dups file]        : Segmental duplication coordinates in BED3 format.
+	--reps  [reps file]        : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.
+
+	Information:
 	--version                  : Print version and exit.
 	--help                     : Print this help screen and exit.
-	--sensitive		   : Use multiple remappings of discordant reads to apply set cover on them.
-	--output-hs		   : Regardless of whether we are using 10x homogeneity score (HS), output the selected clusters HS scores to the vcf file
-	--threads		   : An interger. The number of threads that multithreaded mrFAST will use
-	--rp			   : The minimum read-pair support required for an SV cluster to be considered
+
 
 Converting output VCF file to BED
 ==============
 
 	awk '! /\#/' out.vcf |\
 	awk '{print $1"\t"($2-1)"\t"(substr($8,match($8,/SVLEN=[0-9]+/)+length("SVLEN="),RLENGTH-length("SVLEN="))+$2-1)}' > out.bed
+
+Alternatively, use VCFlib: https://github.com/vcflib/vcflib
+
 

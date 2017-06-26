@@ -305,7 +305,7 @@ void mapSoftClipToRef( bam_info* in_bam,  parameters* params, ref_genome* ref, i
 
 void addSoftClip( ref_genome* ref, bam_info * in_bam, bam1_t* bam_alignment, int library_index, int flag, int *op, int *opl, int chrID)
 {
-	int len, i;
+	int i;
 	float avgPhredQual = 0;
 	bam1_core_t bam_alignment_core;
 	bam_alignment_core = bam_alignment->core;
@@ -323,9 +323,9 @@ void addSoftClip( ref_genome* ref, bam_info * in_bam, bam1_t* bam_alignment, int
 	newEl->readName[strlen( bam_alignment->data) + 6] = '\0';
 
 	/* Get the name of the chromosome */
-	len = strlen( ref->chrom_names[chrID]);
-	newEl->chroName = ( char *) getMem( sizeof( char) * len + 1);
-	strcpy( newEl->chroName, ref->chrom_names[chrID]);
+	
+	newEl->chromosome_name = NULL;
+	set_str( &(newEl->chromosome_name), ref->chrom_names[chrID]);
 
 	newEl->pos = bam_alignment_core.pos;
 	newEl->qual = bam_alignment_core.qual;

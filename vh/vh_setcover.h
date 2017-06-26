@@ -34,7 +34,7 @@ extern int multiIndCount;
 extern int sizeListClusterEl;
 
 typedef struct multiLib{
-	char libName[strSize];
+	char *libName;
 	int indId; // index to the multiInd[X]
 	int maxInstSize;
 	int minInstSize;
@@ -46,7 +46,8 @@ multiLib *multiLibs;
 
 /* SVs which are selected for output are kept for conflict resolution */
 typedef struct SV_selected{
-	char chroName[strSize];
+
+	char *chromosome_name;
 	int clusterId; // ID of the cluster selected
 	char SVtype;// D: deletion, V: Inversion, I: insertion, E: tandam duplication, M: mobile element
 	int posStart_SV, posEnd_SV;// The inside coordinates
@@ -69,7 +70,7 @@ typedef struct clusterIdEl{
 
 /* Holds the information for each read */
 typedef struct readEl{
-	char readName[strSize];
+	char *readName;
 	int readId;
 	int indId;
 	int libId;
@@ -84,7 +85,7 @@ typedef struct readEl{
 /*  Linked list to hold information of each Read Mapping for each cluster */
 typedef struct readMappingEl{
 	int readId; //read id [0 to sizeListReadEl] is an unique identifier for each read (and index to array listReadEL).
-	char chroName[strSize];
+	char *chromosome_name;
 	int posMapLeft;
 	int posMapRight;
 	int indId;
@@ -99,10 +100,10 @@ typedef struct readMappingEl{
 	struct readMappingEl *next; //ptr to the next readMappingEl in this cluster
 }readMappingEl;
 
-/* Holds informtion for each cluster of paired-end reads */
+/* Holds information for each cluster of paired-end reads */
 typedef struct clusterEl{
 	int clusterId;
-	char chroName[strSize];
+	char *chromosome_name;
 	int posStartSV;
 	int posEndSV;
 	int posStartSV_Outer;
@@ -110,18 +111,19 @@ typedef struct clusterEl{
 	int minDelLength;// Only used for deletion. Represents the minimum size of deletion predicted
 	int maxDelLength;//Only used for deletion. Represents the maximum size of deletion predicted
 	char SVtype;//V: inversion, D: Deletion, I: insertion, E: tandem duplication
-	int indIdCount[totalNumInd]; //If this cluster is picked as one of the SVs it shows the number of supporting paired-end reads selected for each individual (0 : means that we have not picked any support for that inidividual for this SV. -1: means that for this individual this SV is in conflict with SVs picked before - NEVER PICK AN SV FOR AN IND WITH SUP -1 ).
+	int *indIdCount; //If this cluster is picked as one of the SVs it shows the number of supporting paired-end reads selected for each individual (0 : means that we have not picked any support for that inidividual for this SV. -1: means that for this individual this SV is in conflict with SVs picked before - NEVER PICK AN SV FOR AN IND WITH SUP -1 ).
+	int *sr_support;
 	int oldBestIsGood; // is the last best score computed for this SV still the best or things have changes
 	float oldBestScore; // Whats is the best old score
 	int bestReadToRemove[totalNumInd]; // the support for each individual for the best old score(if oldBestIsGood is true then this array is still the best selection from this cluster).
-	char mobileName[strSize];
+	char *mobileName;
 	struct readMappingEl *next; //a array of number of individuals for each list of read mappings (i.e. for each individual we have a different list of read mappings and they should be sorted).
 	struct readMappingEl *readMappingSelected; // The link list of all the read mappings which have been selected by set cover for this SV.
 
-	float CNV_Interest[totalNumInd]; // the CNV calculate for the region of interest
-	double Del_Likelihood[totalNumInd];
+	float *CNV_Interest; // the CNV calculate for the region of interest
+	double *Del_Likelihood;
 	double probabilityCNV[totalNumInd][10];// Probability of CNV calculate for 0 to 9
-	long readDepth[totalNumInd];
+	long *readDepth;
 
 	double homogeneity_score;
 	bool MEI_Del;
@@ -134,7 +136,7 @@ clusterEl *listClusterEl; // the array of all the cluster reads
 /* A cluster which is being read and processed before putting all inside a large array (temp cluster) */
 typedef struct clusterElRead{
 	int clusterId;
-	char chroName[strSize];
+	char chromosome_name[strSize];
 	char SVtype;
 	int sizeOfCluster;
 	struct readMappingEl readMappingElArray[maxListClusterSize];

@@ -56,11 +56,12 @@ char * svtypeToChar(enum SVTYPE svt) {
 }
 
 // create a new structure and return address
-struct strvar* new_strvar(char *chrName,int outer_start, int inner_start, int outer_end, int inner_end, enum SVTYPE svtype, int sr_sup, float avg_edit, int min_svlen, int max_svlen, char *samples, double conf_score, bool filtered, bool mei_del,
-		char *mei_name, long depth[], float cn[], double del_likelihood[], int rp[], char indNames[][strSize], double homogeneity_score)
+struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, enum SVTYPE svtype,
+		float avg_edit, int min_svlen, int max_svlen, char *samples, double conf_score, bool filtered, bool mei_del,
+		char *mei_name, long depth[], float cn[], double del_likelihood[], int rp[], int sr[], double homogeneity_score)
 {
 	int i;
-	struct strvar* a_strvar = getMem(sizeof (struct strvar));
+	struct strvar* a_strvar = getMem( sizeof( struct strvar));
 
 	a_strvar->chr_name = chrName;
 	a_strvar->outer_start = outer_start;
@@ -68,18 +69,17 @@ struct strvar* new_strvar(char *chrName,int outer_start, int inner_start, int ou
 	a_strvar->outer_end = outer_end;
 	a_strvar->inner_end = inner_end;
 	a_strvar->svtype = svtype;
-	a_strvar->sr_sup = sr_sup; //******
 	a_strvar->avg_edit = avg_edit;
 	a_strvar->min_svlen = min_svlen;
 	a_strvar->max_svlen = max_svlen;
-	a_strvar->samples = samples; //******
+	a_strvar->samples = samples;
 	a_strvar->mei_name = mei_name;
-	a_strvar->conf_score = conf_score; //******
+	a_strvar->conf_score = conf_score;
 	a_strvar->next = NULL;
 	a_strvar->head = NULL;
 	a_strvar->filtered = filtered;
 	a_strvar->mei_del = mei_del;
-        a_strvar->homogeneity_score = homogeneity_score;
+	a_strvar->homogeneity_score = homogeneity_score;
 
 	for( i = 0; i < indCount; i++)
 	{
@@ -87,7 +87,7 @@ struct strvar* new_strvar(char *chrName,int outer_start, int inner_start, int ou
 		a_strvar->cn[i] = cn[i];
 		a_strvar->del_likelihood[i] = del_likelihood[i];
 		a_strvar->rp[i] = rp[i];
-		strcpy( a_strvar->indNames[i], indNames[i]);
+		a_strvar->sr[i] = sr[i];
 	}
 
 	return a_strvar;
@@ -107,19 +107,16 @@ void print_sv_stats()
 //add the variation in ascending order according to inner_start
 void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FILE* fpOut)
 {
-	int sv_len, i, j, control, ind_id, rp_total = 0;
+	int sv_len, i, j, control, ind_id, rp_total = 0, sr_total = 0;
 	char* svtype = svtypeToChar( sv->svtype);
 
 	/* Sum the rp support for each individual with GT 0/1 */
 	for( i = 0; i < params->num_bams; i++)
 	{
-		for( j = 0; j < indCount; j++)
+		if( in_bams[i]->contribution == true)
 		{
-			if( strcmp( in_bams[i]->sample_name, sv->indNames[j]) == 0)
-			{
-				rp_total +=  sv->rp[j];
-				break;
-			}
+			rp_total +=  sv->rp[i];
+			sr_total += sv->sr[i];
 		}
 	}
 	if( rp_total <= 0)
@@ -163,13 +160,13 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	}
 
 	if( sv->svtype == MEI)
-		fprintf( fpOut, "END=%d;SVLEN=%d;TYPE=%s;RPSUP=%d;", (sv->inner_end) + 1, sv_len, sv->mei_name, rp_total);
+		fprintf( fpOut, "END=%d;SVLEN=%d;TYPE=%s;RPSUP=%d;SRSUP=%d;", (sv->inner_end) + 1, sv_len, sv->mei_name, rp_total, sr_total);
 	else
-		fprintf( fpOut, "END=%d;SVLEN=%d;RPSUP=%d;", (sv->inner_end) + 1, sv_len, rp_total);
+		fprintf( fpOut, "END=%d;SVLEN=%d;RPSUP=%d;SRSUP=%d;", (sv->inner_end) + 1, sv_len, rp_total, sr_total);
 
 	/* If SV is imprecise */
 	if( sv->inner_start != sv->inner_end)
-		fprintf( fpOut, "CIEND=0,%d;CIPOS=-%d,0;", ( sv->outer_end - sv->inner_end), ( sv->inner_start - sv->outer_start));
+		fprintf( fpOut, "CIEND=0,%d;CIPOS=-%d,0;IMPRECISE;", ( sv->outer_end - sv->inner_end), ( sv->inner_start - sv->outer_start));
 
 	if( sv->svtype == TANDUP)
 		fprintf( fpOut, "SVTYPE=DUP\t");
@@ -177,31 +174,30 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		fprintf( fpOut, "SVTYPE=%s\t", svtype);
 
 	/* Format field */
-	fprintf( fpOut, "GT:DL:RD:CN:RP:HS");            
+	if (params->ten_x)
+	  fprintf( fpOut, "GT:DL:RD:CN:RP:SR:HS");
+	else
+	  fprintf( fpOut, "GT:DL:RD:CN:RP:SR");
 
 
-	for( i = 0; i < params->num_bams; i++)
+	control = 0;
+	fprintf( fpOut, "\t");
+	for( j = 0; j < params->num_bams; j++)
 	{
-		control = 0;
-		fprintf( fpOut, "\t");
-		for( j = 0; j < indCount; j++)
+		if( in_bams[j]->contribution == false)
 		{
-			ind_id = j;
-			if( strcmp( in_bams[i]->sample_name, sv->indNames[j]) == 0)
-			{
-				if( sv->rp[j] <= 0)
-				{
-					fprintf( fpOut, "0/0:.:.:.:.");
-					control = 1;
-					break;
-				}
-				fprintf( fpOut, "0/1:%.1f:%li:%.1f:%d:%8.6f", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->homogeneity_score);
-				control = 1;
-				break;
-			}
+ 		        if (params->ten_x)
+			  fprintf( fpOut, "0/0:%.1f:%li:%.1f:%d:%d:%8.6f\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score);
+			else 
+			  fprintf( fpOut, "0/0:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
 		}
-		if( control == 0)
-			fprintf( fpOut, "0/0:.:.:.:.:.");
+		else
+		{
+		  	if (params->ten_x)			 
+			  fprintf( fpOut, "0/1:%.1f:%li:%.1f:%d:%d:%8.6f\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score);
+			else
+			  fprintf( fpOut, "0/1:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
+		}
 	}
 	fprintf( fpOut, "\n");
 
@@ -222,7 +218,8 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 			"##INFO=<ID=DBVARID,Number=1,Type=String,Description=\"ID of this element in DBVAR\">\n"
 			"##INFO=<ID=SAMPLE,Number=1,Type=String,Description=\"Sample ID\">\n"
 			"##INFO=<ID=SVALG,Number=1,Type=String,Description=\"SV discovery algorithm\">\n"
-			"##INFO=<ID=SUP,Number=1,Type=Integer,Description=\"Number of supporting read pairs\">\n"
+			"##INFO=<ID=RPSUP,Number=1,Type=Integer,Description=\"Number of supporting read pairs\">\n"
+			"##INFO=<ID=SRSUP,Number=1,Type=Integer,Description=\"Number of supporting split reads\">\n"
 			"##INFO=<ID=DGVID,Number=1,Type=String,Description=\"ID of this element in Database of Genomic Variation\">\n"
 			"##INFO=<ID=END,Number=1,Type=Integer,Description=\"End coordinate of this variant\">\n"
 			"##INFO=<ID=HOMLEN,Number=.,Type=Integer,Description=\"Length of base pair identical micro-homology at event breakpoints\">\n"
@@ -244,10 +241,11 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 			"##FORMAT=<ID=FT,Number=.,Type=String,Description=\"Per-sample genotype filter, PASS for called genotypes or list of excluding filters\">\n"
 			"##FORMAT=<ID=GL,Number=3,Type=Float,Description=\"Genotype Likelihoods\">\n"
 			"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">\n"
-			"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
-                        "##FORMAT=<ID=HS,Number=1,Type=Float,Description=\"10x Barcode Homogeneity Score\">\n"
+ 	                "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
+			"##FORMAT=<ID=HS,Number=1,Type=Float,Description=\"10x Barcode Homogeneity Score\">\n"
 			"##FORMAT=<ID=RD,Number=1,Type=String,Description=\"Read Depth\">\n"
-			"##FORMAT=<ID=RP,Number=1,Type=String,Description=\"Read Pair Support\">\n";
+			"##FORMAT=<ID=RP,Number=1,Type=String,Description=\"Read Pair Support\">\n"
+			"##FORMAT=<ID=SR,Number=1,Type=String,Description=\"Split Read Support\">\n";
 
 	char header_alt[]="##ALT=<ID=DEL,Description=\"Deletion\">\n";
 	time_t rawtime;
@@ -258,6 +256,7 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 
 	fprintf(fpOut,"##fileformat=VCFv4.1\n");
 	fprintf(fpOut, "##fileDate=%d%s%d%s%d\n", timeinfo->tm_year+1900, (timeinfo->tm_mon+1<10 ? "0" : ""), timeinfo->tm_mon+1, (timeinfo->tm_mday<10 ? "0" : ""), timeinfo->tm_mday);
+	/* TODO. Fix this with the SONIC info field */
 	fprintf(fpOut,"##reference=1000GenomesPilot-NCBI37\n");
 	fprintf(fpOut, "%s%s%s%s", header_info,header_filter,header_format,header_alt);
 	fprintf(fpOut, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s","#CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT");
@@ -270,8 +269,8 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 }
 
 
-void free_all(bam_info** in_bams, parameters *params, ref_genome* ref) {
-
+void free_sensitive(bam_info** in_bams, parameters *params, ref_genome* ref)
+{
 	int lib_index, i, j;
 
 	if ( params->run_rd == 1)
@@ -281,20 +280,78 @@ void free_all(bam_info** in_bams, parameters *params, ref_genome* ref) {
 		{
 			for( lib_index = 0; lib_index < in_bams[i]->num_libraries; lib_index++)
 			{
-				for( j = 0; j < RDCHRCOUNT; j++)
+			        for( j = 0; j < params->this_sonic->number_of_chromosomes; j++)
 					free( in_bams[i]->read_depth[j]);
 				free( in_bams[i]->read_depth);
 			}
 		}
 
-		/* Free the GC array */
-		for( i = 0; i < RDCHRCOUNT; i++)
-			free( ref->gc[i]);
-		free( ref->gc);
 	}
-	/* Free the mei table */
-	free( g_meiTable->chroName);
-	free( g_meiTable->subclass);
-	free( g_meiTable->superclass);
-	free( g_meiTable);
+
+	for( i = 0; i < params->num_bams; i++)
+	{
+		free( in_bams[i]->sample_name);
+		for( j = 0; j < in_bams[i]->num_libraries; j++)
+		{
+			free( in_bams[i]->libraries[j]->divet);
+			free( in_bams[i]->libraries[j]->fastq1);
+			free( in_bams[i]->libraries[j]->fastq2);
+			free( in_bams[i]->libraries[j]->libname);
+			free( in_bams[i]->libraries[j]->listSoftClip);
+		}
+		free( in_bams[i]);
+	}
+	free( in_bams);
+
+	free( params->bam_files);
+	free( params->bam_list_path);
+	free( params->dups);
+	free( params->gaps);
+	free( params->mei);
+	free( params->outprefix);
+	free( params->ref_genome);
+	free( params->reps);
+	free( params->sonic_file);
+	free( params);
 }
+
+void free_quick(bam_info** in_bams, parameters *params, ref_genome* ref)
+{
+	int lib_index, i, j;
+
+	
+	/* Free refgenome struct */
+	free( ref->ref_name);
+	free( ref->in_bam);
+	free( ref);
+
+	/* Free bams and related libraries */
+	for( i = 0; i < params->num_bams; i++)
+	{
+		free( in_bams[i]->sample_name);
+		for( j = 0; j < in_bams[i]->num_libraries; j++)
+		{
+			free( in_bams[i]->libraries[j]->divet);
+			free( in_bams[i]->libraries[j]->fastq1);
+			free( in_bams[i]->libraries[j]->fastq2);
+			free( in_bams[i]->libraries[j]->libname);
+			free( in_bams[i]->libraries[j]->listSoftClip);
+		}
+		free( in_bams[i]);
+	}
+	free( in_bams);
+
+	/* Free params struct */
+	free( params->bam_files);
+	free( params->bam_list_path);
+	free( params->dups);
+	free( params->gaps);
+	free( params->mei);
+	free( params->outprefix);
+	free( params->reps);
+	free( params->sonic_file);
+	free( params);
+
+}
+
+

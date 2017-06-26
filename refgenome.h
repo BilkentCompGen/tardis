@@ -20,7 +20,7 @@ void calc_gc(ref_genome** ref);
 void calc_gc_per_chr( ref_genome** ref, int chr_index);
 void init_rd( bam_info* in_bam, parameters* param, ref_genome* ref);
 void init_rd_per_chr( bam_info* in_bam, parameters* param, ref_genome* ref, int chr_index);
-void calc_mean(ref_genome*, bam_info*);
-void calc_mean_per_chr( ref_genome* ref, bam_info* in_bam, int chr_index);
+void calc_mean(ref_genome *, parameters *, bam_info *);
+void calc_mean_per_chr( ref_genome *, parameters *, bam_info *, int);
 
 #endif /* REFGENOME_H_ */

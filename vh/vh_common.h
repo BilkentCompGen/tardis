@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include "vh_logger.h"
 #include "../common.h"
+#include "../sonic/sonic.h"
 
 #define EXIT_CODE_SUCCESS 0	//Exit code for exiting program successfully
 #define EXIT_CODE_ARG_ERROR 1	//Exit code 1 is for error in main's argument list

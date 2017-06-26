@@ -29,15 +29,6 @@ extern long tandup_cnt_div;
 extern long sr_cnt_div;
 extern long sr_cnt_bam;
 
-
-typedef struct EditDist
-{
-	char *readName;
-	double edit;
-
-	struct EditDist *next;
-} EditDist;
-
 int bamonly_run(ref_genome* ref, parameters *params, bam_info ** in_bams);
 
 #endif /* BAMONLY_BO_BAMHANDLER_H_ */

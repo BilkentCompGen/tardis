@@ -32,6 +32,7 @@ typedef struct _bam_info
 
 	enum gender sample_gender; /* gender of the sample */
 	char* sample_name; /* name of the sample, parsed from SM in the BAM header */
+	bool contribution; /* does this individual contribute to the particular SV? - checked in setcover.c */
 	int num_libraries; /* number of libraries, counted from the RG tags in the BAM header */
 	struct library_properties** libraries; /* each library_properties struct holds statistical/other info */
 } bam_info;
