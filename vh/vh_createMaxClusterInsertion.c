@@ -103,10 +103,10 @@ int vh_createBreakPointIntervals_Insertion (int brkPointLeft)
 	while (ptrMappingOnGenome != NULL)
 	{
 		newElAdded = 1;
-		locBrkPointRightTemp = ptrMappingOnGenome->readMappingPtr->libInfo->maxDelta - (ptrMappingOnGenome->readMappingPtr->locMapRightStart -
-				ptrMappingOnGenome->readMappingPtr->locMapLeftEnd);
-		locBrkPointLeftTemp = ptrMappingOnGenome->readMappingPtr->libInfo->minDelta - (ptrMappingOnGenome->readMappingPtr->locMapRightStart -
-				ptrMappingOnGenome->readMappingPtr->locMapLeftEnd);
+		locBrkPointRightTemp = ptrMappingOnGenome->readMappingPtr->libInfo->maxDelta -
+				(ptrMappingOnGenome->readMappingPtr->locMapRightStart - ptrMappingOnGenome->readMappingPtr->locMapLeftEnd);
+		locBrkPointLeftTemp = ptrMappingOnGenome->readMappingPtr->libInfo->minDelta -
+				(ptrMappingOnGenome->readMappingPtr->locMapRightStart - ptrMappingOnGenome->readMappingPtr->locMapLeftEnd);
 		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].locBrkPointRight = locBrkPointRightTemp;
 		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].locBrkPointLeft= locBrkPointLeftTemp;
 		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].key = locBrkPointLeftTemp;
@@ -143,7 +143,7 @@ void vh_createInsertionClusters (int chroSize)
 		newElAdded = 0;
 		newElAdded = vh_createBreakPointIntervals_Insertion (leftBreakPoint);
 		if (newElAdded)
-			vh_createIntersectingIntervals (leftBreakPoint, 1);
+			vh_createIntersectingIntervals (leftBreakPoint, INSERTION);
 	}
-	vh_flushOut (g_listPotClusterFound, leftBreakPoint, 1);
+	vh_flushOut (g_listPotClusterFound, leftBreakPoint, INSERTION);
 }

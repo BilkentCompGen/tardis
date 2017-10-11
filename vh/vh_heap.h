@@ -25,11 +25,13 @@ typedef struct mei_Reads{
 	char orient;
 	int mQual;
 	int MEI_Type; // 0 : Alu +; 1: Alu -; 2: L1 +; 3; L1 -; 4: SVA +; 5; SVA -
+	char* MEI_Class;
 	char* MEI_Subclass;
 	char *libName;
 	char *indName;
 	int libId;
 	int readTypeSupport;// 0: ReadPair, 1: SplitRead (Soft clipping of the beginig of the read, 2: SplitRead (Soft clipping at the end of the read)
+
 	struct mei_Reads *next;
 } mei_Reads;
 

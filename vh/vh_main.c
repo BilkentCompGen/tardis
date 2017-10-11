@@ -5,7 +5,15 @@
 #include "vh_divethandler.h"
 #include "vh_maximalCluster.h"
 #include "vh_intervalhandler.h"
+#include "vh_setcover.h"
+
 FILE *fileOutput = NULL;
+
+int vh_isValid ()
+{
+	//TODO: To be completed. Check for files to exists, etc.
+	return 1;
+}
 
 void vh_quitProgram (int exitCode)
 {
@@ -72,11 +80,6 @@ void vh_pruneAndNormalizeDivets (struct LibraryInfo *lib, double preProsPrune, i
 	}
 }
 
-int vh_cmprReadNameStr (const void *a, const void *b)
-{
-	return strcmp (*(char **) a, *(char **) b);
-}
-
 void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double preProsPrune, char *outputFile, char *outputRead, int overMapLimit)
 {
 	int totalNumUniqueReads = 0;
@@ -86,10 +89,9 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 	int total_lib_count = 0;
 	struct LibraryInfo *newLibInfo, *cursor, *t;
 	char **allReadNameList;
+	FILE *fileOutputReadName;
 
 	int num_bams = params->num_bams;
-	char *gapFileName = params->gaps;
-	char *repeatFileName = params->reps;
 
 	g_maxListBrkPointIntr = MAXLISTBRKPOINTINTR;
 
@@ -139,7 +141,12 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 		}
 	}
 	cursor = g_libInfo;
-	fileOutput = safe_fopen (outputFile, "w");
+
+	if( debug_mode)
+	{
+		fileOutput = safe_fopen (outputFile, "w");
+		fileOutputReadName = safe_fopen (outputRead, "w");
+	}
 
 	for (; cursor; cursor = cursor->next)
 	{
@@ -154,36 +161,50 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 		vh_logInfo (g_loggerMsgBuffer);
 		fprintf(logFile,"%d left after pruning\n",cursor->size);
 	}
-	if (strcmp (outputRead, ""))
+
+	vh_logInfo ("Writing ReadName Sorted");
+	cursor = g_libInfo;
+
+	while (cursor != NULL)
 	{
-		vh_logInfo ("Writing ReadName Sorted");
-		cursor = g_libInfo;
-		FILE *fileOutputReadName;
-		fileOutputReadName = safe_fopen (outputRead, "w");
-		while (cursor != NULL)
-		{
-			totalNumUniqueReads = totalNumUniqueReads + vh_countNumReads (cursor->hash);
-			cursor = cursor->next;
-		}
-		cursor = g_libInfo;
-		allReadNameList = (char **) getMem (totalNumUniqueReads * sizeof (char *));
-
-		/* Put the names of all the reads in allReadNameList and write them to .name file in sorted order */
-		for (; cursor; cursor = cursor->next)
-		{
-			indexStart = vh_exportToArray(cursor->hash, allReadNameList, indexStart);
-		}
-
-		qsort (allReadNameList, totalNumUniqueReads, sizeof (char *),vh_cmprReadNameStr);
-		fprintf (fileOutputReadName, "%i\n", totalNumUniqueReads);
-		fprintf (logFile, "There are %d unique reads \n", totalNumUniqueReads);
-
-		for (count = 0; count < totalNumUniqueReads; count++)
-		{
-			fprintf (fileOutputReadName, "%s\n", allReadNameList[count]);
-		}
-		fclose (fileOutputReadName);
+		totalNumUniqueReads = totalNumUniqueReads + vh_countNumReads (cursor->hash);
+		cursor = cursor->next;
 	}
+	cursor = g_libInfo;
+	allReadNameList = (char **) getMem (totalNumUniqueReads * sizeof (char *));
+
+	/* Put the names of all the reads in allReadNameList and write them to .name file in sorted order */
+	for (; cursor; cursor = cursor->next)
+	{
+		indexStart = vh_exportToArray(cursor->hash, allReadNameList, indexStart);
+	}
+
+	qsort (allReadNameList, totalNumUniqueReads, sizeof (char *),vh_cmprReadNameStr);
+	if( debug_mode)
+		fprintf (fileOutputReadName, "%i\n", totalNumUniqueReads);
+
+	fprintf (logFile, "There are %d unique reads \n", totalNumUniqueReads);
+
+	/* Write the read names to read_names structure for set_cover */
+	read_names = (readEl *) getMem( ( totalNumUniqueReads + 1) * sizeof( readEl));
+
+	for (count = 0; count < totalNumUniqueReads; count++)
+	{
+		if( debug_mode)
+			fprintf (fileOutputReadName, "%s\n", allReadNameList[count]);
+
+		read_names[count].readName = NULL;
+		set_str( &(read_names[count].readName), allReadNameList[count]);
+		read_names[count].readCovered = 0;
+		read_names[count].readId = count;
+		read_names[count].libId = -1;
+		read_names[count].indId = -1;
+		read_names[count].next = NULL;
+	}
+	read_names_count = totalNumUniqueReads;
+
+	if( debug_mode)
+		fclose (fileOutputReadName);
 
 	//TODO: Someone should free the memory allocated for the divets and for the libraryinfos
 	//free(newLibInfo);
@@ -196,13 +217,12 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 	struct LibraryInfo *cursor, *t;
 
 	/* Initialization function */
-
 	vh_init(in_bams, ref, params, preProsPrune, outputFile, outputRead, overMapLimit);
 
 	/* MEI Filtering */
-	mei_count=mei_filtering(ref, params);
-	fprintf(logFile,"%d mobile elements filtered\n",mei_count);
-	sprintf (g_loggerMsgBuffer, "%d mobile elements filtered.",mei_count);
+	mei_count = mei_filtering( ref, params);
+	fprintf(logFile,"%d mobile elements filtered\n", mei_count);
+	sprintf (g_loggerMsgBuffer, "%d mobile elements filtered.", mei_count);
 	vh_logInfo (g_loggerMsgBuffer);
 
 	for (i = 0; i < ref->chrom_count; i++)
@@ -262,10 +282,10 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 		fflush(stderr); */
 
 		/* Mei */
-		vh_initializeReadMapping_MEI (in_bams, params, ref->chrom_names[i], ref->chrom_lengths[i]);
+		initializeReadMapping_MEI (in_bams, params, ref->chrom_names[i], ref->chrom_lengths[i]);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		MEICluster_Region(in_bams, ref->chrom_names[i], ref->chrom_lengths[i]);
+		MEICluster_Region(params, ref->chrom_names[i], ref->chrom_lengths[i]);
 		fprintf(stderr, ".");
 		fflush(stderr);
 		vh_finalizeReadMapping_Mei(ref->chrom_lengths[i]);
@@ -273,7 +293,8 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 		fflush(stderr);
 	}
 	fprintf(stderr, "\n");
-	fclose (fileOutput);
+	if( debug_mode)
+		fclose (fileOutput);
 
 	/* Free g_libInfo and hash */
 	cursor = g_libInfo;
@@ -293,9 +314,50 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 	}
 }
 
-int vh_isValid ()
+int run_vh( ref_genome* ref, parameters *params, bam_info ** in_bams)
 {
-	//TODO: To be completed. Check for files to exists, etc.
-	return 1;
+	int i, j;
+	double preProsPrune= 0.001;
+	int overMapLimit=500;
+	char divetfile[MAX_SEQ];
+	char outputfile[MAX_SEQ];
+	char outputread[MAX_SEQ];
+	char svfile[MAX_SEQ] = {};
+
+	/* Print all structural variations in .vcf format */
+	sprintf( svfile, "%s.vcf", params->outprefix);
+	FILE* fpVcf = safe_fopen( svfile, "w");
+
+	if( debug_mode)
+	{
+		sprintf( outputfile,"%s.clusters", params->outprefix);
+		sprintf( outputread,"%s.name", params->outprefix);
+	}
+
+	for( i = 0; i < params->num_bams; i++)
+	{
+		for ( j = 0; j < in_bams[i]->num_libraries; j++)
+		{
+			sprintf( divetfile, "%s-%s.sam_DIVET.vh",  in_bams[i]->sample_name, in_bams[i]->libraries[j]->libname);
+			set_str( &( in_bams[i]->libraries[j]->divet), divetfile);
+		}
+	}
+	print_vcf_header(fpVcf, in_bams, params);
+
+	vh_logInfo( "Calculating maximal clusters.");
+	if ( !params->skip_vhcluster) // this parameter is only intended for debugging purposes. End users shouldn't use this
+		vh_clustering( in_bams, ref, params, preProsPrune, outputfile, outputread, overMapLimit);
+
+	vh_logInfo( "Applying SET-COVER approximation to find putative structural variation.");
+	vh_setcover( in_bams, params, ref, fpVcf);
+
+	if( debug_mode)
+		fprintf( stderr, "\nTARDIS is complete. Found %d SVs and %d LowQual SVs. Results are in the %s file.", sv_count, sv_lowqual_count, svfile);
+	else
+		fprintf( stderr, "\nTARDIS is complete. Found %d SVs. Results are in the %s file.", sv_count, svfile);
+
+
+
+	return RETURN_SUCCESS;
 }
 

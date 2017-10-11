@@ -30,7 +30,7 @@ void vh_addToGenomeIndex_Inversion (char *chromosome_name)
 				if (divetReadMappingPtr->orientationLeft == 'F' && divetReadMappingPtr->orientationRight == 'F')
 				{
 					newEl->next = g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd];
-					leftWindowEnd = divetReadMappingPtr->locMapLeftEnd + libInfo->maxDelta;
+					//leftWindowEnd = divetReadMappingPtr->locMapLeftEnd + libInfo->maxDelta;
 					g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd] = newEl;
 				}
 				else if (divetReadMappingPtr->orientationLeft == 'R' && divetReadMappingPtr->orientationRight == 'R')
@@ -231,11 +231,12 @@ int vh_createBreakPointIntervals_Inversion (int brkPointLeft)
 		{
 			locBrkPointRightTemp = vh_max (ptrMappingOnGenome->readMappingPtr->locMapRightStart -
 					vh_max (ptrMappingOnGenome->readMappingPtr->libInfo->minDelta -
-							(ptrMappingOnGenome->readMappingPtr->locMapLeftStart -
-									brkPointLeft), 0), ptrMappingOnGenome->readMappingPtr->locMapLeftStart);
+							(ptrMappingOnGenome->readMappingPtr->locMapLeftStart - brkPointLeft), 0),
+							ptrMappingOnGenome->readMappingPtr->locMapLeftStart);
 			locBrkPointLeftTemp = vh_max (ptrMappingOnGenome->readMappingPtr->locMapRightStart -
 					vh_max (ptrMappingOnGenome->readMappingPtr->libInfo->maxDelta -
-							(ptrMappingOnGenome->readMappingPtr->locMapLeftStart - brkPointLeft), 0), ptrMappingOnGenome->readMappingPtr->locMapLeftStart);
+							(ptrMappingOnGenome->readMappingPtr->locMapLeftStart - brkPointLeft), 0),
+							ptrMappingOnGenome->readMappingPtr->locMapLeftStart);
 		}
 
 		g_tempListRightBrkPointIntr[tempListRightBrkPointIntrId].locBrkPointRight = locBrkPointRightTemp;
@@ -274,7 +275,7 @@ void vh_createInversionClusters (int chroSize)
 		newElAdded = 0;
 		newElAdded = vh_createBreakPointIntervals_Inversion (leftBreakPoint);
 		//if (newElAdded) For Inversions we need to check for every new BrkPoint
-		vh_createIntersectingIntervals (leftBreakPoint, 3);
+		vh_createIntersectingIntervals (leftBreakPoint, INVERSION);
 	}
-	vh_flushOut (g_listPotClusterFound, leftBreakPoint, 3);
+	vh_flushOut (g_listPotClusterFound, leftBreakPoint, INVERSION);
 }

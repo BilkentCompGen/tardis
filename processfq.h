@@ -23,7 +23,7 @@ typedef struct read
 	char empty;
 } _read;
 
-struct library_properties
+typedef struct library_properties
 {
 	char* libname; /* id/name of the library */
 	float frag_avg; /* average fragment size */
@@ -42,7 +42,7 @@ struct library_properties
 	struct discordantMapping *listFR_Mapping;
 	struct discordantMapping *listRF_Mapping;
 	struct discordantMappingMEI *listMEI_Mapping;
-};
+} library_properties;
 
 
 /* Function Prototypes */

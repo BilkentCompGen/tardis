@@ -52,7 +52,8 @@ typedef struct DivetRow
 	double editDistance;
 	double phredScore;
 	int divetRowId;
-	char* meiType; //Only for mobile elements 0 : Alu +; 1: Alu -; 2: L1 +; 3; L1 -; 4: SVA +; 5; SVA -
+	char* meiType;
+	int mei_code; //Only for mobile elements 0 : Alu +; 1: Alu -; 2: L1 +; 3; L1 -; 4: SVA +; 5; SVA -
 	char* mei_subclass;
 	unsigned long ten_x_barcode; // Only for 10x genomics data
 
@@ -103,15 +104,14 @@ typedef struct discordantMappingMEI
 {
 	char *chromosome_name; // chromosome_name
 	char *readName;
-	char *subclass;
 	int pos; // the high quality end mapped
 	int pos_End;
 	int qual;
 	char orient; //the high quality end mapped
 	int MEI_Type; // 0: Alu +, 1: Alu -, 2: L1 +, 3: L1 -, 4: SVA +, 5: SVA -,
+	char *MEI_class;
 	char* MEI_subclass;
 	unsigned long ten_x_barcode; // Only for 10x genomics data
-
 	struct discordantMappingMEI *next;
 }discordantMappingMEI;
 

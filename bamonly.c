@@ -10,15 +10,11 @@
 #include <math.h>
 #include "variants.h"
 #include "vh/vh_common.h"
-#include "vh/vh_divethandler.h"
-#include "vh/vh_main.h"
 #include "vh/vh_maximalCluster.h"
 #include "vh/vh_setcover.h"
-#include "vh/vh_intervalhandler.h"
 #include "vh_createMaxClusterMEI.h"
 #include "splitread.h"
-
-int  STR_SIZE = 100; //maximum size of a constant string, such as 10x barcode length
+#include "processfq.h"
 
 long del_cnt_bam = 0;
 long ins_cnt_bam = 0;
@@ -36,543 +32,213 @@ long sr_cnt_div = 0;
 
 char **allReadNameList;
 
-void add_discordant_RR_FF( ref_genome* ref, bam_info *in_bam, parameters* params, bam1_t* bam_alignment, int library_index, int chrID)
+int is_concordant_quick( bam_alignment_region* bam_align, int min, int max)
 {
-	//Assuming the BAM file is sorted by position only add the mapping to linked list if pos<mpos
-	int len, ed, flag;
-	char *rname;
-	int cigar_op[100];
-	int cigar_opl[100];
-	int countOp;
+	int flag = bam_align->flag;
 
-	bam1_core_t bam_alignment_core;
-	bam_alignment_core = bam_alignment->core;
-
-	discordantMapping *newEl;
-	newEl = ( discordantMapping *) getMem( sizeof( discordantMapping));
-
-	/* Get the read name */
-	rname = bam_get_qname( bam_alignment);
-
-	/* Need to be put into into divet row */
-	if ( params->ten_x){
-		newEl->ten_x_barcode = encode_ten_x_barcode(bam_aux_get(bam_alignment, "BX"));
-	}
-
-	flag = bam_alignment_core.flag;
-
-	if( bam_alignment_core.pos < bam_alignment_core.mpos)
+	if( ( flag & BAM_FPAIRED) == 0)
 	{
-		newEl->readName = ( char*) getMem( ( strlen(rname) + 1) * sizeof( char));
-		strcpy( newEl->readName, rname);
-
-		/* Get the name of the chromosome */
-		len = strlen( ref->chrom_names[chrID]);
-		newEl->chromosome_name = ( char *) getMem( sizeof( char) * len + 1);
-		strcpy( newEl->chromosome_name, ref->chrom_names[chrID]);
-
-		newEl->pos1 = bam_alignment_core.pos;
-		newEl->pos2 = bam_alignment_core.mpos;
-		newEl->mQual1 = bam_alignment_core.qual;
-		newEl->mQual2 = 0;
-
-		if( ( flag & BAM_FREVERSE) != 0 && ( flag & BAM_FMREVERSE) != 0)
-		{
-			newEl->orient1 = 'R';
-			newEl->orient2 = 'R';
-		}
-		else if( ( flag & BAM_FREVERSE) == 0 && ( flag & BAM_FMREVERSE) == 0)
-		{
-			newEl->orient1 = 'F';
-			newEl->orient2 = 'F';
-		}
-
-		inv_cnt_bam++;
-		newEl->svType = 'V';
-		ed = bam_aux2i(bam_aux_get( bam_alignment, "NM"));
-		newEl->editDistance = ed;
-
-		for(countOp=0; countOp<bam_alignment_core.n_cigar; countOp++)
-		{
-			cigar_op[countOp]=bam1_cigar(bam_alignment)[countOp] & BAM_CIGAR_MASK;
-			cigar_opl[countOp]=bam1_cigar(bam_alignment)[countOp] >> BAM_CIGAR_SHIFT;
-		}
-
-		newEl->pos1_End = newEl->pos1 + in_bam->libraries[library_index]->read_length;
-
-		if (cigar_op[bam_alignment_core.n_cigar-1]==BAM_CSOFT_CLIP)
-			newEl->pos1_End = newEl->pos1_End - cigar_opl[bam_alignment_core.n_cigar-1];
-		if (cigar_op[0]==BAM_CSOFT_CLIP)
-			newEl->pos1_End = newEl->pos1_End - cigar_opl[0];
-
-		newEl->pos1_End=newEl->pos1_End-1;
-		newEl->pos1=newEl->pos1+1;
-
-		newEl->next = in_bam->libraries[library_index]->listRR_FF_Mapping;
-		in_bam->libraries[library_index]->listRR_FF_Mapping = newEl;
+		/* Read is single-end. Skip this by calling it concordant */
+		return RPCONC;
 	}
-
-	else if( bam_alignment_core.pos > bam_alignment_core.mpos)
+	/*
+	if( ( flag & BAM_FPROPER_PAIR) == 0)
 	{
-		newEl = in_bam->libraries[library_index]->listRR_FF_Mapping;
+		/* Not proper pair
+		return RPUNMAPPED;
+	}*/
 
-		while( newEl != NULL && strcmp( newEl->readName, rname) != 0)
-			newEl = newEl->next;
-
-		if( newEl != NULL)
-		{
-			ed = bam_aux2i(bam_aux_get( bam_alignment, "NM"));
-			newEl->editDistance += ed;
-
-			for(countOp=0; countOp<bam_alignment_core.n_cigar; countOp++)
-			{
-				cigar_op[countOp]=bam1_cigar(bam_alignment)[countOp] & BAM_CIGAR_MASK;
-				cigar_opl[countOp]=bam1_cigar(bam_alignment)[countOp] >> BAM_CIGAR_SHIFT;
-			}
-
-			newEl->pos2_End=newEl->pos2 + in_bam->libraries[library_index]->read_length;
-			if (cigar_op[bam_alignment_core.n_cigar-1]==BAM_CSOFT_CLIP)
-				newEl->pos2_End=newEl->pos2_End-cigar_opl[bam_alignment_core.n_cigar-1];
-
-			if (cigar_op[0]==BAM_CSOFT_CLIP)
-				newEl->pos2_End=newEl->pos2_End-cigar_opl[0];
-
-
-			newEl->pos2_End=newEl->pos2_End-1;
-			newEl->pos2=newEl->pos2+1;
-			newEl->mQual2 = bam_alignment_core.qual;
-		}
-	}
-}
-
-
-void add_discordant_RF( ref_genome* ref, bam_info *in_bam, parameters* params, bam1_t* bam_alignment, int library_index, int chrID)
-{
-	int len, ed, flag;
-	char *rname;
-	int cigar_op[100];
-	int cigar_opl[100];
-	int countOp;
-
-	bam1_core_t bam_alignment_core;
-	bam_alignment_core = bam_alignment->core;
-	discordantMapping *newEl;
-	newEl = ( discordantMapping *) malloc( sizeof( discordantMapping));
-
-	/* Get the read name */
-	rname = bam_get_qname( bam_alignment);
-	flag = bam_alignment_core.flag;
-
-	/* Need to be put into into divet row */        
-	if ( params->ten_x){
-		newEl->ten_x_barcode = encode_ten_x_barcode(bam_aux_get(bam_alignment, "BX"));
-	}
-
-	if( bam_alignment_core.pos <= bam_alignment_core.mpos)
+	if( ( flag & BAM_FUNMAP) != 0)  // c.a.
 	{
-		newEl->readName = ( char*) getMem( ( strlen( rname) + 1) * sizeof( char));
-		strcpy( newEl->readName, rname);
+		/* Read unmapped; Orphan or OEA */
+		return RPUNMAPPED;
+	}
 
-		/* Get the name of the chromosome */
-		len = strlen( ref->chrom_names[chrID]);
-		newEl->chromosome_name = ( char *) getMem( sizeof ( char) * len + 1);
-		strcpy( newEl->chromosome_name, ref->chrom_names[chrID]);
+	if( ( flag & BAM_FMUNMAP) != 0) // c.a.
+	{
+		/* Mate unmapped; Orphan or OEA */
+		return RPUNMAPPED;
+	}
 
-		newEl->pos1 = bam_alignment_core.pos;
-		newEl->pos2 = bam_alignment_core.mpos;
-		newEl->mQual1 = bam_alignment_core.qual;
-		newEl->mQual2 = 0;
+	if( ( flag & BAM_FREVERSE) != 0 && ( flag & BAM_FMREVERSE) != 0)
+	{
+		/* -- orientation = inversion */
+		return RPINV;
+	}
 
+	if( ( flag & BAM_FREVERSE) == 0 && ( flag & BAM_FMREVERSE) == 0)
+	{
+		/* ++ orientation = inversion */
+		return RPINV;
+	}
+
+	if( bam_align->chrID_left != bam_align->chrID_right)
+	{
+		/* On different chromosomes */
+		return RPINTERCHR;
+	}
+
+	if( bam_align->pos_left <= bam_align->pos_right) // c.a.
+	{
+		/* Read is placed BEFORE its mate */
 		if( ( flag & BAM_FREVERSE) != 0 && ( flag & BAM_FMREVERSE) == 0)
 		{
-			newEl->orient1 = 'R';
-			newEl->orient2 = 'F';
+			/* -+ orientation = tandem duplication */
+			return RPTDUP; //was 0 before
 		}
-		else
-			fprintf(stderr, "Error in add_discordant_RF()\n");
-
-		ed = bam_aux2i(bam_aux_get( bam_alignment, "NM"));
-		newEl->editDistance = ed;
-
-		tandup_cnt_bam++;
-		newEl->svType = 'E';
-
-
-		for( countOp=0; countOp<bam_alignment_core.n_cigar; countOp++)
-		{
-			cigar_op[countOp]=bam1_cigar(bam_alignment)[countOp] & BAM_CIGAR_MASK;
-			cigar_opl[countOp]=bam1_cigar(bam_alignment)[countOp] >> BAM_CIGAR_SHIFT;
-		}
-
-		newEl->pos1_End = newEl->pos1 + in_bam->libraries[library_index]->read_length;
-
-		if (cigar_op[bam_alignment_core.n_cigar-1]==BAM_CSOFT_CLIP)
-			newEl->pos1_End = newEl->pos1_End - cigar_opl[bam_alignment_core.n_cigar-1];
-		if (cigar_op[0]==BAM_CSOFT_CLIP)
-			newEl->pos1_End = newEl->pos1_End - cigar_opl[0];
-
-		newEl->pos1_End=newEl->pos1_End-1;
-		newEl->pos1=newEl->pos1+1;
-
-		newEl->next = in_bam->libraries[library_index]->listRF_Mapping;
-		in_bam->libraries[library_index]->listRF_Mapping = newEl;
 	}
-
-	else if( bam_alignment_core.pos > bam_alignment_core.mpos)
+	else
 	{
-		newEl = in_bam->libraries[library_index]->listRF_Mapping;
-		while( newEl != NULL && strncmp( newEl->readName, bam_alignment->data, bam_alignment_core.l_qname) != 0)
-			newEl = newEl->next;
-
-		if( newEl != NULL)
-		{
-			ed = bam_aux2i(bam_aux_get( bam_alignment, "NM"));
-			newEl->editDistance += ed;
-			for(countOp=0; countOp<bam_alignment_core.n_cigar; countOp++)
-			{
-				cigar_op[countOp]=bam1_cigar(bam_alignment)[countOp] & BAM_CIGAR_MASK;
-				cigar_opl[countOp]=bam1_cigar(bam_alignment)[countOp] >> BAM_CIGAR_SHIFT;
-			}
-
-			newEl->pos2_End=newEl->pos2 + in_bam->libraries[library_index]->read_length;
-			if (cigar_op[bam_alignment_core.n_cigar-1]==BAM_CSOFT_CLIP)
-				newEl->pos2_End=newEl->pos2_End-cigar_opl[bam_alignment_core.n_cigar-1];
-
-			if (cigar_op[0]==BAM_CSOFT_CLIP)
-				newEl->pos2_End=newEl->pos2_End-cigar_opl[0];
-
-
-			newEl->pos2_End=newEl->pos2_End-1;
-			newEl->pos2=newEl->pos2+1;
-			newEl->mQual2 = bam_alignment_core.qual;
-		}
-	}
-}
-
-void add_discordant_FR( ref_genome* ref, bam_info *in_bam, parameters* params, bam1_t* bam_alignment, int library_index, int svType, int chrID)
-{
-	int len, ed, flag;
-	char *rname;
-	int cigar_op[100];
-	int cigar_opl[100];
-	int countOp;
-
-	bam1_core_t bam_alignment_core;
-	bam_alignment_core = bam_alignment->core;
-	discordantMapping *newEl;
-	newEl = ( discordantMapping *) getMem( sizeof( discordantMapping));
-
-	/* Get the read name */
-	rname = bam_get_qname( bam_alignment);
-
-	/* Need to be put into into divet row */
-	if ( params->ten_x){
-		newEl->ten_x_barcode = encode_ten_x_barcode(bam_aux_get(bam_alignment, "BX"));
-	}
-
-	flag = bam_alignment_core.flag;
-
-	if( bam_alignment_core.pos < bam_alignment_core.mpos)
-	{
-		newEl->readName = ( char*) getMem( ( strlen( rname) + 1) * sizeof( char));
-		strcpy( newEl->readName, rname);
-
-		/* Get the name of the chromosome */
-		len = strlen( ref->chrom_names[chrID]);
-		newEl->chromosome_name = ( char *) getMem( sizeof ( char) * len + 1);
-		strcpy( newEl->chromosome_name, ref->chrom_names[chrID]);
-
-		newEl->pos1 = bam_alignment_core.pos;
-		newEl->pos2 = bam_alignment_core.mpos;
-		newEl->mQual1 = bam_alignment_core.qual;
-		newEl->mQual2 = 0;
-
+		/* Read is placed AFTER its mate */
 		if( ( flag & BAM_FREVERSE) == 0 && ( flag & BAM_FMREVERSE) != 0)
 		{
-			newEl->orient1 = 'F';
-			newEl->orient2 = 'R';
+			/* +- orientation = tandem duplication */
+			return RPTDUP; //was 0 before
 		}
-		else
-		{
-			fprintf(stderr, "Error in add_discordant_FR()\n");
-		}
-
-		if(svType == RPDEL)
-		{
-			newEl->svType = 'D';
-			del_cnt_bam++;
-		}
-		if(svType == RPINS)
-		{
-			newEl->svType = 'I';
-			ins_cnt_bam++;
-		}
-
-		ed = bam_aux2i(bam_aux_get( bam_alignment, "NM"));
-		newEl->editDistance = ed;
-
-		for(countOp = 0; countOp < bam_alignment_core.n_cigar; countOp++)
-		{
-			cigar_op[countOp] = bam1_cigar( bam_alignment)[countOp] & BAM_CIGAR_MASK;
-			cigar_opl[countOp] = bam1_cigar( bam_alignment)[countOp] >> BAM_CIGAR_SHIFT;
-		}
-
-		newEl->pos1_End = newEl->pos1 + in_bam->libraries[library_index]->read_length;
-
-		if( cigar_op[bam_alignment_core.n_cigar-1] == BAM_CSOFT_CLIP)
-			newEl->pos1_End = newEl->pos1_End - cigar_opl[bam_alignment_core.n_cigar - 1];
-
-		if( cigar_op[0] == BAM_CSOFT_CLIP)
-			newEl->pos1_End = newEl->pos1_End - cigar_opl[0];
-
-		newEl->pos1_End = newEl->pos1_End - 1;
-		newEl->pos1 = newEl->pos1 + 1;
-
-
-		newEl->next = in_bam->libraries[library_index]->listFR_Mapping;
-		in_bam->libraries[library_index]->listFR_Mapping = newEl;
 	}
-	else if( bam_alignment_core.pos > bam_alignment_core.mpos)
-	{
-		newEl = in_bam->libraries[library_index]->listFR_Mapping;
-		while( newEl != NULL && strncmp( newEl->readName, bam_alignment->data, bam_alignment_core.l_qname) != 0)
-			newEl = newEl->next;
 
-		if( newEl != NULL)
+	/* Passed all of the above. proper pair, both mapped, in +- orientation. Now check the isize */
+	if( abs( bam_align->isize) < min) // c.a.
+	{
+		/* Deletion or Insertion */
+		return RPINS;
+	}
+	else if( abs( bam_align->isize) > max)
+	{
+		return RPDEL;
+	}
+
+	/* All passed. Read is concordant */
+	return RPCONC;
+}
+
+
+void free_alignments( bam_alignment_region* bam_align)
+{
+	int i;
+	bam_alignment_region* bam_align_next;
+
+	while( ( bam_align) != NULL)
+	{
+		bam_align_next = (bam_align)->next;
+		free( bam_align);
+		bam_align = bam_align_next;
+	}
+	bam_align = NULL;
+}
+
+
+/* Get the alternative mapping locations from the XA field of bam file */
+void get_alt_mappings( ref_genome* ref, library_properties * library, bam1_core_t bam_alignment_core, bam_hdr_t* bam_header,
+		bam_alignment_region** alt_map, char* xa_string, int map_limit)
+{
+	int i, j, k, cigar_count, mapping_count = 0;
+	uint32_t cigar_op, cigar_opl, cigar_opl_shifted, cigar_final;
+	char *tok, *tok2, a[4][200];
+	char str[1024], num[3];
+	bam_alignment_region* new_mapping;
+
+	strcpy( str, xa_string);
+	//fprintf(stderr,"\n\n\n\n\n\nMAIN= %s\n", str);
+
+	tok = strchr( str, ';');
+	while (tok != NULL)
+	{
+		*tok++ = '\0';
+		i = 0;
+		tok2 = strtok(str, ",");
+
+		while (tok2 != NULL)
 		{
-			ed = bam_aux2i(bam_aux_get( bam_alignment, "NM"));
-			newEl->editDistance += ed;
-			for( countOp = 0; countOp < bam_alignment_core.n_cigar; countOp++)
+			strcpy( a[i], tok2);
+			i++;
+			tok2 = strtok( NULL, ",");
+		}
+		new_mapping = ( bam_alignment_region*) getMem( sizeof( bam_alignment_region));
+		new_mapping->chrID_left = find_chr_index_bam( ref, a[0], bam_header);
+		new_mapping->pos_left = atoi( a[1] + 1);
+		new_mapping->chrID_right = bam_alignment_core.mtid;
+		new_mapping->pos_right = bam_alignment_core.mpos;
+		new_mapping->flag = bam_alignment_core.flag;
+
+		//fprintf(stderr,"%d - ",new_mapping->flag);
+		if( a[1][0] == '-')
+			new_mapping->flag = new_mapping->flag | BAM_FREVERSE;
+		else if( a[1][0] == '+')
+			new_mapping->flag = new_mapping->flag & 0xFFEF;
+
+		if( new_mapping->chrID_left != new_mapping->chrID_right)
+			new_mapping->isize = 0;
+
+		/*If left pair is forward */
+		else if(  new_mapping->flag & BAM_FREVERSE == 0)
+		{
+			/*If right pair is reverse */
+			if( bam_alignment_core.flag & BAM_FMREVERSE != 0)
+				new_mapping->isize = (new_mapping->pos_right + library->read_length)  - (new_mapping->pos_left);
+			else
+				new_mapping->isize = new_mapping->pos_right - new_mapping->pos_left;
+		}
+		/*If left pair is reverse */
+		else if(  new_mapping->flag & BAM_FREVERSE != 0)
+		{
+			/*If right pair is reverse */
+			if(  bam_alignment_core.flag & BAM_FMREVERSE != 0)
+				new_mapping->isize = (new_mapping->pos_right + library->read_length) - (new_mapping->pos_left + library->read_length);
+			else
+				new_mapping->isize = (new_mapping->pos_right) - (new_mapping->pos_left + library->read_length);
+		}
+
+		/* Cigar */
+		j = 0;
+		cigar_count = 0;
+		new_mapping->cigar = (uint32_t*) getMem( 20 * sizeof( uint32_t));
+
+		while( a[2][j] != '\0')
+		{
+			k = 0;
+			while( isdigit( a[2][j]))
 			{
-				cigar_op[countOp] = bam1_cigar( bam_alignment)[countOp] & BAM_CIGAR_MASK;
-				cigar_opl[countOp] = bam1_cigar( bam_alignment)[countOp] >> BAM_CIGAR_SHIFT;
+				num[k] = a[2][j];
+				k++;
+				j++;
+			}
+			num[k] = '\0';
+			cigar_opl = atoi( num);
+			cigar_opl_shifted = cigar_opl << 4;
+
+			switch( a[2][j])
+			{
+			case 'M': cigar_op = 0; break;
+			case 'I': cigar_op = 1; break;
+			case 'D': cigar_op = 2;	break;
+			case 'N': cigar_op = 4; break;
 			}
 
-			newEl->pos2_End = newEl->pos2 + in_bam->libraries[library_index]->read_length;
-			if( cigar_op[bam_alignment_core.n_cigar-1] == BAM_CSOFT_CLIP)
-				newEl->pos2_End = newEl->pos2_End - cigar_opl[bam_alignment_core.n_cigar-1];
+			cigar_final = cigar_op | cigar_opl_shifted;
+			//fprintf(stderr, "%s - op=0x%.8X opl=0x%.8X opl_shifted=0x%.8X final=0x%.8X\n\n",a[2], cigar_op, cigar_opl, cigar_opl_shifted, cigar_final );
 
-			if( cigar_op[0] == BAM_CSOFT_CLIP)
-				newEl->pos2_End = newEl->pos2_End - cigar_opl[0];
-
-			newEl->pos2_End = newEl->pos2_End - 1;
-			newEl->pos2 = newEl->pos2 + 1;
-			newEl->mQual2 = bam_alignment_core.qual;
+			j++;
+			new_mapping->cigar[cigar_count] = cigar_final;
+			cigar_count++;
 		}
+
+		new_mapping->n_cigar = cigar_count;
+		new_mapping->edit_distance = atoi( a[3]);
+		new_mapping->next = *alt_map;
+		*alt_map = new_mapping;
+
+		//fprintf(stderr,"INNN %d %d %d\n", new_mapping->chrID_left, new_mapping->pos_left, new_mapping->n_cigar);
+
+		strcpy( str, tok);
+		tok = strchr( str, ';');
+
+		mapping_count++;
+		if( mapping_count == map_limit)
+			break;
 	}
 }
 
-void add_discordant_MEI( ref_genome* ref, bam_info * in_bam, parameters* params, bam1_t* bam_alignment, char* mei_subclass, int library_index, int MEI_Type, int chrID)
-{
-	int len, flag;
-	char *rname;
-	int countOp, cigar_op, cigar_opl;
-
-	bam1_core_t bam_alignment_core;
-	bam_alignment_core = bam_alignment->core;
-	discordantMappingMEI *newEl;
-	newEl = ( discordantMappingMEI *) getMem( sizeof( discordantMappingMEI));
-
-	/* Get the read name */
-	rname = bam_get_qname(bam_alignment);
-
-	/* Need to be put into into divet row */        
-	if ( params->ten_x){
-		newEl->ten_x_barcode = encode_ten_x_barcode(bam_aux_get(bam_alignment, "BX"));
-	}
-
-	flag = bam_alignment_core.flag;
-
-	newEl->readName = NULL;
-	set_str( &(newEl->readName), rname);
-
-	/* Get the name of the chromosome */
-	len = strlen( ref->chrom_names[chrID]);
-	newEl->chromosome_name = NULL;
-	set_str( &(newEl->chromosome_name), ref->chrom_names[chrID]);
-
-	/* Get the name of the mei */
-	len = strlen( mei_subclass);
-	newEl->MEI_subclass = NULL;
-
-	set_str( &(newEl->MEI_subclass), mei_subclass);
-
-	newEl->pos = bam_alignment_core.pos;
-	newEl->qual = bam_alignment_core.qual;
-
-	if( ( flag & BAM_FREVERSE) != 0)
-		newEl->orient = 'R';
-	else
-		newEl->orient='F';
-
-	mei_cnt_bam++;
-	newEl->MEI_Type = MEI_Type;
-
-	newEl->pos_End = newEl->pos;
-	for( countOp = 0; countOp < bam_alignment_core.n_cigar; countOp++)
-	{
-		cigar_op = bam1_cigar(bam_alignment)[countOp] & BAM_CIGAR_MASK;
-		cigar_opl = bam1_cigar(bam_alignment)[countOp] >> BAM_CIGAR_SHIFT;
-		if (cigar_op == BAM_CMATCH)
-			newEl->pos_End = newEl->pos_End + cigar_opl;
-	}
-
-	newEl->next = in_bam->libraries[library_index]->listMEI_Mapping;
-	in_bam->libraries[library_index]->listMEI_Mapping = newEl;
-}
-
-
-int find_mei_bam(ref_genome* ref, parameters *params, char *chromosome_name, char** mei_subclass, int start, int end, int flag)
-{
-	int ind, len;
-	int return_type = NOTMEI;
-
-	/* char* MEI_Type; */
-
-	sonic_repeat *repeat_item;
-
-	/* Check if the right end is inside the annotated transposon */
-
-	repeat_item = sonic_is_mobile_element( params->this_sonic, chromosome_name, start, end, params->mei );
-	if( repeat_item == NULL)
-		return NOTMEI;
-
-	(*mei_subclass) = NULL;
-	set_str( mei_subclass, repeat_item->repeat_type);
-
-	/*IF THE MEI INSERT IS + STRAND UPPERCASE, IF - STRAND LOWER CASE*/
-
-	/* ARDA: this MEI_Type issue should be fixed. DO NOT hardcode anything. */
-
-
-	/* NOTE: SONIC keeps repeat_class as SINE/Alu, LINE/L1, etc. */
-
-	if( ( ( flag & BAM_FMREVERSE) == 0 && repeat_item->strand == SONIC_STRAND_REV)
-			|| ( ( flag & BAM_FMREVERSE) != 0 && repeat_item->strand == SONIC_STRAND_FWD))
-	{
-		if( repeat_item->repeat_type[0] == 'A')
-			return_type = 0;
-		else if( repeat_item->repeat_type[0] == 'L')
-			return_type = 2;
-		else if( repeat_item->repeat_type[0] == 'S')
-			return_type = 4;
-	}
-	else
-	{
-		if( repeat_item->repeat_type[0] == 'A')
-			return_type = 1;
-		else if( repeat_item->repeat_type[0] == 'L')
-			return_type = 3;
-		else if( repeat_item->repeat_type[0] == 'S')
-			return_type = 5;
-	}
-
-	return return_type;
-
-}
-
-
-void read_bam(bam_info* in_bam, parameters* params, ref_genome* ref, bam_hdr_t* bam_header)
-{
-	/* Variables */
-	int lib_index, meiType, ind, i, window_start, window_end;
-	int left_end_id, right_end_id, svType, flag;
-	char* library_name = NULL, *chr_name;
-	int32_t *bamToRefIndex;
-	int cigar_op[100], cigar_opl[100];
-	char* mei_subclass;
-	bam1_core_t bam_alignment_core;
-	bam1_t* bam_alignment;
-
-
-	bam_alignment = bam_init1();
-
-	/* The array is used to map the chromosome indices in bam file to the ones in reference genome in case there is a difference */
-	bamToRefIndex = ( int *) getMem( bam_header->n_targets * sizeof( int32_t));
-	for( i = 0; i < bam_header->n_targets; i++)
-	{
-		bamToRefIndex[i] = sonic_refind_chromosome_index(params->this_sonic, bam_header->target_name[i]);
-		//fprintf(stderr, "%d - %d\n", i, bamToRefIndex[i]);
-	}
-
-	while( bam_itr_next( in_bam->bam_file, in_bam->iter, bam_alignment) > 0)
-	{
-		bam_alignment_core = bam_alignment->core;
-
-		/* Make sure the chromosome name is within the correct range */
-		if( bam_alignment_core.tid >= 0 && bam_alignment_core.tid < params->this_sonic->number_of_chromosomes &&
-				bam_alignment_core.mtid >= 0 && bam_alignment_core.mtid < params->this_sonic->number_of_chromosomes)
-		{
-			left_end_id = bamToRefIndex[bam_alignment_core.tid];
-			right_end_id = bamToRefIndex[bam_alignment_core.mtid];
-		}
-		else
-			continue;
-
-		/* Get library index */
-		set_str( &library_name, bam_aux_get( bam_alignment, "RG"));
-		lib_index = find_library_index( in_bam, library_name + 1);
-
-		flag = bam_alignment_core.flag;
-
-		/* Increase the read depth and read count */
-		in_bam->read_depth_per_chr[bam_alignment_core.pos]++;
-		in_bam->read_count++;
-
-		if( right_end_id >= params->this_sonic->number_of_chromosomes || right_end_id < 0)
-			continue;
-
-		if( !sonic_is_satellite(params->this_sonic, ref->chrom_names[left_end_id], bam_alignment_core.pos, bam_alignment_core.pos+bam_alignment_core.l_qseq)
-				&& !sonic_is_satellite( params->this_sonic, ref->chrom_names[right_end_id], bam_alignment_core.mpos, bam_alignment_core.mpos+bam_alignment_core.l_qseq))
-		{
-			// Remove the paired-ends that both end overlap each other
-			if( is_proper( flag) && !( ( left_end_id == right_end_id) && ( abs( bam_alignment_core.pos - bam_alignment_core.mpos) < 100)))
-			{
-				svType = is_concordant( bam_alignment_core, in_bam->libraries[lib_index]->conc_min, in_bam->libraries[lib_index]->conc_max);
-
-				/* Inversion */
-				if( svType == RPINV && left_end_id == right_end_id && abs( bam_alignment_core.pos - bam_alignment_core.mpos) < MAX_INV_LEN)
-					add_discordant_RR_FF( ref, in_bam, params, bam_alignment, lib_index, left_end_id);
-
-				if( svType != RPCONC && bam_alignment_core.qual > params->mq_threshold)
-				{
-					if( ( svType == RPDEL || svType == RPINS) && left_end_id == right_end_id)	/* Deletion or Insertion */
-						add_discordant_FR( ref, in_bam, params, bam_alignment, lib_index, svType, left_end_id);
-
-					else if( svType == RPTDUP && left_end_id == right_end_id)	/* Tandem Duplication */
-						add_discordant_RF( ref, in_bam, params, bam_alignment, lib_index, left_end_id);
-
-					/* MEI */
-					meiType = find_mei_bam( ref, params, ref->chrom_names[right_end_id], &mei_subclass, bam_alignment_core.mpos,
-							bam_alignment_core.mpos + in_bam->libraries[lib_index]->read_length, flag);
-
-					if (meiType != NOTMEI && ( left_end_id != right_end_id ||
-							abs( bam_alignment_core.mpos - bam_alignment_core.pos) > MIN_MEI_DISTANCE))
-						add_discordant_MEI( ref, in_bam, params, bam_alignment, mei_subclass, lib_index, meiType, left_end_id);
-				}
-				if( !params->no_soft_clip)
-				{
-					/* Soft Clipping */
-					if( bam_alignment_core.qual > params->mq_threshold && bam_alignment_core.n_cigar < 3)
-					{
-						for( i = 0; i < bam_alignment_core.n_cigar; i++)
-						{
-							cigar_op[i] = bam1_cigar(bam_alignment)[i] & BAM_CIGAR_MASK;
-							cigar_opl[i] = bam1_cigar(bam_alignment)[i] >> BAM_CIGAR_SHIFT;
-						}
-						if( ( cigar_op[0] == BAM_CSOFT_CLIP && cigar_opl[0] > MIN_SOFTCLIP_LEN) ||
-								( cigar_op[bam_alignment_core.n_cigar - 1] == BAM_CSOFT_CLIP && cigar_opl[bam_alignment_core.n_cigar - 1] > MIN_SOFTCLIP_LEN))
-							addSoftClip( ref, in_bam, bam_alignment, lib_index, flag, cigar_op, cigar_opl, left_end_id);
-					}
-				}
-			}
-		}
-	}
-	bam_destroy1( bam_alignment);
-	free(bamToRefIndex);
-	fprintf( stderr, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI clusters and %li split reads found in BAM.\n", del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam);
-	fprintf( logFile, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI clusters and %li split reads found in BAM.\n", del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam);
-}
 
 void findUniqueReads( bam_info** in_bam, parameters *params, ref_genome* ref, char *outputread)
 {
@@ -580,14 +246,14 @@ void findUniqueReads( bam_info** in_bam, parameters *params, ref_genome* ref, ch
 	int totalCountRead = 0;
 	long read_name_count;
 
-
 	softClip *softClipPtr;
 	discordantMappingMEI *discordantReadPtrMEI;
 	discordantMapping *discordantReadPtr;
 
 	FILE *fileOutputReadName;
-	fileOutputReadName = safe_fopen ( outputread, "w");
 
+	if( debug_mode)
+		fileOutputReadName = safe_fopen ( outputread, "w");
 
 	allReadNameList = ( char **) getMem ( ( total_read_count + 1) * sizeof ( char *));
 	if( allReadNameList == NULL)
@@ -655,15 +321,34 @@ void findUniqueReads( bam_info** in_bam, parameters *params, ref_genome* ref, ch
 		if ( i == 0 || strcmp( allReadNameList[i], allReadNameList[i-1]) != 0)
 			totalCountRead++;
 	}
-	fprintf( fileOutputReadName, "%i\n", totalCountRead);
+	if( debug_mode)
+		fprintf( fileOutputReadName, "%i\n", totalCountRead);
+
+	/* Write the read names to read_names structure for set_cover */
+	read_names = (readEl *) getMem( ( read_name_count + 1) * sizeof( readEl));
+	j = 0;
 
 	for( i = 0; i < read_name_count; i++)
 	{
 		if( i == 0 || strcmp( allReadNameList[i], allReadNameList[i-1]) != 0)
-			fprintf( fileOutputReadName, "%s\n", allReadNameList[i]);
-	}
+		{
+			if( debug_mode)
+				fprintf( fileOutputReadName, "%s\n", allReadNameList[i]);
 
-	fclose( fileOutputReadName);
+			read_names[j].readName = NULL;
+			set_str( &(read_names[j].readName), allReadNameList[i]);
+			read_names[j].readCovered = 0;
+			read_names[j].readId = j;
+			read_names[j].libId = -1;
+			read_names[j].indId = -1;
+			read_names[j].next = NULL;
+			j++;
+		}
+	}
+	read_names_count = j;
+
+	if( debug_mode)
+		fclose( fileOutputReadName);
 
 	for( i = 0; i < total_read_count; i++)
 	{
@@ -677,7 +362,7 @@ void findUniqueReads( bam_info** in_bam, parameters *params, ref_genome* ref, ch
 }
 
 
-void load_Divet_bam( bam_info** in_bams, ref_genome* ref, parameters *params, int chr_index)
+int load_Divet_bam( bam_info** in_bams, ref_genome* ref, parameters *params, int chr_index)
 {
 	int lib_cnt, read_cnt;
 	int j, bam_index, chr, divet_row_count = 0;
@@ -711,10 +396,9 @@ void load_Divet_bam( bam_info** in_bams, ref_genome* ref, parameters *params, in
 			newLibInfo->size = 0;
 			newLibInfo->next = NULL;
 
-			divet_row_count += read_Divet_bam( in_bams[bam_index]->libraries[lib_cnt]->listFR_Mapping, params, ref, newLibInfo, chr_index, divet_row_count);
-			divet_row_count += read_Divet_bam( in_bams[bam_index]->libraries[lib_cnt]->listRF_Mapping, params, ref, newLibInfo, chr_index, divet_row_count);
-			divet_row_count += read_Divet_bam( in_bams[bam_index]->libraries[lib_cnt]->listRR_FF_Mapping, params, ref, newLibInfo, chr_index, divet_row_count);
-
+			divet_row_count = read_Divet_bam( in_bams[bam_index]->libraries[lib_cnt]->listFR_Mapping, params, ref, newLibInfo, chr_index, divet_row_count);
+			divet_row_count = read_Divet_bam( in_bams[bam_index]->libraries[lib_cnt]->listRF_Mapping, params, ref, newLibInfo, chr_index, divet_row_count);
+			divet_row_count = read_Divet_bam( in_bams[bam_index]->libraries[lib_cnt]->listRR_FF_Mapping, params, ref, newLibInfo, chr_index, divet_row_count);
 			if( g_libInfo == NULL)
 				g_libInfo = newLibInfo;
 			else                  //add to the end of the linked list
@@ -749,7 +433,7 @@ void load_Divet_bam( bam_info** in_bams, ref_genome* ref, parameters *params, in
 				newLibInfo->size = 0;
 				newLibInfo->next = NULL;
 
-				read_Divet_bam_softClip( in_bams[bam_index]->libraries[lib_cnt]->listSoftClip, params, ref, newLibInfo, chr_index, newLibInfo->readLen, divet_row_count);
+				divet_row_count = read_Divet_bam_softClip( in_bams[bam_index]->libraries[lib_cnt]->listSoftClip, params, ref, newLibInfo, chr_index, newLibInfo->readLen, divet_row_count);
 
 				if( g_libInfo == NULL)
 				{
@@ -764,6 +448,7 @@ void load_Divet_bam( bam_info** in_bams, ref_genome* ref, parameters *params, in
 			}
 		}
 	}
+	return divet_row_count;
 }
 
 void free_mappings( bam_info** in_bams, ref_genome* ref, parameters* params)
@@ -794,7 +479,7 @@ void free_mappings( bam_info** in_bams, ref_genome* ref, parameters* params)
 			in_bams[bam_index]->libraries[i]->listRR_FF_Mapping = NULL;
 
 			ptrDisMap = in_bams[bam_index]->libraries[i]->listRF_Mapping;
-			while( ptrDisMap!=NULL)
+			while( ptrDisMap != NULL)
 			{
 				ptrDisMapNext = ptrDisMap->next;
 				if( ptrDisMap->readName != NULL)
@@ -869,7 +554,7 @@ void freeAll( bam_info** in_bams, ref_genome* ref, parameters* params)
 	for( bam_index = 0; bam_index < params->num_bams; bam_index++)
 	{
 		/* Free the read depth array*/
-		free(in_bams[bam_index]->read_depth_per_chr);
+		free( in_bams[bam_index]->read_depth_per_chr);
 	}
 	//free( ref->gc_per_chr);
 
@@ -880,7 +565,7 @@ void freeAll( bam_info** in_bams, ref_genome* ref, parameters* params)
 	sr_cnt_div = 0;
 
 	libInfo = g_libInfo;
-	while( libInfo!= NULL)
+	while( libInfo != NULL)
 	{
 		libInfoNext = libInfo->next;
 		for( i = 0; i < NHASH; i++)
@@ -909,18 +594,536 @@ void freeAll( bam_info** in_bams, ref_genome* ref, parameters* params)
 	g_libInfo = NULL;
 }
 
+void add_discordant_RR_FF( ref_genome* ref, library_properties *library, parameters* params, bam1_t* bam_alignment, bam_alignment_region* bam_align, int chrID)
+{
+	int len;
+
+	bam1_core_t bam_alignment_core = bam_alignment->core;
+
+	discordantMapping *newEl;
+	newEl = ( discordantMapping *) getMem( sizeof( discordantMapping));
+
+	/* Need to be put into into divet row */
+	if ( params->ten_x)
+		newEl->ten_x_barcode = encode_ten_x_barcode(bam_aux_get( bam_alignment, "BX"));
+
+	/* Get the read name */
+	char* read_name = bam_get_qname( bam_alignment);
+
+	if( bam_align->pos_left < bam_align->pos_right)
+	{
+		newEl->readName = NULL;
+		set_str( &(newEl->readName), bam_get_qname(bam_alignment));
+
+		/* Get the name of the chromosome */
+		len = strlen( ref->chrom_names[chrID]);
+		newEl->chromosome_name = ( char *) getMem( sizeof( char) * len + 1);
+		strcpy( newEl->chromosome_name, ref->chrom_names[chrID]);
+
+		newEl->pos1 = bam_align->pos_left;
+		newEl->pos2 = bam_align->pos_right;
+		newEl->mQual1 = bam_alignment_core.qual;
+		newEl->mQual2 = 0;
+
+		if( ( bam_align->flag & BAM_FREVERSE) != 0 && ( bam_align->flag & BAM_FMREVERSE) != 0)
+		{
+			newEl->orient1 = 'R';
+			newEl->orient2 = 'R';
+		}
+		else if( ( bam_align->flag & BAM_FREVERSE) == 0 && ( bam_align->flag & BAM_FMREVERSE) == 0)
+		{
+			newEl->orient1 = 'F';
+			newEl->orient2 = 'F';
+		}
+
+		inv_cnt_bam++;
+		newEl->svType = INVERSION;
+		newEl->editDistance = bam_align->edit_distance;
+
+		newEl->pos1_End = newEl->pos1 + library->read_length;
+
+		if( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S')
+			newEl->pos1_End = newEl->pos1_End - bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]);
+
+		if( bam_cigar_opchr( bam_align->cigar[0]) == 'S')
+			newEl->pos1_End = newEl->pos1_End - bam_cigar_oplen( bam_align->cigar[0]);
+
+		newEl->pos1_End = newEl->pos1_End - 1;
+		newEl->pos1 = newEl->pos1 + 1;
+
+		newEl->next = library->listRR_FF_Mapping;
+		library->listRR_FF_Mapping = newEl;
+	}
+
+	else if( bam_align->pos_left > bam_align->pos_right)
+	{
+		newEl = library->listRR_FF_Mapping;
+
+		while( newEl != NULL && strcmp( newEl->readName, read_name) != 0)
+			newEl = newEl->next;
+
+		if( newEl != NULL)
+		{
+			newEl->editDistance += bam_align->edit_distance;
+
+			newEl->pos2_End = newEl->pos2 + library->read_length;
+			if( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S')
+				newEl->pos2_End = newEl->pos2_End - bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]);
+
+			if( bam_cigar_opchr( bam_align->cigar[0]) == 'S')
+				newEl->pos2_End = newEl->pos2_End - bam_cigar_oplen( bam_align->cigar[0]);
+
+
+			newEl->pos2_End = newEl->pos2_End - 1;
+			newEl->pos2 = newEl->pos2 + 1;
+			newEl->mQual2 = bam_alignment_core.qual;
+		}
+	}
+}
+
+
+void add_discordant_RF( ref_genome* ref, library_properties *library, parameters* params, bam1_t* bam_alignment, bam_alignment_region* bam_align, int chrID)
+{
+	int len;
+
+	bam1_core_t bam_alignment_core = bam_alignment->core;
+
+	discordantMapping *newEl;
+	newEl = ( discordantMapping *) getMem( sizeof( discordantMapping));
+
+	/* Need to be put into into divet row */
+	if ( params->ten_x)
+		newEl->ten_x_barcode = encode_ten_x_barcode(bam_aux_get( bam_alignment, "BX"));
+
+	if( bam_align->pos_left < bam_align->pos_right)
+	{
+		newEl->readName = NULL;
+		set_str( &(newEl->readName), bam_get_qname(bam_alignment));
+
+		/* Get the name of the chromosome */
+		len = strlen( ref->chrom_names[chrID]);
+		newEl->chromosome_name = ( char *) getMem( sizeof ( char) * len + 1);
+		strcpy( newEl->chromosome_name, ref->chrom_names[chrID]);
+
+		newEl->pos1 = bam_align->pos_left;
+		newEl->pos2 = bam_align->pos_right;
+		newEl->mQual1 = bam_alignment_core.qual;
+		newEl->mQual2 = 0;
+
+		if( ( bam_align->flag & BAM_FREVERSE) != 0 && ( bam_align->flag & BAM_FMREVERSE) == 0)
+		{
+			newEl->orient1 = 'R';
+			newEl->orient2 = 'F';
+		}
+		else
+			fprintf(stderr, "Error in add_discordant_RF()\n");
+
+		newEl->editDistance = bam_align->edit_distance;
+
+		tandup_cnt_bam++;
+		newEl->svType = TANDEMDUP;
+
+
+		newEl->pos1_End = newEl->pos1 + library->read_length;
+
+		if( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S')
+			newEl->pos1_End = newEl->pos1_End - bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]);
+
+		if( bam_cigar_opchr( bam_align->cigar[0]) == 'S')
+			newEl->pos1_End = newEl->pos1_End - bam_cigar_oplen( bam_align->cigar[0]);
+
+		newEl->pos1_End = newEl->pos1_End - 1;
+		newEl->pos1 = newEl->pos1 + 1;
+
+		newEl->next = library->listRF_Mapping;
+		library->listRF_Mapping = newEl;
+	}
+
+	else if( bam_align->pos_left > bam_align->pos_right)
+	{
+		newEl = library->listRF_Mapping;
+		while( newEl != NULL && strncmp( newEl->readName, bam_alignment->data, bam_alignment_core.l_qname) != 0)
+			newEl = newEl->next;
+
+		if( newEl != NULL)
+		{
+			newEl->editDistance += bam_align->edit_distance;
+
+			newEl->pos2_End = newEl->pos2 + library->read_length;
+			if( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S')
+				newEl->pos2_End = newEl->pos2_End - bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]);
+
+			if( bam_cigar_opchr( bam_align->cigar[0]) == 'S')
+				newEl->pos2_End = newEl->pos2_End - bam_cigar_oplen( bam_align->cigar[0]);
+
+			newEl->pos2_End = newEl->pos2_End - 1;
+			newEl->pos2 = newEl->pos2 + 1;
+			newEl->mQual2 = bam_alignment_core.qual;
+		}
+	}
+}
+
+void add_discordant_FR( ref_genome* ref, library_properties *library, parameters* params, bam1_t* bam_alignment, bam_alignment_region* bam_align, int svType, int chrID)
+{
+	int len;
+
+	bam1_core_t bam_alignment_core = bam_alignment->core;
+
+	discordantMapping *newEl;
+	newEl = ( discordantMapping *) getMem( sizeof( discordantMapping));
+
+	/* Need to be put into into divet row */
+	if ( params->ten_x)
+		newEl->ten_x_barcode = encode_ten_x_barcode(bam_aux_get( bam_alignment, "BX"));
+
+	if( bam_align->pos_left < bam_align->pos_right)
+	{
+		newEl->readName = NULL;
+		set_str( &(newEl->readName), bam_get_qname( bam_alignment));
+
+		/* Get the name of the chromosome */
+		len = strlen( ref->chrom_names[chrID]);
+		newEl->chromosome_name = ( char *) getMem( sizeof ( char) * len + 1);
+		strcpy( newEl->chromosome_name, ref->chrom_names[chrID]);
+
+		newEl->pos1 = bam_align->pos_left;
+		newEl->pos2 = bam_align->pos_right;
+		newEl->mQual1 = bam_alignment_core.qual;
+		newEl->mQual2 = 0;
+
+		if( ( bam_align->flag & BAM_FREVERSE) == 0 && ( bam_align->flag & BAM_FMREVERSE) != 0)
+		{
+			newEl->orient1 = 'F';
+			newEl->orient2 = 'R';
+		}
+		else
+		{
+			fprintf(stderr, "Error in add_discordant_FR() - flag:%016x\n", bam_align->flag);
+		}
+
+		if( svType == RPDEL)
+		{
+			newEl->svType = DELETION;
+			del_cnt_bam++;
+		}
+		if( svType == RPINS)
+		{
+			newEl->svType = INSERTION;
+			ins_cnt_bam++;
+		}
+
+		newEl->editDistance = bam_align->edit_distance;
+
+		newEl->pos1_End = newEl->pos1 + library->read_length;
+
+		if( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S')
+			newEl->pos1_End = newEl->pos1_End - bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]);
+
+		if( bam_cigar_opchr( bam_align->cigar[0]) == 'S')
+			newEl->pos1_End = newEl->pos1_End - bam_cigar_oplen( bam_align->cigar[0]);
+
+		newEl->pos1_End = newEl->pos1_End - 1;
+		newEl->pos1 = newEl->pos1 + 1;
+
+		newEl->pos2_End = newEl->pos2 + library->read_length;
+
+		newEl->next = library->listFR_Mapping;
+		library->listFR_Mapping = newEl;
+
+		//fprintf(stderr, "pos1=%d posend=%d ed=%d name=%s chr_name=%s lib=%d qual=%d\n",newEl->pos1, newEl->pos1_End, newEl->editDistance, newEl->readName, newEl->chromosome_name, bam_align->lib_index, newEl->mQual1);
+	}
+
+	else if( bam_align->pos_left > bam_align->pos_right)
+	{
+		newEl = library->listFR_Mapping;
+		while( newEl != NULL && strncmp( newEl->readName, bam_alignment->data, bam_alignment_core.l_qname) != 0)
+			newEl = newEl->next;
+
+		if( newEl != NULL)
+		{
+			newEl->editDistance += bam_align->edit_distance;
+
+			newEl->pos2_End = newEl->pos2 + library->read_length;
+			if( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S')
+				newEl->pos2_End = newEl->pos2_End - bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]);
+
+			if( bam_cigar_opchr( bam_align->cigar[0]) == 'S')
+				newEl->pos2_End = newEl->pos2_End - bam_cigar_oplen( bam_align->cigar[0]);
+
+			newEl->pos2_End = newEl->pos2_End - 1;
+			newEl->pos2 = newEl->pos2 + 1;
+			newEl->mQual2 = bam_alignment_core.qual;
+		}
+	}
+
+}
+
+void add_discordant_MEI( ref_genome* ref, library_properties *library, parameters* params, bam1_t* bam_alignment, bam_alignment_region* bam_align, char* mei_subclass, char* mei_class, int MEI_Type, int chrID)
+{
+	int len;
+	int countOp;
+
+	bam1_core_t bam_alignment_core = bam_alignment->core;
+
+	discordantMappingMEI *newEl;
+	newEl = ( discordantMappingMEI *) getMem( sizeof( discordantMappingMEI));
+
+
+	/* Need to be put into into divet row */        
+	if ( params->ten_x){
+		newEl->ten_x_barcode = encode_ten_x_barcode(bam_aux_get( bam_alignment, "BX"));
+	}
+
+	newEl->readName = NULL;
+	set_str( &(newEl->readName), bam_get_qname(bam_alignment));
+
+	/* Get the name of the chromosome */
+	len = strlen( ref->chrom_names[chrID]);
+	newEl->chromosome_name = NULL;
+	set_str( &(newEl->chromosome_name), ref->chrom_names[chrID]);
+
+	/* Get the name of the mei subclass */
+	len = strlen( mei_subclass);
+	newEl->MEI_subclass = NULL;
+
+	set_str( &(newEl->MEI_subclass), mei_subclass);
+
+	/* Get the name of the mei class */
+	len = strlen( mei_class);
+	newEl->MEI_class = NULL;
+
+	set_str( &(newEl->MEI_class), mei_class);
+
+	newEl->pos = bam_align->pos_left;
+	newEl->qual = bam_alignment_core.qual;
+
+	if( ( bam_align->flag & BAM_FREVERSE) != 0)
+		newEl->orient = 'R';
+	else
+		newEl->orient = 'F';
+
+	mei_cnt_bam++;
+	newEl->MEI_Type = MEI_Type;
+
+	newEl->pos_End = newEl->pos;
+	for( countOp = 0; countOp < bam_align->n_cigar; countOp++)
+	{
+		if( bam_cigar_opchr( bam_align->cigar[countOp]) == 'S')
+			newEl->pos_End = newEl->pos_End + bam_cigar_oplen( bam_align->cigar[countOp]);
+	}
+
+	newEl->next = library->listMEI_Mapping;
+	library->listMEI_Mapping = newEl;
+}
+
+
+int find_mei_bam( ref_genome* ref, parameters *params, char *chromosome_name, char** mei_subclass, char** mei_class, int start, int end, int flag)
+{
+	int ind, len;
+	int return_type = NOTMEI;
+
+	sonic_repeat *repeat_item;
+
+	/* Check if the right end is inside the annotated transposon */
+	repeat_item = sonic_is_mobile_element( params->this_sonic, chromosome_name, start, end, params->mei );
+	if( repeat_item == NULL)
+		return NOTMEI;
+
+	(*mei_subclass) = NULL;
+	set_str( mei_subclass, repeat_item->repeat_type);
+
+	(*mei_class) = NULL;
+	set_str( mei_class, repeat_item->repeat_class);
+
+	/* NOTE: SONIC keeps repeat_class as SINE/Alu, LINE/L1, etc. */
+	if( ( ( flag & BAM_FMREVERSE) == 0 && repeat_item->strand == SONIC_STRAND_REV)
+			|| ( ( flag & BAM_FMREVERSE) != 0 && repeat_item->strand == SONIC_STRAND_FWD))
+	{
+		return_type = repeat_item->mei_code * 2;
+		/*
+		if( repeat_item->repeat_type[0] == 'A')
+			return_type = 0;
+		else if( repeat_item->repeat_type[0] == 'L')
+			return_type = 2;
+		else if( repeat_item->repeat_type[0] == 'S')
+			return_type = 4;
+		 */
+	}
+	else
+	{
+		return_type = (repeat_item->mei_code * 2) + 1;
+		/*
+		if( repeat_item->repeat_type[0] == 'A')
+			return_type = 1;
+		else if( repeat_item->repeat_type[0] == 'L')
+			return_type = 3;
+		else if( repeat_item->repeat_type[0] == 'S')
+			return_type = 5;
+		 */
+	}
+	return return_type;
+}
+
+int find_SV_regions( library_properties *library, parameters* params, ref_genome* ref, bam1_t* bam_alignment, int32_t *bamToRefIndex, bam_alignment_region* bam_align)
+{
+	int svType, meiType = NOTMEI, left_end_id, right_end_id, i;
+	char* mei_subclass, *mei_class;
+
+	bam1_core_t bam_alignment_core = bam_alignment->core;
+
+	/* Make sure the chromosome name is within the correct range */
+	if( bam_align->chrID_left >= 0 && bam_align->chrID_left < params->this_sonic->number_of_chromosomes &&
+			bam_align->chrID_right >= 0 && bam_align->chrID_right < params->this_sonic->number_of_chromosomes)
+	{
+		left_end_id = bamToRefIndex[bam_align->chrID_left];
+		right_end_id = bamToRefIndex[bam_align->chrID_right];
+
+		if( right_end_id >= params->this_sonic->number_of_chromosomes || right_end_id < 0 ||
+				left_end_id >= params->this_sonic->number_of_chromosomes || left_end_id < 0)
+			return -1;
+	}
+	else
+		return -1;
+
+	/* Find the SVs */
+	if( !sonic_is_satellite( params->this_sonic, ref->chrom_names[left_end_id], bam_align->pos_left, bam_align->pos_left + bam_alignment_core.l_qseq)
+			&& !sonic_is_satellite( params->this_sonic, ref->chrom_names[right_end_id], bam_align->pos_right, bam_align->pos_right + bam_alignment_core.l_qseq))
+	{
+		int insLen = abs( bam_align->pos_left - bam_align->pos_right);
+
+		/* Remove the paired-ends that both end overlap each other */
+		if( is_proper( bam_align->flag) && !( ( left_end_id == right_end_id) && ( insLen < 100)))
+		{
+			svType = is_concordant_quick( bam_align, library->conc_min, library->conc_max);
+			meiType = find_mei_bam( ref, params, ref->chrom_names[right_end_id], &mei_subclass, &mei_class, bam_align->pos_right,
+					bam_align->pos_right + library->read_length, bam_align->flag);
+
+			if( svType != RPCONC && bam_alignment_core.qual > params->mq_threshold)
+			{
+				/* MEI */
+				if( meiType != NOTMEI && ( left_end_id != right_end_id ||
+						abs( bam_align->pos_left - bam_align->pos_right) > MIN_MEI_DISTANCE))
+					add_discordant_MEI( ref, library, params, bam_alignment, bam_align, mei_subclass, mei_class, meiType, left_end_id);
+				/* Deletion or Insertion */
+				else if( ( svType == RPDEL || svType == RPINS) && left_end_id == right_end_id)
+					add_discordant_FR( ref, library, params, bam_alignment, bam_align, svType, left_end_id);
+				/* Tandem Duplication */
+				else if( svType == RPTDUP && left_end_id == right_end_id)
+				{
+					/* Since MT is circular, we need to eliminate the read-pairs at both ends of the chromosome */
+					if( insLen < (ref->chrom_lengths[left_end_id]) - (2 * library->conc_max))
+						add_discordant_RF( ref, library, params, bam_alignment, bam_align, left_end_id);
+				}
+			}
+			/* Inversion */
+			if( svType == RPINV && meiType == NOTMEI && left_end_id == right_end_id && abs( bam_align->pos_left - bam_align->pos_right) < MAX_INV_LEN)
+				add_discordant_RR_FF( ref, library, params, bam_alignment, bam_align, left_end_id);
+
+			/* Soft Clipping */
+			if( !params->no_soft_clip)
+			{
+				if( bam_alignment_core.qual > params->mq_threshold && bam_align->n_cigar < MAX_NUM_CIGAR)
+				{
+					/* We need to have soft clip at the beginning, end, or both with length >MIN_SOFTCLIP_LEN */
+					if( ( bam_cigar_opchr( bam_align->cigar[0]) == 'S' && bam_cigar_oplen( bam_align->cigar[0]) > MIN_SOFTCLIP_LEN) ||
+							( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S' &&
+									bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]) > MIN_SOFTCLIP_LEN))
+						addSoftClip( ref, library, bam_align, bam_alignment, left_end_id);
+				}
+			}
+		}
+	}
+	return 1;
+}
+
+
+void read_bam( bam_info* in_bam, parameters* params, ref_genome* ref)
+{
+	/* Variables */
+	int i, chr_index_bam, return_type, ed, len, lib_index;
+	char *xa_str = NULL, *library_name = NULL;
+	int32_t bamToRefIndex[in_bam->bam_header->n_targets];
+	uint8_t *tmp;
+	bam1_core_t bam_alignment_core;
+	bam_alignment_region* bam_align = NULL, *bam_align_tmp;
+
+	bam1_t* bam_alignment = bam_init1();
+
+	/* The array is used to map the chromosome indices in bam file to the ones in reference genome */
+	for( i = 0; i < in_bam->bam_header->n_targets; i++)
+		bamToRefIndex[i] = sonic_refind_chromosome_index( params->this_sonic, in_bam->bam_header->target_name[i]);
+
+	while( bam_itr_next( in_bam->bam_file, in_bam->iter, bam_alignment) > 0)
+	{
+		bam_alignment_core = bam_alignment->core;
+
+		if( bam_align != NULL)
+			free_alignments( bam_align);
+
+		/* Get library index */
+		set_str( &library_name, bam_aux_get( bam_alignment, "RG"));
+		lib_index = find_library_index( in_bam, library_name + 1);
+
+		/* Put the alignment data to bam_alignment_region data structure */
+		bam_align = ( bam_alignment_region*) getMem( sizeof( bam_alignment_region));
+		bam_align->chrID_left = bam_alignment_core.tid;
+		bam_align->chrID_right = bam_alignment_core.mtid;
+		bam_align->pos_left = bam_alignment_core.pos;
+		bam_align->pos_right = bam_alignment_core.mpos;
+		bam_align->flag = bam_alignment_core.flag;
+		bam_align->n_cigar = bam_alignment_core.n_cigar;
+		bam_align->cigar = bam_get_cigar( bam_alignment);
+		bam_align->isize = bam_alignment_core.isize;
+		bam_align->next = NULL;
+
+		tmp = bam_aux_get( bam_alignment, "NM");
+		bam_align->edit_distance = 0;
+		if( tmp != 0)
+			bam_align->edit_distance = bam_aux2i( tmp);
+
+		/* Increase the read depth and read count for RD filtering */
+		in_bam->read_depth_per_chr[bam_align->pos_left]++;
+		in_bam->read_count++;
+
+		return_type = find_SV_regions( in_bam->libraries[lib_index], params, ref, bam_alignment, bamToRefIndex, bam_align);
+		if( return_type == -1)
+			continue;
+
+		/* Get alternative mapping locations - XA field */
+		if( params->alt_mapping != 0)
+		{
+			xa_str = NULL;
+			set_str( &xa_str, bam_aux_get( bam_alignment, "XA"));
+
+			if( xa_str != NULL)
+			{
+				get_alt_mappings( ref, in_bam->libraries[lib_index], bam_alignment_core, in_bam->bam_header, &bam_align, ( xa_str + 1), params->alt_mapping);
+
+				bam_align_tmp = bam_align;
+				while(	bam_align_tmp != NULL)
+				{
+					//fprintf(stderr,"%d %d %d\n", bam_align_tmp->chrID_left, bam_align_tmp->flag, bam_align_tmp->edit_distance);
+					return_type = find_SV_regions( in_bam->libraries[lib_index], params, ref, bam_alignment, bamToRefIndex, bam_align_tmp);
+					bam_align_tmp = bam_align_tmp->next;
+				}
+				//fprintf(stderr,"\n\n\n");
+			}
+		}
+	}
+	bam_destroy1( bam_alignment);
+	fprintf( stderr, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI clusters and %li split reads found in BAM.\n", del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam);
+	fprintf( logFile, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI clusters and %li split reads found in BAM.\n", del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam);
+}
+
 
 void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *params)
 {
-	int i, bam_index, chr_index, chr_index_bam, return_value, len, not_in_bam = 0;
-	int total_sv = 0, total_sv_lowqual = 0;
+	int i, bam_index, chr_index, chr_index_bam, return_value, not_in_bam = 0;
+	int total_sv = 0, total_sv_lowqual = 0, divet_row_count;
 	char outputfile[MAX_SEQ];
 	char outputread[MAX_SEQ];
 	char svfile[MAX_SEQ];
 	FILE *fpVcf = NULL;
-
-	bam_hdr_t* bam_header;
-	hts_idx_t *idx;
 
 	sprintf( outputread, "%s.name", params->outprefix);
 	sprintf( outputfile, "%s.clusters", params->outprefix);
@@ -933,14 +1136,14 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 
 	for( chr_index = 0; chr_index < params->this_sonic->number_of_chromosomes; chr_index++)
 	{
-		if (chr_index < params->first_chrom){
+		if (chr_index < params->first_chrom)
 			chr_index = params->first_chrom;
-		}
-		if (chr_index > params->last_chrom){
+
+		if (chr_index > params->last_chrom)
+		{
 			chr_index = params->this_sonic->number_of_chromosomes;
 			continue;
 		}
-
 
 		if( !params->no_soft_clip)
 		{
@@ -954,17 +1157,17 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 			in_bams[bam_index]->bam_file = safe_hts_open( params->bam_file_list[bam_index], "r");
 
 			/* Read in BAM header information */
-			bam_header = bam_hdr_read( ( in_bams[bam_index]->bam_file->fp).bgzf);
+			in_bams[bam_index]->bam_header = bam_hdr_read( ( in_bams[bam_index]->bam_file->fp).bgzf);
 
 			/* Load the bam index file */
-			idx = sam_index_load( in_bams[bam_index]->bam_file, params->bam_file_list[bam_index]);
-			if( idx == NULL)
+			in_bams[bam_index]->bam_file_index = sam_index_load( in_bams[bam_index]->bam_file, params->bam_file_list[bam_index]);
+			if( in_bams[bam_index]->bam_file_index == NULL)
 			{
 				fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load)\n");
 				exit( 1);
 			}
 
-			chr_index_bam = find_chr_index_bam( ref, ref->chrom_names[chr_index], bam_header);
+			chr_index_bam = find_chr_index_bam( ref, ref->chrom_names[chr_index], in_bams[bam_index]->bam_header);
 			not_in_bam = 0;
 			if( chr_index_bam == -1)
 			{
@@ -973,7 +1176,7 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 				continue;
 			}
 
-			in_bams[bam_index]->iter = bam_itr_queryi( idx, chr_index_bam, 0, ref->chrom_lengths[chr_index]);
+			in_bams[bam_index]->iter = bam_itr_queryi( in_bams[bam_index]->bam_file_index, chr_index_bam, 0, ref->chrom_lengths[chr_index]);
 			if( in_bams[bam_index]->iter == NULL)
 			{
 				fprintf( stderr, "Error: Iterator cannot be loaded (bam_itr_queryi)\n");
@@ -983,14 +1186,14 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 
 			fprintf( stderr, "\n                                                        ");
 			fflush( stderr);
-			fprintf( stderr, "\nReading BAM [%s] - Chromosome: %s", in_bams[bam_index]->sample_name, bam_header->target_name[chr_index_bam]);
+			fprintf( stderr, "\nReading BAM [%s] - Chromosome: %s", in_bams[bam_index]->sample_name, in_bams[bam_index]->bam_header->target_name[chr_index_bam]);
 			fflush( stderr);
 
 			/* Initialize the read depth and read count */
 			init_rd_per_chr( in_bams[bam_index], params, ref, chr_index);
 
 			/* Read bam file for this chromosome */
-			read_bam( in_bams[bam_index], params, ref, bam_header);
+			read_bam( in_bams[bam_index], params, ref);
 
 			if( !params->no_soft_clip)
 			{
@@ -1013,8 +1216,8 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 			}
 			/* Free the bam related files */
 			bam_itr_destroy( in_bams[bam_index]->iter);
-			bam_hdr_destroy( bam_header);
-			hts_idx_destroy(idx);
+			bam_hdr_destroy( in_bams[bam_index]->bam_header);
+			hts_idx_destroy(in_bams[bam_index]->bam_file_index);
 
 			/* Increase the total read count for this chromosome and make the number of SVs 0 for this bam */
 			total_read_count += del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + sr_cnt_bam;
@@ -1025,13 +1228,14 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 		if( !params->no_soft_clip)
 		{
 			/* Free the hash */
-			free_10bp_HashIndex();
+			free_HashIndex();
 		}
 
-		load_Divet_bam( in_bams, ref, params, chr_index);
+		divet_row_count = load_Divet_bam( in_bams, ref, params, chr_index);
 
-		/* Open the .clusters file */
-		fileOutput = safe_fopen( outputfile, "w");
+		/* Open the .clusters file if running in debug mode */
+		if( debug_mode)
+			fileOutput = safe_fopen( outputfile, "w");
 
 		/* Deletion */
 		fprintf( stderr, "\nPreparing Deletion clusters");
@@ -1069,9 +1273,9 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 		fprintf( stderr, ".");
 		fflush( stderr);
 
-		/* Tandem Duplication
+		/* Tandem Duplication */
 		fprintf( stderr, "\nPreparing Tandem Dup clusters");
-		vh_initializeReadMapping_TDup( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
+		vh_initializeReadMapping_TDup( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index], params->this_sonic);
 		fprintf( stderr, ".");
 		fflush( stderr);
 		vh_createTDupClusters( ref->chrom_lengths[chr_index]);
@@ -1079,14 +1283,15 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 		fflush( stderr);
 		vh_finalizeReadMapping( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
 		fprintf( stderr, ".");
-		fflush( stderr);*/
+		fflush( stderr);
+
 
 		/* Mei filtering */
 		fprintf( stderr, "\nPreparing MEI clusters");
-		initializeReadMapping_MEI( in_bams, ref, params, ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
+		initializeReadMapping_MEI( in_bams, params, ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
 		fprintf( stderr, ".");
 		fflush( stderr);
-		MEICluster_Region( in_bams, ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
+		MEICluster_Region( params, ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
 		fprintf( stderr, ".");
 		fflush( stderr);
 		vh_finalizeReadMapping_Mei( ref->chrom_lengths[chr_index]);
@@ -1094,7 +1299,9 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 		fflush( stderr);
 
 		fprintf( stderr, "\n");
-		fclose( fileOutput);
+
+		if( debug_mode)
+			fclose( fileOutput);
 
 		findUniqueReads( in_bams, params, ref, outputread);
 
@@ -1102,7 +1309,7 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 		free_mappings( in_bams, ref, params);
 
 		fprintf( stderr, "\nApplying set cover\n");
-		vh_setcover( in_bams, params, ref, outputread, outputfile, fpVcf);
+		vh_setcover( in_bams, params, ref, fpVcf);
 		total_sv += sv_count;
 		total_sv_lowqual += sv_lowqual_count;
 
@@ -1114,9 +1321,11 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 	fflush( stderr);
 	fprintf( stderr, "\n");
 
-	if ( !TARDIS_DEBUG)
-		remove( outputfile);
-	fprintf( stderr, "TARDIS is complete. Found %d SVs and %d LowQual.", total_sv, total_sv_lowqual);
+	if( debug_mode)
+		fprintf( stderr, "TARDIS is complete. Found %d SVs and %d LowQual.", total_sv, total_sv_lowqual);
+	else
+		fprintf( stderr, "TARDIS is complete. Found %d SVs", total_sv);
+
 	print_sv_stats();
 }
 
@@ -1124,9 +1333,6 @@ int bamonly_run( ref_genome* ref, parameters *params, bam_info ** in_bams)
 {
 	int rd_del_filtered, bam_index;
 	int sv_total, i, len;
-
-	char *gapFileName = params->gaps;
-	char *repeatFileName = params->reps;
 
 	/* Initialize and read bam file */
 	fprintf( stderr, "Processing bam file for read pair and read depth filtering\n"

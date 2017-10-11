@@ -11,6 +11,7 @@
 #include "vh_conflict.h"
 #include "vh_setcover.h"
 
+int numSV = 0; // total number of distinct SVs picked
 
 void removeInd( int ind, int j)
 {
@@ -22,19 +23,19 @@ int conflictsBetweenTwoSV_Cord( int startCoord1, int stopCoord1,char SVtype1, in
 {
 	if( ( startCoord1 > stopCoord2 || stopCoord1 < startCoord2))
 		return 0;
-	if( SVtype1 == 'A' || SVtype1 == 'B' || SVtype2 == 'A' || SVtype2 == 'B')
+	if( SVtype1 == MEIFORWARD || SVtype1 == MEIREVERSE || SVtype2 == MEIFORWARD || SVtype2 == MEIREVERSE)
 		return 0;
-	if( SVtype1 == 'V' && SVtype2 == 'V')
+	if( SVtype1 == INVERSION && SVtype2 == INVERSION)
 	{
 		if( ( ( startCoord1 > startCoord2) && ( stopCoord1 < stopCoord2)) || ( ( startCoord1 < startCoord2) && ( stopCoord1 > stopCoord2)))
 			return 0;
 	}
-	else if( SVtype1 == 'V' && SVtype2 == 'D')
+	else if( SVtype1 == INVERSION && SVtype2 == DELETION)
 	{
 		if( startCoord1 < startCoord2 && stopCoord1 > stopCoord2)
 			return 0;
 	}
-	else if( SVtype1 == 'D' && SVtype2 == 'V')
+	else if( SVtype1 == DELETION && SVtype2 == INVERSION)
 	{
 		if( startCoord2 < startCoord1 && stopCoord2 > stopCoord1)
 			return 0;
@@ -46,7 +47,8 @@ int conflictsAny(int i, int *supInd) // return the individual that SV_i is in co
 {
 	SV_selected *ptrSV;
 	int conflict=0;
-	int count=0;
+	int count;
+
 	for (count=0; count<numSV; count++)
 	{
 		if (strcmp(listSelectedSV[count].chromosome_name, listClusterEl[i].chromosome_name)==0)
@@ -156,7 +158,7 @@ void addToListOfConflicts(int i, int j, int *countReads) // adds SV i to SV j's 
 	newSV->clusterId = listSelectedSV[i].clusterId;
 	newSV->SVtype = listSelectedSV[i].SVtype;
 
-  newSV->chromosome_name = NULL;
+	newSV->chromosome_name = NULL;
 	set_str( &(newSV->chromosome_name), listSelectedSV[i].chromosome_name);
 
 	for( count = 0; count < multiIndCount; count++)
@@ -182,8 +184,7 @@ void addToConflict(int maxWeightSet, int *countReads)// adds the SV numSV to the
 	}
 	if( idSV2Add == -1)
 	{
-
- 	  listSelectedSV[numSV].chromosome_name = NULL;
+		listSelectedSV[numSV].chromosome_name = NULL;
 		set_str( &(listSelectedSV[numSV].chromosome_name), listClusterEl[maxWeightSet].chromosome_name);
 
 		listSelectedSV[numSV].posStart_SV = listClusterEl[maxWeightSet].posStartSV;

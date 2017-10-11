@@ -22,43 +22,11 @@ int sv_count;
 int sv_lowqual_count;
 int indCount;
 
-enum SVTYPE getEnum(char c) {
-	switch (c) {
-	case 'D':
-		return DEL;
-	case 'V':
-		return INV;
-	case 'S':
-		return INS;
-	case 'E':
-		return TANDUP;
-	case 'A':
-		return MEI;
-	case 'B':
-		return MEI;
-	}
-	return DEL;
-}
-
-char * svtypeToChar(enum SVTYPE svt) {
-	switch (svt) {
-	case DEL:
-		return "DEL";
-	case INS:
-		return "INS";
-	case INV:
-		return "INV";
-	case MEI:
-		return "MEI";
-	case TANDUP:
-		return "TANDUP";
-	}
-}
-
 // create a new structure and return address
-struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, enum SVTYPE svtype,
+struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, char svtype,
 		float avg_edit, int min_svlen, int max_svlen, char *samples, double conf_score, bool filtered, bool mei_del,
-		char *mei_name, long depth[], float cn[], double del_likelihood[], int rp[], int sr[], double homogeneity_score)
+		char *mei_name, long depth[], float cn[], double del_likelihood[], int rp[], int sr[], double homogeneity_score,
+		float weight)
 {
 	int i;
 	struct strvar* a_strvar = getMem( sizeof( struct strvar));
@@ -80,6 +48,7 @@ struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int o
 	a_strvar->filtered = filtered;
 	a_strvar->mei_del = mei_del;
 	a_strvar->homogeneity_score = homogeneity_score;
+	a_strvar->weight = weight;
 
 	for( i = 0; i < indCount; i++)
 	{
@@ -108,14 +77,13 @@ void print_sv_stats()
 void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FILE* fpOut)
 {
 	int sv_len, i, j, control, ind_id, rp_total = 0, sr_total = 0;
-	char* svtype = svtypeToChar( sv->svtype);
 
 	/* Sum the rp support for each individual with GT 0/1 */
 	for( i = 0; i < params->num_bams; i++)
 	{
 		if( in_bams[i]->contribution == true)
 		{
-			rp_total +=  sv->rp[i];
+			rp_total += sv->rp[i];
 			sr_total += sv->sr[i];
 		}
 	}
@@ -123,43 +91,43 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		sv->filtered = true;
 
 	sv_len = abs( ( sv->inner_end - sv->inner_start + 1));
-	if( sv->svtype == DEL)
+	if( sv->svtype == DELETION)
 	{
 		if(sv->mei_del == true)
 		{
 			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s%s\t255\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_del_", ++del_cnt, ".", "<", "DEL:ME:", sv->mei_name, ">",( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else
-			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t255\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_del_", ++del_cnt, ".", "<", svtype, ">",( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t255\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_del_", ++del_cnt, ".", "<", "DEL", ">",( sv->filtered == false) ? "PASS" : "LowQual");
 		total_del_length += sv_len;
 	}
 
-	else if( sv->svtype == INS)
+	else if( sv->svtype == INSERTION)
 	{
-		fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_ins_", ++ins_cnt, ".", "<", svtype, ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+		fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_ins_", ++ins_cnt, ".", "<", "INS", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		total_ins_length += sv_len;
 	}
-	else if( sv->svtype == INV)
+	else if( sv->svtype == INVERSION)
 	{
-		fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_inv_", ++inv_cnt, ".", "<", svtype, ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+		fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_inv_", ++inv_cnt, ".", "<", "INV", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		total_inv_length += sv_len;
 	}
-	else if( sv->svtype == MEI)
+	else if( sv->svtype == MEIFORWARD || sv->svtype == MEIREVERSE)
 	{
-		fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_mei_", ++mei_cnt, ".", "<", svtype, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
+		fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_mei_", ++mei_cnt, ".", "<", "MEI", ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
 		if( sv->filtered)
 		{
 			mei_cnt_filtered++;
 			total_mei_length += sv_len;
 		}
 	}
-	else if( sv->svtype == TANDUP)
+	else if( sv->svtype == TANDEMDUP)
 	{
 		fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++tandup_cnt, ".", "<", "DUP:TANDEM", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		total_tandup_length += sv_len;
 	}
 
-	if( sv->svtype == MEI)
+	if( sv->svtype == MEIFORWARD || sv->svtype == MEIREVERSE)
 		fprintf( fpOut, "END=%d;SVLEN=%d;TYPE=%s;RPSUP=%d;SRSUP=%d;", (sv->inner_end) + 1, sv_len, sv->mei_name, rp_total, sr_total);
 	else
 		fprintf( fpOut, "END=%d;SVLEN=%d;RPSUP=%d;SRSUP=%d;", (sv->inner_end) + 1, sv_len, rp_total, sr_total);
@@ -168,17 +136,22 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	if( sv->inner_start != sv->inner_end)
 		fprintf( fpOut, "CIEND=0,%d;CIPOS=-%d,0;IMPRECISE;", ( sv->outer_end - sv->inner_end), ( sv->inner_start - sv->outer_start));
 
-	if( sv->svtype == TANDUP)
+	if( sv->svtype == DELETION)
+		fprintf( fpOut, "SVTYPE=DEL\t");
+	else if( sv->svtype == MEIFORWARD || sv->svtype == MEIREVERSE)
+		fprintf( fpOut, "SVTYPE=MEI\t");
+	else if( sv->svtype == TANDEMDUP)
 		fprintf( fpOut, "SVTYPE=DUP\t");
-	else
-		fprintf( fpOut, "SVTYPE=%s\t", svtype);
+	else if( sv->svtype == INSERTION)
+		fprintf( fpOut, "SVTYPE=INS\t");
+	else if( sv->svtype == INVERSION)
+		fprintf( fpOut, "SVTYPE=INV\t");
 
 	/* Format field */
-	if (params->ten_x)
-	  fprintf( fpOut, "GT:DL:RD:CN:RP:SR:HS");
+	if (params->ten_x || params->output_hs)
+		fprintf( fpOut, "GT:DL:RD:CN:RP:SR:HS:WE");
 	else
-	  fprintf( fpOut, "GT:DL:RD:CN:RP:SR");
-
+		fprintf( fpOut, "GT:DL:RD:CN:RP:SR");
 
 	control = 0;
 	fprintf( fpOut, "\t");
@@ -186,17 +159,17 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	{
 		if( in_bams[j]->contribution == false)
 		{
- 		        if (params->ten_x)
-			  fprintf( fpOut, "0/0:%.1f:%li:%.1f:%d:%d:%8.6f\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score);
+			if (params->ten_x || params->output_hs)
+				fprintf( fpOut, "0/0:%.1f:%li:%.1f:%d:%d:%8.6f:%8.10f\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
 			else 
-			  fprintf( fpOut, "0/0:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
+				fprintf( fpOut, "0/0:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
 		}
 		else
 		{
-		  	if (params->ten_x)			 
-			  fprintf( fpOut, "0/1:%.1f:%li:%.1f:%d:%d:%8.6f\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score);
+			if (params->ten_x || params->output_hs)
+				fprintf( fpOut, "0/1:%.1f:%li:%.1f:%d:%d:%8.6f:%8.10f\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
 			else
-			  fprintf( fpOut, "0/1:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
+				fprintf( fpOut, "0/1:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
 		}
 	}
 	fprintf( fpOut, "\n");
@@ -233,15 +206,17 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 			"##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">\n"
 			"##INFO=<ID=VALIDATED,Number=0,Type=Flag,Description=\"Validated by PCR, Assembly or Microarray\">\n"
 			"##INFO=<ID=VALMETHOD,Number=.,Type=String,Description=\"Type of validation: CGH, PCR, SAV (superarray), CAP (capture-array), or ASM (assembly)\">\n";
+
 	char header_filter[]="##FILTER=<ID=LowQual,Description=\"Genotype call confidence below LOD 1.3\">\n"
 			"##FILTER=<ID=dpr5,Description=\"Read Depth probability below 5%\">\n";
+
 	char header_format[] = "##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">\n"
 			"##FORMAT=<ID=CNQ,Number=1,Type=Float,Description=\"Copy number genotype quality for imprecise events\">\n"
 			"##FORMAT=<ID=DL,Number=1,Type=String,Description=\"Deletion Likelihood\">\n"
 			"##FORMAT=<ID=FT,Number=.,Type=String,Description=\"Per-sample genotype filter, PASS for called genotypes or list of excluding filters\">\n"
 			"##FORMAT=<ID=GL,Number=3,Type=Float,Description=\"Genotype Likelihoods\">\n"
 			"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">\n"
- 	                "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
+			"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
 			"##FORMAT=<ID=HS,Number=1,Type=Float,Description=\"10x Barcode Homogeneity Score\">\n"
 			"##FORMAT=<ID=RD,Number=1,Type=String,Description=\"Read Depth\">\n"
 			"##FORMAT=<ID=RP,Number=1,Type=String,Description=\"Read Pair Support\">\n"
@@ -280,12 +255,11 @@ void free_sensitive(bam_info** in_bams, parameters *params, ref_genome* ref)
 		{
 			for( lib_index = 0; lib_index < in_bams[i]->num_libraries; lib_index++)
 			{
-			        for( j = 0; j < params->this_sonic->number_of_chromosomes; j++)
+				for( j = 0; j < params->this_sonic->number_of_chromosomes; j++)
 					free( in_bams[i]->read_depth[j]);
 				free( in_bams[i]->read_depth);
 			}
 		}
-
 	}
 
 	for( i = 0; i < params->num_bams; i++)
@@ -319,7 +293,6 @@ void free_quick(bam_info** in_bams, parameters *params, ref_genome* ref)
 {
 	int lib_index, i, j;
 
-	
 	/* Free refgenome struct */
 	free( ref->ref_name);
 	free( ref->in_bam);
@@ -351,7 +324,6 @@ void free_quick(bam_info** in_bams, parameters *params, ref_genome* ref)
 	free( params->reps);
 	free( params->sonic_file);
 	free( params);
-
 }
 
 

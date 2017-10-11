@@ -8,16 +8,36 @@
 #define FIRST_CHROM 10001
 #define LAST_CHROM 10002
 
+int count_mei_columns( char* mei_string)
+{
+	char *tok;
+	char str[1024];
+	int mei_code;
+
+	strcpy(str, mei_string);
+
+	mei_code = 0;
+	tok = strtok(str, ":");
+
+	while (tok != NULL)
+	{
+		mei_code++;
+		tok = strtok(NULL, ":");
+	}
+
+	return mei_code;
+}
+
 int parse_command_line( int argc, char** argv, parameters* params)
 {
 	int index;
 	int o;
-	static int run_vh = 0, run_ns = 0, run_rd = 0, run_sr = 0, run_all = 1, sensitive = 0, no_soft_clip = 0;
+	static int run_vh = 0, run_ns = 0, run_rd = 0, run_sr = 0, run_all = 1, sensitive = 0, no_soft_clip = 0, debug = 0;
 	static int skip_fastq = 0, skip_sort = 0, skip_remap = 0, skip_cluster = 0, quick = 0, ten_x = 0, output_hs = 0;
 	static int make_sonic = 0;
 	static int load_sonic = 0;
 	static int do_remap = 0;
-	char *threshold = NULL, *mapping_qual = NULL, *rp_support = NULL;
+	char *threshold = NULL, *mapping_qual = NULL, *rp_support = NULL, *alt_mapping = NULL;
 
 	static struct option long_options[] = 
 	{
@@ -42,13 +62,15 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"mq", required_argument, 0, 'e'},
 			{"rp", required_argument, 0, 'j'},
 			{"vh"     , no_argument, &run_vh,     1 },
-			{"no-soft-clip"     , no_argument, &no_soft_clip,     1 },
+			{"no-soft-clip" , no_argument, &no_soft_clip, 1 },
+			{"debug" , no_argument, &debug, 1 },
+			{"xa" , required_argument, 0, 'k' },
 			/*
 			{"rd"     , no_argument, &run_rd,     1 },
 			{"ns"     , no_argument, &run_ns,     1 },
 			{"sr"     , no_argument, &run_sr,     1 },
 			{"all"    , no_argument, &run_all,    1 },
-			*/
+			 */
 			{"sensitive"    , no_argument, &sensitive,    1 },
 			{"skip-fastq", no_argument, &skip_fastq,  1 },
 			{"skip-sort" , no_argument, &skip_sort,  1 },
@@ -67,7 +89,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		return 0;
 	}
 
-	while( ( o = getopt_long( argc, argv, "hvb:i:f:g:d:r:o:m:c:s:a:e:n:j", long_options, &index)) != -1)
+	while( ( o = getopt_long( argc, argv, "hvb:i:f:g:d:r:o:m:c:s:a:e:n:j:k", long_options, &index)) != -1)
 	{
 		switch( o)
 		{
@@ -156,6 +178,10 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			set_str( &( rp_support), optarg);
 			break;
 
+		case 'k':
+			set_str( &( alt_mapping), optarg);
+			break;
+
 		case 'v':
 			fprintf( stderr, "\nTARDIS: Toolkit for Automated and Rapid DIscovery of Structural variants.\n");
 			fprintf( stderr, "Version %s\n\tLast update: %s, build date: %s\n\n", TARDIS_VERSION, TARDIS_UPDATE, BUILD_DATE);
@@ -164,7 +190,6 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			break;
 		}
 	}
-
 
 	/* check quick vs remap mode */
 	if (quick && do_remap){
@@ -175,7 +200,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		quick = 0;
 	}
 
-	
+
 
 	/* TODO: check parameter validity */
 
@@ -191,7 +216,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	{
 		run_vh = 1; run_rd=1; run_sr = 1; run_ns = 1;
 		} */
-	
+
 
 	/* check if outprefix is given */
 	if( params->outprefix == NULL && !make_sonic)
@@ -303,6 +328,14 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		free( rp_support);
 	}
 
+	if( alt_mapping == NULL)
+		params->alt_mapping = 0;
+	else
+	{
+		params->alt_mapping = atoi(alt_mapping);
+		free( alt_mapping);
+	}
+
 	/* set flags */
 	params->run_vh = run_vh;
 	params->run_rd = run_rd;
@@ -318,6 +351,11 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	params->output_hs = output_hs | ten_x;
 	params->make_sonic = make_sonic;
 	params->sensitive = sensitive;
+	params->number_of_different_mei_types = count_mei_columns( params->mei);
+	debug_mode = debug;
+
+	if( debug_mode)
+		fprintf(stderr, "\n\n*** DEBUG MODE is on, you can check .NAME and .CLUSTER files ***\n\n");
 
 	if( params->sensitive == 0)
 		params->quick = 1;
@@ -331,10 +369,9 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		params->load_sonic = load_sonic;
 
 	if ( params->sonic_info == NULL)
-	  set_str( &(params->sonic_info), params->ref_genome);
+		set_str( &(params->sonic_info), params->ref_genome);
 
 
-	
 	return RETURN_SUCCESS;
 
 }
@@ -349,18 +386,9 @@ void print_help( void)
 	fprintf( stdout, "\t--out   [output prefix]    : Prefix for the output file names.\n");
 	fprintf( stdout, "\t--ref   [reference genome] : Reference genome in FASTA format.\n");
 	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n");	
-	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]     : List of mobile element names.\n");
-	fprintf( stdout, "\t--10x                      : Take into account 10x barcode info of the read pairs\n");
+	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]   : List of mobile element names.\n");
 	fprintf( stdout, "\t--no-soft-clip             : Skip soft clip remapping.\n");
-	/*
-	fprintf( stdout, "\t--xx                       : Sample is male.\n");
-	fprintf( stdout, "\t--xy                       : Sample is female.\n");
-	fprintf( stdout, "\t--vh                       : Run VariationHunter/CommonLAW (read pair + read depth).\n");
-	/* not  yet implemented, hide the parameters. No need for these anyway.
-	fprintf( stdout, "\t--ns                       : Run NovelSeq (read pair + assembly).\n");
-	fprintf( stdout, "\t--sr                       : Run SPLITREAD (split read).\n");
-	fprintf( stdout, "\t--all                      : Run all three algorithms above [DEFAULT].\n");
-	 */
+
 	fprintf( stdout, "\n\tAdditional parameters for sensitive mode:\n\n");
 	fprintf( stdout, "\t--sensitive                : Sensitive mode that uses all map locations. Requires mrFAST remapping.\n");
 	fprintf( stdout, "\t--skip-fastq               : Skip FASTQ dump for discordants. Use this only if you are regenerating the calls. Sensitive mode only.\n");
@@ -370,12 +398,13 @@ void print_help( void)
 
 	fprintf( stdout, "\n\tAdditional parameters to build SONIC file within TARDIS:\n\n");
 	fprintf( stdout, "\t--make-sonic [sonic file]  : SONIC file that will contain the assembly annotations.\n");
-	fprintf( stdout, "\t--sonic-info [\"string\"]    : SONIC information string to be used as the reference genome name.\n");
+	fprintf( stdout, "\t--sonic-info [\"string\"]  : SONIC information string to be used as the reference genome name.\n");
 	fprintf( stdout, "\t--gaps  [gaps file]        : Assembly gap coordinates in BED3 format.\n");
 	fprintf( stdout, "\t--dups  [dups file]        : Segmental duplication coordinates in BED3 format.\n"); 
 	fprintf( stdout, "\t--reps  [reps file]        : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.\n");
 
-	fprintf( stdout, "\n\tInformation:\n");
+
+	fprintf( stdout, "\n\n\tInformation:\n");
 	fprintf( stdout, "\t--version                  : Print version and exit.\n");
 	fprintf( stdout, "\t--help                     : Print this help screen and exit.\n\n");
 	fprintf( stdout, "It is bigger on the inside!\n\n");

@@ -191,7 +191,8 @@ int run_rd( bam_info** in_bam, parameters* params, ref_genome* ref)
 	hts_itr_t *iter;
 	hts_idx_t *idx;
 
-	fprintf( stderr,"10x flag: %d\n", ten_x_flag);
+	if( ten_x_flag)
+		fprintf( stderr,"10x flag: %d\n", ten_x_flag);
 
 	for ( bam_index = 0; bam_index < params->num_bams; bam_index++)
 	{

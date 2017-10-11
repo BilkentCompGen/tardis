@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <time.h>
 #include "common.h"
@@ -7,9 +6,11 @@
 #include "processfq.h"
 #include "config.h"
 #include "external.h"
-#include "vh.h"
 #include "tardis.h"
 #include "bamonly.h"
+#include "variants.h"
+#include "refgenome.h"
+#include "vh_main.h"
 #include "sonic/sonic.h"
 
 FILE *logFile = NULL;
@@ -113,7 +114,7 @@ int main( int argc, char** argv)
 		}
 		else
 		  fprintf( stderr, "Skipping FASTQ creation.\n");
-	       
+
 
 		/* Remap with mrFAST */
 		if( params->skip_remap == 0)

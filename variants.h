@@ -9,11 +9,6 @@
 #define  totalNumInd 20
 #define  strSize 200 //maximum size of a constant string, such as readName length
 
-enum SVTYPE {
-	DEL, INS, INV, TANDUP, MEI, TRANSCHROM
-};
-enum SVTYPE getEnum(char c);
-char * svtypeToChar(enum SVTYPE svt);
 
 typedef struct strvar {
 	char *chr_name; /*chromosome name*/
@@ -21,7 +16,7 @@ typedef struct strvar {
 	int inner_start; /* inner start coordinate */
 	int outer_end; /* outer end coordinate */
 	int inner_end; /* inner end coordinate */
-	enum SVTYPE svtype; /* type of SV */
+	char svtype; /* type of SV */
 	float avg_edit; /* average edit distance of reads mapped to reference */
 	int min_svlen; /* lower bound of SV size */
 	int max_svlen; /* upper bound of SV size */
@@ -37,7 +32,7 @@ typedef struct strvar {
 	float del_likelihood[totalNumInd];
 	bool low_qual;
 	double homogeneity_score;
-
+	float weight;
 	struct strvar *next; /* next pointer for linked list */
 	struct strvar **head; /* head pointer points to pointer that points to head element */
 }strvar;
@@ -56,9 +51,10 @@ typedef struct chr_index {
 /* functions */
 int rd_filtering(struct strvar ** variations, bam_info** in_bams, ref_genome* ref, char* dups_file);
 struct strvar ** init_vars(int num_chroms);
-struct strvar* new_strvar(char *chrName,int outer_start, int inner_start, int outer_end, int inner_end, enum SVTYPE svtype,
+struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, char svtype,
 		float avg_edit, int min_svlen, int max_svlen, char *samples, double conf_score, bool filtered, bool,
-		char *mei_name, long depth[], float cn[], double del_likelihood[], int rp[], int sr[], double homogeneity_score);
+		char *mei_name, long depth[], float cn[], double del_likelihood[], int rp[], int sr[], double homogeneity_score,
+		float weight_without_homogeneity_score);
 void add_strvar(struct strvar ** variations, struct strvar* sv);
 void print_strvar(bam_info** in_bams, parameters* params, struct strvar* sv, FILE* fpOut);
 int print_all_vars(struct strvar ** variations, parameters *params, FILE *fpOut);

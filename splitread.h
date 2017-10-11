@@ -9,8 +9,9 @@
 #define SPLITREAD_H_
 
 #include "processbam.h"
+#include "bamonly.h"
 
-#define SR_HASH_SIZE 1000000
+#define HASHKMERLEN 10
 
 typedef struct lociInRef
 {
@@ -20,9 +21,9 @@ typedef struct lociInRef
 
 extern char *ref_seq_per_chr;
 
-void addSoftClip( ref_genome* ref, bam_info * in_bam, bam1_t* bam_alignment, int library_index, int flag, int *op, int *opl, int chrID);
-void create_10bp_HashIndex( ref_genome* ref, int chr_index);
-void free_10bp_HashIndex();
+void addSoftClip( ref_genome* ref, library_properties * library, bam_alignment_region* bam_align, bam1_t* bam_alignment, int chrID);
+void create_HashIndex( ref_genome* ref, int chr_index);
+void free_HashIndex();
 void countNumSoftClipInCluster( parameters *params, ref_genome* ref, bam_info* in_bam, int chr_index);
 void mapSoftClipToRef( bam_info* in_bam,  parameters* params, ref_genome* ref, int chr_index);
 void readReferenceSeq(ref_genome *ref, parameters *params, int chr_index);

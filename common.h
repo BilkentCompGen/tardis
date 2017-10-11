@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include "sonic/sonic.h"
 
+
 /* Exit Codes */
 #define EXIT_SUCCESS 0
 #define EXIT_COMMON 1
@@ -23,6 +24,7 @@
 #define RETURN_ERROR 0
 
 #define MAX_BAMS 256
+#define MAXLISTBRKPOINTINTR 10000000;
 
 /* Maximum filename length */
 #define MAX_LENGTH 1024
@@ -43,7 +45,7 @@
 extern int running_mode;
 extern int ten_x_flag;
 extern int output_hs_flag;
-
+extern int debug_mode; /* boolean stand-in to work in debug mode - .name and .clusters are created */
 
 // Track memory usage
 extern long long memUsage;
@@ -60,12 +62,13 @@ typedef struct _params
 	char* gaps; /* path to assembly gaps file - bed */
 	char* mei;  /* regular expression-like MEI list */
 	char* outprefix; /* prefix for the output files */
-	int  force_read_length; /* force read length to a certain value, discard those that are shorter. Hidden feature due to GIAB */
+	int force_read_length; /* force read length to a certain value, discard those that are shorter. Hidden feature due to GIAB */
 	char run_vh; /* boolean stand-in to run VariationHunter */
 	char run_rd; /* boolean stand-in to run Read Depth */
 	char run_ns; /* boolean stand-in to run NovelSeq */
 	char run_sr; /* boolean stand-in to run SPLITREAD */
 	char no_soft_clip; /* boolean stand-in to skip soft clip */
+	int alt_mapping; /* check the alternative mapping locations from the xa field in bwa */
 	char skip_fastq; /* boolean stand-in to skip FASTQ dump */
 	char skip_sort; /* boolean stand-in to skip FASTQ sort */
 	char skip_remap; /* boolean stand-in to skip FASTQ remap */
@@ -78,13 +81,14 @@ typedef struct _params
 	int output_hs; /*boolean for whether to record the homogeneity score (HS) in VCF regardless whether HS is used in set cover or not*/
 	int make_sonic; /*make SONIC file and exit*/
 	int load_sonic; /*load SONIC file*/
-        char *sonic_info; /* SONIC reference information string for building */
+	char *sonic_info; /* SONIC reference information string for building */
 	int first_chrom; /*the first chromosome as indexed in the ref to be computer for. 0 by default*/
 	int last_chrom; /*the last chromosome as indexed in the ref to be computer for. ref->chrom_count by default*/
 	int rd_threshold; /* Threshold is used in RD filtering, calWeight() in vh_setcover.c */
 	int mq_threshold; /* Minimum mapping quality */
 	int rp_threshold; /* Minimum read pair support */
-        char *sonic_file; /* SONIC file name */
+	int number_of_different_mei_types; /* Number of distinct MEI types e.g. ALU:L1:SVA has three different types */
+	char *sonic_file; /* SONIC file name */
 	sonic *this_sonic; /* SONIC */
 } parameters;
 
@@ -92,11 +96,11 @@ typedef struct _params
 typedef struct _ref_genome
 {
 	char* ref_name; /* name of the chromosome */
-        bool* in_bam; /* if the chromosome is available in the bam file */
-  /* the following don't seem to be necessary any more. load_refgen now just copies the pointer from sonic to avoid substantial refactoring */
-        int chrom_count; /* number of chromosomes */
-        int* chrom_lengths; /* lengths of the chromosomes */
-        char** chrom_names; /* names of the chromosomes */
+	bool* in_bam; /* if the chromosome is available in the bam file */
+	/* the following don't seem to be necessary any more. load_refgen now just copies the pointer from sonic to avoid substantial refactoring */
+	int chrom_count; /* number of chromosomes */
+	int* chrom_lengths; /* lengths of the chromosomes */
+	char** chrom_names; /* names of the chromosomes */
 }ref_genome;
 
 /* Parameter related TARDIS functions */
@@ -129,6 +133,7 @@ int find_chr_index_bam(ref_genome*, char*, bam_hdr_t*);
 int max( int x, int y);
 int min( int x, int y);
 int hammingDistance( char *str1, char *str2, int len);
+int vh_cmprReadNameStr (const void *a, const void *b);
 
 // Memory allocation/tracking functions
 void* getMem( size_t size);

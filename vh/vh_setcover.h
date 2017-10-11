@@ -16,15 +16,14 @@
 #include "../variants.h"
 
 #define SOFTCLIP_WRONGMAP_WINDOW 20
-#define  maxChroSize 1000000000
-#define  inf 10000000 // a constant to reprsent infinity
-#define  maxLengthSV_Del 500000 // maximum length of SV allowed
-#define  maxLengthSV_Inv 20000000
-#define  maxLengthSV_TDup 500000
-#define  maxListClusterSize 500000 // maximum size of a cluster
-#define  maxClustersAllowed 1000000 //maximum number of clusters to read
-#define  maxNumSV 100000 //maximum number of SV's allowed to be reported.
-#define  TRUE 1
+#define maxChroSize 1000000000
+#define MaxClusterCount 1000000
+#define inf 10000000 // a constant to represent infinity
+#define maxLengthSV_Del 500000 // maximum length of SV allowed
+#define maxLengthSV_Inv 20000000
+#define maxLengthSV_TDup 500000
+#define maxListClusterSize 500000 // maximum size of a cluster
+#define TRUE 1
 #define FALSE 0
 #define true 1
 #define false 0
@@ -32,6 +31,35 @@
 extern int cluster_count;
 extern int multiIndCount;
 extern int sizeListClusterEl;
+extern long read_names_count;
+extern struct readEl *read_names; // Array of all reads
+extern struct clusters_final* clusters_all[MaxClusterCount];
+
+typedef struct clusters_final
+{
+	int id;
+	char* read_name;
+	char* chromosome_name1;
+	char* chromosome_name2;
+	char* mei_type;
+	char* mei_subclass;
+	char* library_name;
+	char* individual_name;
+	int start_position;
+	int end_position;
+	char SV_type;
+	char orientation_left;
+	char orientation_right;
+	float phred_score;
+	int edit_distance;
+	int mapping_quality_left;
+	int mapping_quality_right;
+	float correct_mapping_qual;
+	bool split_read;
+	bool ten_x_barcode;
+
+	struct clusters_final *next;
+} clusters_final;
 
 typedef struct multiLib{
 	char *libName;
@@ -42,23 +70,6 @@ typedef struct multiLib{
 }multiLib;
 
 multiLib *multiLibs;
-//int multiLibsCount;
-
-/* SVs which are selected for output are kept for conflict resolution */
-typedef struct SV_selected{
-
-	char *chromosome_name;
-	int clusterId; // ID of the cluster selected
-	char SVtype;// D: deletion, V: Inversion, I: insertion, E: tandam duplication, M: mobile element
-	int posStart_SV, posEnd_SV;// The inside coordinates
-	int posStart_SV_Outer, posEnd_SV_Outer;//The outside coordinates
-	int sup[totalNumInd]; // support for the SV picked for each individual
-	struct SV_selected* conflict_Next; // keep a link list of all other SVs selected which are in conlift with this SV (in hapolid genome)
-} SV_selected;
-
-
-SV_selected listSelectedSV[maxNumSV];// the array of all the SVs selected till now 
-int numSV; // total number of distinct SVs picked
 
 ////////////////////////////////////////////////THE DATA STRUCTURES TO HOLD INFORMATION FOR EACH MAPPING
 
@@ -81,11 +92,11 @@ typedef struct readEl{
 
 ///////////////////////////////////////////////THE DATA STRUCTURES FOR HOLDING INFORMATION FOR EACH CLUSTERS
 
-
 /*  Linked list to hold information of each Read Mapping for each cluster */
 typedef struct readMappingEl{
 	int readId; //read id [0 to sizeListReadEl] is an unique identifier for each read (and index to array listReadEL).
 	char *chromosome_name;
+	char *mei_subclass;
 	int posMapLeft;
 	int posMapRight;
 	int indId;
@@ -110,7 +121,7 @@ typedef struct clusterEl{
 	int posEndSV_Outer;
 	int minDelLength;// Only used for deletion. Represents the minimum size of deletion predicted
 	int maxDelLength;//Only used for deletion. Represents the maximum size of deletion predicted
-	char SVtype;//V: inversion, D: Deletion, I: insertion, E: tandem duplication
+	char SVtype; //V: inversion, D: Deletion, I: insertion, E: tandem duplication
 	int *indIdCount; //If this cluster is picked as one of the SVs it shows the number of supporting paired-end reads selected for each individual (0 : means that we have not picked any support for that inidividual for this SV. -1: means that for this individual this SV is in conflict with SVs picked before - NEVER PICK AN SV FOR AN IND WITH SUP -1 ).
 	int *sr_support;
 	int oldBestIsGood; // is the last best score computed for this SV still the best or things have changes
@@ -125,10 +136,12 @@ typedef struct clusterEl{
 	double probabilityCNV[totalNumInd][10];// Probability of CNV calculate for 0 to 9
 	long *readDepth;
 
+    double weight_without_homogeniety_score;
 	double homogeneity_score;
 	bool MEI_Del;
 	bool LowQual;
 
+    double weight_without_homogeniety_score_at_read_covering;
 }clusterEl;
 
 clusterEl *listClusterEl; // the array of all the cluster reads
@@ -151,6 +164,6 @@ typedef struct barcode_list_element{
 }barcode_list_element;
 
 float calWeight( ref_genome* ref, parameters *params, int clusterId, int *countBestSetPicked);
-void vh_setcover( bam_info **in_bams, parameters *params, ref_genome* ref, char* read_file, char* cluster_file, FILE *fpVcf);
+void vh_setcover( bam_info **in_bams, parameters *params, ref_genome* ref, FILE *fpVcf);
 
 #endif

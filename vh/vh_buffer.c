@@ -20,7 +20,7 @@ int bufferIsUseful( ref_genome* ref, parameters *params)
 		{
 			listClusterEl[listClusterInBuffer[count].clusterId].oldBestScore = calWeight( ref, params, listClusterInBuffer[count].clusterId, listClusterEl[listClusterInBuffer[count].clusterId].bestReadToRemove );
 			listClusterEl[listClusterInBuffer[count].clusterId].oldBestIsGood = 1;
-			listClusterInBuffer[count].score=listClusterEl[listClusterInBuffer[count].clusterId].oldBestScore;
+			listClusterInBuffer[count].score = listClusterEl[listClusterInBuffer[count].clusterId].oldBestScore;
 		}
 	}
 
@@ -64,17 +64,17 @@ void emptyBuffer()
 
 int addToBuffer(float score, int clusterId)
 {
+	int count, count2;
+
 	if( countInBuffer < maxSizeOfBuffer)
 	{
 		listClusterInBuffer[countInBuffer].score = score;
 		listClusterInBuffer[countInBuffer].clusterId = clusterId;
 		countInBuffer++;
-		if(score > maxScoreInBuffer)
+		if( score > maxScoreInBuffer)
 			maxScoreInBuffer = score;
 		return 0;
 	}
-	int count;
-	int count2;
 	if( score < maxScoreInBuffer)
 	{
 		for( count = 0; count < maxSizeOfBuffer; count++)

@@ -54,10 +54,10 @@ void vh_freeLinkedList (struct MappingOnGenome *);
 void vh_finalizeReadMapping (char *, int);
 void vh_copyElBrkPointIntr (int, int);
 int vh_isItSubset (int *, int, int *, int);
-int vh_outputCluster (struct ClustersFound *, int);
-void vh_addToPotentialOutput (int, struct Heap *, int);
-void vh_flushOut (struct ClustersFound *, int, int);
-void vh_createIntersectingIntervals (int, int);
+int vh_outputCluster (struct ClustersFound *, char);
+void vh_addToPotentialOutput (int, struct Heap *, char);
+void vh_flushOut (struct ClustersFound *, int, char);
+void vh_createIntersectingIntervals (int, char);
 int vh_notBothDirections (struct ClustersFound *);
 
 extern struct MappingOnGenome **g_genomeIndexStart;

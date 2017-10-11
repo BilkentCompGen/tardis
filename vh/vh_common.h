@@ -10,6 +10,12 @@
 //#define MAIN_MAIN     //The main Main function of the program
 
 //#define MAIN_DELETION_CLUSTER
+#define INVERSION 'V'
+#define INSERTION 'I'
+#define DELETION 'D'
+#define TANDEMDUP 'E'
+#define MEIFORWARD 'A'
+#define MEIREVERSE 'B'
 
 #include <stdlib.h>
 #include "vh_logger.h"

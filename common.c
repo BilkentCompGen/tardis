@@ -15,6 +15,7 @@ long long memUsage = 0;
 int running_mode = QUICK;
 int ten_x_flag = 0;
 int output_hs_flag = 0;
+int debug_mode = 0;
 
 void init_params( parameters** params)
 {
@@ -50,14 +51,15 @@ void init_params( parameters** params)
 	( *params)->make_sonic = 0;
 	( *params)->load_sonic = 0;
 	( *params)->sonic_info = NULL;
+	( *params)->number_of_different_mei_types = 0;
 	( *params)->quick = 1;
-
 
 	for( i = 0; i < MAX_BAMS; i++)
 	{
 		(*params)->bam_file_list[i] = NULL;
 	}
 }
+
 
 void print_params( parameters* params)
 {
@@ -234,6 +236,10 @@ int is_concordant( bam1_core_t bam_alignment_core, int min, int max)
 	/* All passed. Read is concordant */
 	return RPCONC;
 }
+
+
+
+
 
 /* Decode 4-bit encoded bases to their corresponding characters */
 char base_as_char( int base_as_int)
@@ -428,6 +434,10 @@ int find_chr_index_bam( ref_genome* ref, char* chromosome_name, bam_hdr_t* bam_h
 	return -1;
 }
 
+int vh_cmprReadNameStr (const void *a, const void *b)
+{
+	return strcmp (*(char **) a, *(char **) b);
+}
 
 unsigned long encode_ten_x_barcode(char* source){
 	int i, len;

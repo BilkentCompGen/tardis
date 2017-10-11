@@ -14,21 +14,22 @@
 #include "vh/vh_common.h"
 #include <htslib/faidx.h>
 
-lociInRef *hash_table_SR[SR_HASH_SIZE];
-//lociInRef **hash_table_SR;
+//lociInRef *hash_table_SR[SR_HASH_SIZE];
+
+lociInRef **hash_table_SR;
 char *ref_seq_per_chr;
 
 /* Read the reference genome */
 void readReferenceSeq( ref_genome *ref, parameters *params, int chr_index)
 {
-	int i = 0, min, max, loc_length;
+	int i, min, max, loc_length;
 	char *ref_seq;
 	long bp_cnt = 0;
 	faidx_t* ref_fai;
 
 	min = 0, max = 999;
 	ref_fai = fai_load( ref->ref_name);
-	ref_seq_per_chr = ( char *) getMem( (ref->chrom_lengths[chr_index]+1) * sizeof( char));
+	ref_seq_per_chr = ( char *) calloc( (ref->chrom_lengths[chr_index] + 1), sizeof( char));
 
 	while ( max < ref->chrom_lengths[chr_index])
 	{
@@ -37,7 +38,7 @@ void readReferenceSeq( ref_genome *ref, parameters *params, int chr_index)
 		for( i = 0; i < loc_length; i++)
 		{
 			if( bp_cnt < ref->chrom_lengths[chr_index])
-				ref_seq_per_chr[bp_cnt] = toupper(ref_seq[i]);
+				ref_seq_per_chr[bp_cnt] = toupper( ref_seq[i]);
 			bp_cnt++;
 		}
 		if( bp_cnt >= ref->chrom_lengths[chr_index])
@@ -46,67 +47,116 @@ void readReferenceSeq( ref_genome *ref, parameters *params, int chr_index)
 		min += loc_length;
 		max += loc_length;
 	}
-	fai_destroy(ref_fai);
-	free(ref_seq);
+	fai_destroy( ref_fai);
+	free( ref_seq);
 
 	ref_seq_per_chr[bp_cnt] = '\0';
-	create_10bp_HashIndex( ref, chr_index);
+	create_HashIndex( ref, chr_index);
 }
 
 int hash_function_ref( ref_genome *ref, char *str)
 {
-	int i, count=0;
+  /* this strictly assumes HASHKMERLEN < 16 */
 
-	for( i = 0; i < strlen( str); i++)
-		count = (2 * count) + (int)str[i];
-
-	return count % 1000000;
+        int i;
+	long count = 0;
+	int val = 0, numericVal = 0;
+	
+	while(i < HASHKMERLEN)
+	  {
+	    switch (str[i])
+	      {
+	      case 'A':
+		numericVal = 0;
+		break;
+	      case 'C':
+		numericVal = 1;
+		break;
+	      case 'G' :
+		numericVal = 2;
+		break;
+	      case 'T':
+		numericVal = 3;
+		break;
+	      default:
+		return -1;
+		break;
+	      }
+	    val = (val << 2) | numericVal;
+	    i++;
+	  }	
+	return val;
 }
 
-void create_10bp_HashIndex( ref_genome* ref, int chr_index)
+int is_kmer_valid (char *str){
+  if (strlen(str) < HASHKMERLEN)
+    return 0;
+  if (strchr( str, 'N') != NULL || strchr( str, 'M') != NULL || strchr( str, 'R') != NULL || strchr( str, 'Y') != NULL)
+    return 0;
+  return 1;
+}
+
+void create_HashIndex( ref_genome* ref, int chr_index)
 {
-	int i, index;
-	char str[11];
+	int i,k, ind;
+	char* str;
 	lociInRef *ptr;
 
-	//hash_table_SR = ( lociInRef **) getMem( SR_HASH_SIZE * sizeof( lociInRef*));
+	int SR_HASH_SIZE = pow (4, HASHKMERLEN);
 
+	
+	hash_table_SR = ( lociInRef **) getMem( (SR_HASH_SIZE + 1) * sizeof( lociInRef*));
+	str = ( char*) getMem ( sizeof(char) * (HASHKMERLEN+1));
+	
 	for( i = 0; i < SR_HASH_SIZE; i++)
 		hash_table_SR[i] = NULL;
 
-	for( i = 0; i < ref->chrom_lengths[chr_index] - 10; i++)
+	for( i = 0; i < ref->chrom_lengths[chr_index] - HASHKMERLEN; i++)
 	{
-		strncpy( str, &(ref_seq_per_chr[i]), 10);
-		str[10] = '\0';
+		if( ref_seq_per_chr[i] == '\0')
+			break;
 
-		if( strcmp( str, "NNNNNNNNNN\0") != 0)
+		strncpy( str, &(ref_seq_per_chr[i]), HASHKMERLEN);
+
+		if( is_kmer_valid(str))
 		{
-			index = hash_function_ref( ref, str);
+			ind = hash_function_ref( ref, str);
+			if( ind < 0)
+			{
+				continue;
+			}
 			ptr = ( lociInRef *) getMem( sizeof( lociInRef));
 			ptr->pos = i;
-			ptr->next = hash_table_SR[index];
-			hash_table_SR[index] = ptr;
+			ptr->next = hash_table_SR[ind];
+			hash_table_SR[ind] = ptr;
 		}
 	}
+
+	free( str);
 }
 
-void free_10bp_HashIndex()
+
+void free_HashIndex()
 {
 	int i;
-	lociInRef *ptr, *ptrTemp;
+	lociInRef *ptr, *ptrNext;
 
+	int SR_HASH_SIZE = pow (4, HASHKMERLEN);
+		
 	for( i = 0; i < SR_HASH_SIZE; i++)
 	{
 		ptr = hash_table_SR[i];
 		while( ptr != NULL)
 		{
-			ptrTemp = ptr->next;
+			ptrNext = ptr->next;
 			free( ptr);
-			ptr = ptrTemp;
+			ptr = ptrNext;
 		}
 	}
-	//if( hash_table_SR != NULL)
-		//free( hash_table_SR);
+
+	if( hash_table_SR != NULL)
+	  free( hash_table_SR);
+	//hash_table_SR = NULL;
 
 	free( ref_seq_per_chr);
 }
@@ -117,13 +167,13 @@ posMapSoftClip *almostPerfect_match_seq_ref(ref_genome* ref, int chr_index, char
 	char orient[10000];// orient of the mapping
 	int dist, reverseMatch;
 	lociInRef *ptr;
-	char seed[11];
+	char seed[HASHKMERLEN+1];
 	char *strRev;
 	posMapSoftClip *tmpSoftClipMap, *returnPtr;
 	returnPtr = NULL;
 
-	strncpy( seed, str, 10);
-	seed[10] = '\0';
+	strncpy( seed, str, HASHKMERLEN);
+	seed[HASHKMERLEN] = '\0';
 	index = hash_function_ref( ref, seed);
 	ptr = hash_table_SR[index];
 
@@ -164,8 +214,8 @@ posMapSoftClip *almostPerfect_match_seq_ref(ref_genome* ref, int chr_index, char
 				strRev[strlen( str) - i - 1] = 'N';
 		}
 		strRev[strlen( str)] = '\0';
-		strncpy( seed, strRev, 10);
-		seed[10] = '\0';
+		strncpy( seed, strRev, HASHKMERLEN);
+		seed[HASHKMERLEN] = '\0';
 		index = hash_function_ref( ref, seed);
 		ptr = hash_table_SR[index];
 
@@ -269,14 +319,12 @@ void countNumSoftClipInCluster( parameters *params, ref_genome* ref, bam_info* i
 void mapSoftClipToRef( bam_info* in_bam,  parameters* params, ref_genome* ref, int chr_index)
 {
 	int i;
-	int mappingPos[100000];
-	int numMap = 0;
 	char *str;
 	softClip *ptrSoftClip;
 
 	for( i = 0; i < in_bam->num_libraries; i++)
 	{
-		str = ( char *)malloc( sizeof( char) * in_bam->libraries[i]->read_length);
+		str = ( char *) getMem( sizeof( char) * in_bam->libraries[i]->read_length);
 
 		ptrSoftClip = in_bam->libraries[i]->listSoftClip;
 		while( ptrSoftClip != NULL)
@@ -303,16 +351,16 @@ void mapSoftClipToRef( bam_info* in_bam,  parameters* params, ref_genome* ref, i
 	}
 }
 
-void addSoftClip( ref_genome* ref, bam_info * in_bam, bam1_t* bam_alignment, int library_index, int flag, int *op, int *opl, int chrID)
+void addSoftClip( ref_genome* ref, library_properties * library, bam_alignment_region* bam_align, bam1_t* bam_alignment, int chrID)
 {
 	int i;
 	float avgPhredQual = 0;
-	bam1_core_t bam_alignment_core;
-	bam_alignment_core = bam_alignment->core;
 
-	softClip *newEl = ( softClip *) malloc( sizeof( softClip));
-	newEl->readName = ( char*)malloc( ( strlen( bam_alignment->data) + 7) * sizeof( char));
-	strncpy(newEl->readName, bam_alignment->data, strlen( bam_alignment->data));
+	bam1_core_t bam_alignment_core = bam_alignment->core;
+
+	softClip *newEl = ( softClip *) getMem( sizeof( softClip));
+	newEl->readName = ( char*) getMem( ( strlen( bam_alignment->data) + 7) * sizeof( char));
+	strncpy( newEl->readName, bam_alignment->data, strlen( bam_alignment->data));
 
 	newEl->readName[strlen( bam_alignment->data)] = '_';
 	newEl->readName[strlen( bam_alignment->data) + 1] = 'S';
@@ -323,26 +371,26 @@ void addSoftClip( ref_genome* ref, bam_info * in_bam, bam1_t* bam_alignment, int
 	newEl->readName[strlen( bam_alignment->data) + 6] = '\0';
 
 	/* Get the name of the chromosome */
-	
 	newEl->chromosome_name = NULL;
 	set_str( &(newEl->chromosome_name), ref->chrom_names[chrID]);
 
-	newEl->pos = bam_alignment_core.pos;
+	newEl->pos = bam_align->pos_left;
 	newEl->qual = bam_alignment_core.qual;
-	newEl->softClipString = ( char *)malloc( ( bam_alignment_core.l_qseq + 1) * sizeof( char));
+	newEl->softClipString = ( char *)getMem( ( bam_alignment_core.l_qseq + 1) * sizeof( char));
 
-	if( ( flag & BAM_FREVERSE) != 0)
-		newEl->orient='R';
+	if( ( bam_align->flag & BAM_FREVERSE) != 0)
+		newEl->orient = 'R';
 	else
-		newEl->orient='F';
+		newEl->orient = 'F';
 
-	uint8_t *a_qual = bam_get_qual(bam_alignment);
-	for( i = 0; i < bam_alignment->core.n_cigar; i++)
+	uint8_t *a_qual = bam_get_qual( bam_alignment);
+
+	for( i = 0; i < bam_align->n_cigar; i++)
 	{
-		newEl->op[i] = op[i];
-		newEl->opl[i] = opl[i];
+		newEl->op[i] = bam_cigar_op( bam_align->cigar[i]);
+		newEl->opl[i] = bam_cigar_oplen( bam_align->cigar[i]);
 	}
-	newEl->opCount = bam_alignment->core.n_cigar;
+	newEl->opCount = bam_align->n_cigar;
 
 	for( i = 0; i < bam_alignment_core.l_qseq; i++)
 	{
@@ -358,26 +406,26 @@ void addSoftClip( ref_genome* ref, bam_info * in_bam, bam1_t* bam_alignment, int
 			newEl->softClipString[i] = 'N';
 	}
 
-	if( op[0] == BAM_CSOFT_CLIP && opl[0] > MIN_SOFTCLIP_LEN)
+	if( newEl->op[0] == BAM_CSOFT_CLIP && newEl->opl[0] > MIN_SOFTCLIP_LEN)
 	{
-		for( i = 0; i < opl[0]; i++)
+		for( i = 0; i < newEl->opl[0]; i++)
 			avgPhredQual = avgPhredQual + a_qual[i];
 
-		avgPhredQual = ( float)avgPhredQual / ( float)opl[0];
+		avgPhredQual = ( float)avgPhredQual / ( float)newEl->opl[0];
 	}
-	else if( op[newEl->opCount - 1] == BAM_CSOFT_CLIP && opl[newEl->opCount - 1] > MIN_SOFTCLIP_LEN)
+	else if( newEl->op[newEl->opCount - 1] == BAM_CSOFT_CLIP && newEl->opl[newEl->opCount - 1] > MIN_SOFTCLIP_LEN)
 	{
-		for( i = in_bam->libraries[library_index]->read_length - opl[newEl->opCount - 1] - 1; i < in_bam->libraries[library_index]->read_length; i++)
+		for( i = library->read_length - newEl->opl[newEl->opCount - 1] - 1; i < library->read_length; i++)
 			avgPhredQual = avgPhredQual + a_qual[i];
 
-		avgPhredQual = ( float)avgPhredQual / opl[newEl->opCount - 1];
+		avgPhredQual = ( float)avgPhredQual / newEl->opl[newEl->opCount - 1];
 	}
 
 	newEl->softClipString[bam_alignment_core.l_qseq] = '\0';
 	newEl->avgPhredQualSoftClip = ( int)floorf( avgPhredQual);
 	newEl->ptrPosMapSoftClip = NULL;
-	newEl->next = in_bam->libraries[library_index]->listSoftClip;
-	in_bam->libraries[library_index]->listSoftClip = newEl;
+	newEl->next = library->listSoftClip;
+	library->listSoftClip = newEl;
 
 	sr_cnt_bam++;
 }

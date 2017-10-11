@@ -249,7 +249,7 @@ DivetRow *vh_loadDivetFile (LibraryInfo * libInfo, sonic *this_sonic)
 
 		//		if (vh_notInRepeat (newRow) == 1)
 		if (!sonic_is_satellite(this_sonic, newRow->chromosome_name, newRow->locMapLeftStart, newRow->locMapLeftEnd) &&
-		    !sonic_is_satellite(this_sonic, newRow->chromosome_name, newRow->locMapRightStart, newRow->locMapRightEnd) )
+				!sonic_is_satellite(this_sonic, newRow->chromosome_name, newRow->locMapRightStart, newRow->locMapRightEnd) )
 		{
 			if (libInfo->head == NULL || libInfo->tail == NULL)
 			{
@@ -430,9 +430,13 @@ int read_Divet_bam( discordantMapping *discordantReadPtr, parameters *params, re
 
 	while( discordantReadPtr != NULL)
 	{
-	  is_satellite = sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos1, discordantReadPtr->pos1_End)
-	    && sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End);
-	  if ( is_satellite == 0 && discordantReadPtr->mQual1 > params->mq_threshold && discordantReadPtr->mQual2 > params->mq_threshold
+		is_satellite = sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos1, discordantReadPtr->pos1_End)
+	    		&& sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End);
+
+		//if( discordantReadPtr->svType == DELETION && is_satellite == 0)
+			//		fprintf(stderr, "pos1=%d pos2=%d ed=%d name=%s chr_name=%s qual1=%d qual2=%d\n",discordantReadPtr->pos1, discordantReadPtr->pos2, discordantReadPtr->editDistance, discordantReadPtr->readName, discordantReadPtr->chromosome_name, discordantReadPtr->mQual1, discordantReadPtr->mQual2);
+
+		if ( is_satellite == 0 && discordantReadPtr->mQual1 > params->mq_threshold && discordantReadPtr->mQual2 > params->mq_threshold
 				&& strcmp(discordantReadPtr->chromosome_name, ref->chrom_names[chr_index]) == 0 && discordantReadPtr->pos1 > 0
 				&& discordantReadPtr->pos2 > 0 && discordantReadPtr->pos2 < ref->chrom_lengths[chr_index])
 		{
@@ -485,13 +489,13 @@ int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, ref_geno
 		ptrPosMapSoftClip = ptrSoftClip->ptrPosMapSoftClip;
 		while( ptrPosMapSoftClip != NULL)
 		{
-		  is_satellite = sonic_is_satellite( params->this_sonic, ptrSoftClip->chromosome_name, ptrSoftClip->pos, ptrSoftClip->pos+1 )
-		    && sonic_is_satellite( params->this_sonic, ptrSoftClip->chromosome_name, ptrPosMapSoftClip->posMap, ptrPosMapSoftClip->posMap+1);
-		  if ( is_satellite == 0 && ptrSoftClip->qual > params->mq_threshold	&& strcmp(ptrSoftClip->chromosome_name, ref->chrom_names[chr_index]) == 0
-		       && ptrPosMapSoftClip->mapq > 0 && ptrSoftClip->pos > 0 && ptrPosMapSoftClip->posMap > 0)
-		    {
-		      newRow = vh_loadDivetRowFromBamSoftClip( ptrSoftClip, ptrPosMapSoftClip, libInfo, read_len, divet_row_count);
-		      if( newRow == NULL)
+			is_satellite = sonic_is_satellite( params->this_sonic, ptrSoftClip->chromosome_name, ptrSoftClip->pos, ptrSoftClip->pos+1 )
+		    						&& sonic_is_satellite( params->this_sonic, ptrSoftClip->chromosome_name, ptrPosMapSoftClip->posMap, ptrPosMapSoftClip->posMap+1);
+			if ( is_satellite == 0 && ptrSoftClip->qual > params->mq_threshold && strcmp(ptrSoftClip->chromosome_name, ref->chrom_names[chr_index]) == 0
+					&& ptrPosMapSoftClip->mapq > 0 && ptrSoftClip->pos > 0 && ptrPosMapSoftClip->posMap > 0)
+			{
+				newRow = vh_loadDivetRowFromBamSoftClip( ptrSoftClip, ptrPosMapSoftClip, libInfo, read_len, divet_row_count);
+				if( newRow == NULL)
 					;//fprintf( stderr, "ERROR loading divet from bam (soft clip)\n");
 				else
 				{
