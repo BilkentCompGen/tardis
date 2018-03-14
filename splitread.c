@@ -56,44 +56,44 @@ void readReferenceSeq( ref_genome *ref, parameters *params, int chr_index)
 
 int hash_function_ref( ref_genome *ref, char *str)
 {
-  /* this strictly assumes HASHKMERLEN < 16 */
+	/* this strictly assumes HASHKMERLEN < 16 */
 
-        int i;
+	int i;
 	long count = 0;
 	int val = 0, numericVal = 0;
-	
+
 	while(i < HASHKMERLEN)
-	  {
-	    switch (str[i])
-	      {
-	      case 'A':
-		numericVal = 0;
-		break;
-	      case 'C':
-		numericVal = 1;
-		break;
-	      case 'G' :
-		numericVal = 2;
-		break;
-	      case 'T':
-		numericVal = 3;
-		break;
-	      default:
-		return -1;
-		break;
-	      }
-	    val = (val << 2) | numericVal;
-	    i++;
-	  }	
+	{
+		switch (str[i])
+		{
+		case 'A':
+			numericVal = 0;
+			break;
+		case 'C':
+			numericVal = 1;
+			break;
+		case 'G' :
+			numericVal = 2;
+			break;
+		case 'T':
+			numericVal = 3;
+			break;
+		default:
+			return -1;
+			break;
+		}
+		val = (val << 2) | numericVal;
+		i++;
+	}
 	return val;
 }
 
 int is_kmer_valid (char *str){
-  if (strlen(str) < HASHKMERLEN)
-    return 0;
-  if (strchr( str, 'N') != NULL || strchr( str, 'M') != NULL || strchr( str, 'R') != NULL || strchr( str, 'Y') != NULL)
-    return 0;
-  return 1;
+	if (strlen(str) < HASHKMERLEN)
+		return 0;
+	if (strchr( str, 'N') != NULL || strchr( str, 'M') != NULL || strchr( str, 'R') != NULL || strchr( str, 'Y') != NULL)
+		return 0;
+	return 1;
 }
 
 void create_HashIndex( ref_genome* ref, int chr_index)
@@ -104,10 +104,9 @@ void create_HashIndex( ref_genome* ref, int chr_index)
 
 	int SR_HASH_SIZE = pow (4, HASHKMERLEN);
 
-	
-	hash_table_SR = ( lociInRef **) getMem( (SR_HASH_SIZE + 1) * sizeof( lociInRef*));
-	str = ( char*) getMem ( sizeof(char) * (HASHKMERLEN+1));
-	
+	hash_table_SR = ( lociInRef **) getMem( ( SR_HASH_SIZE + 1) * sizeof( lociInRef*));
+	str = ( char*) getMem ( sizeof(char) * (HASHKMERLEN + 1));
+
 	for( i = 0; i < SR_HASH_SIZE; i++)
 		hash_table_SR[i] = NULL;
 
@@ -116,15 +115,14 @@ void create_HashIndex( ref_genome* ref, int chr_index)
 		if( ref_seq_per_chr[i] == '\0')
 			break;
 
-		strncpy( str, &(ref_seq_per_chr[i]), HASHKMERLEN);
+		strncpy( str, &( ref_seq_per_chr[i]), HASHKMERLEN);
 
 		if( is_kmer_valid(str))
 		{
 			ind = hash_function_ref( ref, str);
 			if( ind < 0)
-			{
 				continue;
-			}
+
 			ptr = ( lociInRef *) getMem( sizeof( lociInRef));
 			ptr->pos = i;
 			ptr->next = hash_table_SR[ind];
@@ -142,7 +140,7 @@ void free_HashIndex()
 	lociInRef *ptr, *ptrNext;
 
 	int SR_HASH_SIZE = pow (4, HASHKMERLEN);
-		
+
 	for( i = 0; i < SR_HASH_SIZE; i++)
 	{
 		ptr = hash_table_SR[i];
@@ -155,13 +153,13 @@ void free_HashIndex()
 	}
 
 	if( hash_table_SR != NULL)
-	  free( hash_table_SR);
+		free( hash_table_SR);
 	//hash_table_SR = NULL;
 
 	free( ref_seq_per_chr);
 }
 
-posMapSoftClip *almostPerfect_match_seq_ref(ref_genome* ref, int chr_index, char *str, int pos)
+posMapSoftClip *almostPerfect_match_seq_ref( ref_genome* ref, int chr_index, char *str, int pos)
 {
 	int i, index, posMapSize, posMap[10000], hammingDisMap[10000];
 	char orient[10000];// orient of the mapping
@@ -187,7 +185,7 @@ posMapSoftClip *almostPerfect_match_seq_ref(ref_genome* ref, int chr_index, char
 			if( dist <= ( 0.05 * strlen( str)))
 			{
 				posMap[posMapSize] = ptr->pos;
-				orient[posMapSize] = 'F';
+				orient[posMapSize] = FORWARD;
 				hammingDisMap[posMapSize] = dist;
 				posMapSize = posMapSize + 1;
 			}
@@ -228,7 +226,7 @@ posMapSoftClip *almostPerfect_match_seq_ref(ref_genome* ref, int chr_index, char
 				if( dist <= ( 0.05 * strlen( strRev)))
 				{
 					posMap[posMapSize] = ptr->pos;
-					orient[posMapSize] = 'R';
+					orient[posMapSize] = REVERSE;
 					hammingDisMap[posMapSize] = dist;
 					posMapSize = posMapSize + 1;
 					reverseMatch = 1;
@@ -265,7 +263,7 @@ posMapSoftClip *almostPerfect_match_seq_ref(ref_genome* ref, int chr_index, char
 void countNumSoftClipInCluster( parameters *params, ref_genome* ref, bam_info* in_bam, int chr_index)
 {
 	int i, j, countNumSR, posStartSF;
-	int* countSoftClip = ( int *)getMem( ( ref->chrom_lengths[chr_index] + 1000) * sizeof( int));
+	int *countSoftClip = ( int *)getMem( ( ref->chrom_lengths[chr_index] + 1000) * sizeof( int));
 	softClip *ptrSoftClip;
 
 	for( i = 0; i < ref->chrom_lengths[chr_index] + 1000; i++)
@@ -302,8 +300,7 @@ void countNumSoftClipInCluster( parameters *params, ref_genome* ref, bam_info* i
 			else if( ptrSoftClip->op[ptrSoftClip->opCount - 1] == BAM_CSOFT_CLIP)
 			{
 				posStartSF = ptrSoftClip->pos - ptrSoftClip->opl[ptrSoftClip->opCount-1] + in_bam->libraries[i]->read_length;
-
-				for(j = max(0, posStartSF - MIN_SOFTCLIP_LEN); j < min(ref->chrom_lengths[chr_index], posStartSF + MIN_SOFTCLIP_LEN); j++)
+				for( j = max( 0, posStartSF - MIN_SOFTCLIP_LEN); j < min(ref->chrom_lengths[chr_index], posStartSF + MIN_SOFTCLIP_LEN); j++)
 					countNumSR = countNumSR + countSoftClip[j];
 			}
 
@@ -379,9 +376,9 @@ void addSoftClip( ref_genome* ref, library_properties * library, bam_alignment_r
 	newEl->softClipString = ( char *)getMem( ( bam_alignment_core.l_qseq + 1) * sizeof( char));
 
 	if( ( bam_align->flag & BAM_FREVERSE) != 0)
-		newEl->orient = 'R';
+		newEl->orient = REVERSE;
 	else
-		newEl->orient = 'F';
+		newEl->orient = FORWARD;
 
 	uint8_t *a_qual = bam_get_qual( bam_alignment);
 

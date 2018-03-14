@@ -1,7 +1,7 @@
 #ifndef MAIN_H__
 #define MAIN_H__
 
-#include "../refgenome.h"
+#include "../processrefgen.h"
 #include "vh_common.h"
 
 

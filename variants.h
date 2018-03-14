@@ -3,7 +3,8 @@
 
 #include <stdio.h>
 #include <stdbool.h>
-#include "refgenome.h"
+
+#include "processrefgen.h"
 
 #define add_to_beginning 0
 #define  totalNumInd 20
@@ -30,6 +31,7 @@ typedef struct strvar {
 	long depth[totalNumInd]; /* Total Read depth of the variation */
 	float cn[totalNumInd];
 	float del_likelihood[totalNumInd];
+	float dup_likelihood[totalNumInd];
 	bool low_qual;
 	double homogeneity_score;
 	float weight;
@@ -52,8 +54,8 @@ typedef struct chr_index {
 int rd_filtering(struct strvar ** variations, bam_info** in_bams, ref_genome* ref, char* dups_file);
 struct strvar ** init_vars(int num_chroms);
 struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, char svtype,
-		float avg_edit, int min_svlen, int max_svlen, char *samples, double conf_score, bool filtered, bool,
-		char *mei_name, long depth[], float cn[], double del_likelihood[], int rp[], int sr[], double homogeneity_score,
+		float avg_edit, int min_svlen, int max_svlen, char *samples, double conf_score, bool filtered, bool mei_del,
+		char *mei_name, long depth[], float cn[], double del_likelihood[], double dup_likelihood[], int rp[], int sr[], double homogeneity_score,
 		float weight_without_homogeneity_score);
 void add_strvar(struct strvar ** variations, struct strvar* sv);
 void print_strvar(bam_info** in_bams, parameters* params, struct strvar* sv, FILE* fpOut);

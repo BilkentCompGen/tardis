@@ -95,7 +95,6 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 
 	g_maxListBrkPointIntr = MAXLISTBRKPOINTINTR;
 
-
 	/*Hold the libraries in a linked list*/
 	g_libInfo = NULL;
 
@@ -268,9 +267,8 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 		fprintf(stderr, ".");
 		fflush(stderr);
 
-		/* Tandem Duplication 
+		/* Tandem Duplication */
 		vh_initializeReadMapping_TDup (ref->chrom_names[i], ref->chrom_lengths[i], params->this_sonic);
-
 		fprintf(stderr, ".");
 		fflush(stderr);
 		vh_createTDupClusters (ref->chrom_lengths[i]);
@@ -278,8 +276,7 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 		fflush(stderr);
 		vh_finalizeReadMapping (ref->chrom_names[i], ref->chrom_lengths[i]);
 		fprintf(stderr, ".");
-
-		fflush(stderr); */
+		fflush(stderr);
 
 		/* Mei */
 		initializeReadMapping_MEI (in_bams, params, ref->chrom_names[i], ref->chrom_lengths[i]);
@@ -317,8 +314,8 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 int run_vh( ref_genome* ref, parameters *params, bam_info ** in_bams)
 {
 	int i, j;
-	double preProsPrune= 0.001;
-	int overMapLimit=500;
+	double preProsPrune = 0.001;
+	int overMapLimit = 500;
 	char divetfile[MAX_SEQ];
 	char outputfile[MAX_SEQ];
 	char outputread[MAX_SEQ];

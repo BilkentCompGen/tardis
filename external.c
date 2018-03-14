@@ -3,6 +3,7 @@
 #include <string.h>
 #include <signal.h>
 #include "external.h"
+#include "processfq.h"
 
 int remap_mrfast( parameters *params, bam_info ** in_bams, configuration *cfg)
 {

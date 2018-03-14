@@ -9,6 +9,7 @@
 #define SPLITREAD_H_
 
 #include "processbam.h"
+#include "processfq.h"
 #include "bamonly.h"
 
 #define HASHKMERLEN 10

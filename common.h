@@ -8,6 +8,26 @@
 #include <stdbool.h>
 #include "sonic/sonic.h"
 
+//#define MAIN_DELETION_CLUSTER
+#define INVERSION 'V'
+#define INSERTION 'I'
+#define DELETION 'D'
+#define TANDEMDUP 'E'
+
+#define INVDUPLEFT 'S'
+#define INVDUPRIGHT 'T'
+
+#define INTERDUPLEFT 'H'
+#define INTERDUPRIGHT 'M'
+
+#define MEIFORWARD 'A'
+#define MEIREVERSE 'B'
+
+#define LEFT 'L'
+#define RIGHT 'R'
+#define NONE 'N'
+#define FORWARD 'F'
+#define REVERSE 'R'
 
 /* Exit Codes */
 #define EXIT_SUCCESS 0
@@ -116,7 +136,6 @@ htsFile* safe_hts_open( char* path, char* mode);
 
 /* General BAM processing functions */
 int is_proper( int flag);
-int is_discordant( bam1_core_t bam_alignment_core, int min, int max);
 int is_concordant( bam1_core_t bam_alignment_core, int min, int max);
 char base_as_char( int base_as_int);
 char complement_char( char base);

@@ -238,9 +238,6 @@ int is_concordant( bam1_core_t bam_alignment_core, int min, int max)
 }
 
 
-
-
-
 /* Decode 4-bit encoded bases to their corresponding characters */
 char base_as_char( int base_as_int)
 {

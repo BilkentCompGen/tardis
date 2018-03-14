@@ -31,7 +31,6 @@ int conflictsAny(int i, int *supInd);
 void addToListOfConflicts(int i, int j, int *countReads);
 void addToConflict(int maxWeightSet, int *countReads);
 void initConflict( int max_sv_count);
-void freeConflict();
 
 
 #endif /* VH_VH_CONFLICT_H_ */

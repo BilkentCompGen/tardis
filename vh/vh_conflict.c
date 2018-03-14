@@ -10,6 +10,7 @@
 #include <string.h>
 #include "vh_conflict.h"
 #include "vh_setcover.h"
+#include "vh_common.h"
 
 int numSV = 0; // total number of distinct SVs picked
 

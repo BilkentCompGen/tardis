@@ -9,6 +9,7 @@
 #define BAMONLY_BO_BAMHANDLER_H_
 
 #include "processbam.h"
+#include "processfq.h"
 
 #define MIN_INS_LEN 100
 #define MAX_INV_LEN 100000000
@@ -29,23 +30,7 @@ extern long tandup_cnt_div;
 extern long sr_cnt_div;
 extern long sr_cnt_bam;
 
-typedef struct bam_alignment_region
-{
-	int32_t chrID_left;
-	int32_t chrID_right;
-	int32_t pos_left;
-	int32_t pos_right;
-	int32_t isize;
-	uint16_t flag;
-	char orientation;
-	uint32_t edit_distance;
-	uint32_t n_cigar;
-	uint32_t* cigar;
-
-	struct bam_alignment_region *next;
-}bam_alignment_region;
-
 int bamonly_run(ref_genome* ref, parameters *params, bam_info ** in_bams);
-
+int read_mapping( library_properties *library, parameters* params, ref_genome* ref, bam1_t* bam_alignment, int32_t *bamToRefIndex, bam_alignment_region* bam_align);
 
 #endif /* BAMONLY_BO_BAMHANDLER_H_ */

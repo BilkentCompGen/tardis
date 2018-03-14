@@ -6,17 +6,17 @@
 #include "vh_setcover.h"
 #include "vh_heap.h"
 
-mei_Reads **mReads;
+mei_Reads **mReads = NULL;
 HeapMEI H_F; /* The forward mapping heap from left of breakpoint */
 HeapMEI H_R; /* the reverse mapping heap from right of breakpoint */
 HeapMEI H_S; /* The soft clipping read */
 
-int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromosome_name)
+int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromosome_name, int chroSize)
 {
 	mei_Reads *tmpMEI_Reads;
 	discordantMappingMEI *discordantReadPtr;
 	softClip *softClipPtr;
-	int numSample, count, mei_count = 0;
+	int numSample, count, mei_count = 0, tmp;
 	int is_satellite;
 
 	sonic_repeat *mei;
@@ -32,7 +32,8 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 			while( discordantReadPtr != NULL)
 			{
 				is_satellite = sonic_is_satellite (params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos, discordantReadPtr->pos_End);
-				if( is_satellite == 0 && strcmp( discordantReadPtr->chromosome_name, chromosome_name) == 0)
+				if( is_satellite == 0 && strcmp( discordantReadPtr->chromosome_name, chromosome_name) == 0
+						&& ( discordantReadPtr->pos > 0) && ( discordantReadPtr->pos_End < chroSize))
 				{
 					if( discordantReadPtr->MEI_Type > -1)
 					{
@@ -61,15 +62,16 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 						tmpMEI_Reads->indName = NULL;
 						set_str( &tmpMEI_Reads->indName, in_bams[numSample]->sample_name);
 
-						if (discordantReadPtr->orient == 'F')
+						if (discordantReadPtr->orient == FORWARD)
 						{
 							tmpMEI_Reads->next = mReads[discordantReadPtr->pos_End];
 							mReads[discordantReadPtr->pos_End] = tmpMEI_Reads;
 						}
-						else if (discordantReadPtr->orient == 'R')
+						if (discordantReadPtr->orient == REVERSE)
 						{
-							tmpMEI_Reads->next = mReads[max( 0, discordantReadPtr->pos - in_bams[numSample]->libraries[count]->conc_max)];
-							mReads[max(0, discordantReadPtr->pos - in_bams[numSample]->libraries[count]->conc_max)] = tmpMEI_Reads;
+							tmp = max( 0, discordantReadPtr->pos - in_bams[numSample]->libraries[count]->conc_max);
+							tmpMEI_Reads->next = mReads[tmp];
+							mReads[tmp] = tmpMEI_Reads;
 						}
 						mei_count++;
 					}
@@ -79,13 +81,13 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 			while( softClipPtr != NULL)
 			{
 				is_satellite = sonic_is_satellite (params->this_sonic, softClipPtr->chromosome_name, softClipPtr->pos, softClipPtr->pos+1);
-				if( is_satellite == 0 && strcmp( softClipPtr->chromosome_name, chromosome_name) == 0)
+				if( is_satellite == 0 && strcmp( softClipPtr->chromosome_name, chromosome_name) == 0 && ( softClipPtr->pos > 0))
 				{
 					posMapSoftClip *ptrPosMapSoftClip = softClipPtr->ptrPosMapSoftClip;
 					if( ptrPosMapSoftClip != NULL)
 					{
 						mei = sonic_is_mobile_element( params->this_sonic, chromosome_name, ptrPosMapSoftClip->posMap, ptrPosMapSoftClip->posMap+1, params->mei);
-						if( mei != NULL)
+						if( mei != NULL && ( ptrPosMapSoftClip->posMap < chroSize))
 						{
 							tmpMEI_Reads = (mei_Reads*) getMem(sizeof(mei_Reads));
 
@@ -108,7 +110,6 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 
 							tmpMEI_Reads->indName = NULL;
 							set_str( &(tmpMEI_Reads->indName), in_bams[numSample]->sample_name);
-
 
 							if( softClipPtr->op[0] == 4) //soft clipped at the beginning of the read. Horrible. Replace with #define
 							{
@@ -135,7 +136,7 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 }
 
 
-int addToGenomeIndex_MEI_sensitive( parameters *params, char *chromosome_name)
+int addToGenomeIndex_MEI_sensitive( parameters *params, char *chromosome_name, int chroSize)
 {
 	LibraryInfo *libInfo;
 	DivetRow *divetReadMappingPtr;
@@ -148,7 +149,9 @@ int addToGenomeIndex_MEI_sensitive( parameters *params, char *chromosome_name)
 		divetReadMappingPtr = libInfo->head;
 		while (divetReadMappingPtr != NULL)
 		{
-			if (strcmp (divetReadMappingPtr->chromosome_name, chromosome_name) == 0 && ((divetReadMappingPtr->svType == MEIRIGHTPAIR || divetReadMappingPtr->svType == MEILEFTPAIR)))
+			if (strcmp (divetReadMappingPtr->chromosome_name, chromosome_name) == 0
+					&& ((divetReadMappingPtr->svType == MEIRIGHTPAIR || divetReadMappingPtr->svType == MEILEFTPAIR))
+					&& ( divetReadMappingPtr->locMapLeftStart > 0) && ( divetReadMappingPtr->locMapRightEnd < chroSize))
 			{
 				tmpMEI_Reads = (mei_Reads *)getMem(sizeof(mei_Reads));
 				tmpMEI_Reads->readName = NULL;
@@ -171,59 +174,42 @@ int addToGenomeIndex_MEI_sensitive( parameters *params, char *chromosome_name)
 
 				tmpMEI_Reads->libId = libId;
 
-				/* ARDA: Horrible coding. Fix. */
-				/* sonic_repeat now has mei_code that points to the index of the MEI type in the --mei string */
-				/* just use it, instead of hardcoding meiType[]. For reverse complements, add n = number_of_mei_types */
-				/*
-				if(divetReadMappingPtr->meiType[0]=='A')
-					tmpMEI_Reads->MEI_Type=0;
-				else if (divetReadMappingPtr->meiType[0]=='a')
-					tmpMEI_Reads->MEI_Type=1;
-				else if(divetReadMappingPtr->meiType[0]=='L')
-					tmpMEI_Reads->MEI_Type=2;
-				else if (divetReadMappingPtr->meiType[0]=='l')
-					tmpMEI_Reads->MEI_Type=3;
-				else if(divetReadMappingPtr->meiType[0]=='S')
-					tmpMEI_Reads->MEI_Type=4;
-				else if (divetReadMappingPtr->meiType[0]=='s')
-					tmpMEI_Reads->MEI_Type=5;
-				 */
 				tmpMEI_Reads->MEI_Type = divetReadMappingPtr->mei_code;
 
 				if (divetReadMappingPtr->svType == MEIRIGHTPAIR)
 				{
-					if(divetReadMappingPtr->orientationLeft == 'F')
+					if(divetReadMappingPtr->orientationLeft == FORWARD)
 					{
 						tmpMEI_Reads->pos = divetReadMappingPtr->locMapLeftStart;
 						tmpMEI_Reads->pos_End = divetReadMappingPtr->locMapLeftEnd;
-						tmpMEI_Reads->orient = 'F';
+						tmpMEI_Reads->orient = FORWARD;
 						tmpMEI_Reads->next = mReads[tmpMEI_Reads->pos_End];
 						mReads[tmpMEI_Reads->pos_End] = tmpMEI_Reads;
 					}
-					else if (divetReadMappingPtr->orientationLeft == 'R')
+					else if (divetReadMappingPtr->orientationLeft == REVERSE)
 					{
 						tmpMEI_Reads->pos = divetReadMappingPtr->locMapLeftStart;
 						tmpMEI_Reads->pos_End = divetReadMappingPtr->locMapLeftEnd;
-						tmpMEI_Reads->orient = 'R';
+						tmpMEI_Reads->orient = REVERSE;
 						tmpMEI_Reads->next = mReads[max(0,tmpMEI_Reads->pos-libInfo->maxDelta)];
 						mReads[max( 0, tmpMEI_Reads->pos-libInfo->maxDelta)] = tmpMEI_Reads;
 					}
 				}
 				else if (divetReadMappingPtr->svType == MEILEFTPAIR)
 				{
-					if(divetReadMappingPtr->orientationRight == 'F')
+					if(divetReadMappingPtr->orientationRight == FORWARD)
 					{
 						tmpMEI_Reads->pos = divetReadMappingPtr->locMapRightStart;
 						tmpMEI_Reads->pos_End = divetReadMappingPtr->locMapRightEnd;
-						tmpMEI_Reads->orient = 'F';
+						tmpMEI_Reads->orient = FORWARD;
 						tmpMEI_Reads->next = mReads[tmpMEI_Reads->pos_End];
 						mReads[tmpMEI_Reads->pos_End] = tmpMEI_Reads;
 					}
-					else if (divetReadMappingPtr->orientationRight == 'R')
+					else if (divetReadMappingPtr->orientationRight == REVERSE)
 					{
 						tmpMEI_Reads->pos = divetReadMappingPtr->locMapRightStart;
 						tmpMEI_Reads->pos_End = divetReadMappingPtr->locMapRightEnd;
-						tmpMEI_Reads->orient = 'R';
+						tmpMEI_Reads->orient = REVERSE;
 						tmpMEI_Reads->next = mReads[max(0,tmpMEI_Reads->pos-libInfo->maxDelta)];
 						mReads[max( 0, tmpMEI_Reads->pos-libInfo->maxDelta)] = tmpMEI_Reads;
 					}
@@ -246,7 +232,7 @@ void add_R_Heap( int pos)
 	HeapElMEI *newEl;
 	while(mei_ReadsPtr!=NULL)
 	{
-		if (mei_ReadsPtr->orient=='R' && mei_ReadsPtr->readTypeSupport==0)
+		if (mei_ReadsPtr->orient == REVERSE && mei_ReadsPtr->readTypeSupport == 0)
 		{
 			newEl=(HeapElMEI *)getMem(sizeof(HeapElMEI));
 			newEl->mei_ReadsPtr = mei_ReadsPtr;
@@ -287,7 +273,7 @@ void add_F_Heap( int pos)
 
 	while( mei_ReadsPtr != NULL)
 	{
-		if( mei_ReadsPtr->orient == 'F' && mei_ReadsPtr->readTypeSupport == 0)
+		if( mei_ReadsPtr->orient == FORWARD && mei_ReadsPtr->readTypeSupport == 0)
 		{
 			newEl = ( HeapElMEI *) getMem( sizeof( HeapElMEI));
 			newEl->mei_ReadsPtr = mei_ReadsPtr;
@@ -408,8 +394,8 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						cluster_new->individual_name = NULL;
 						set_str( &cluster_new->individual_name, H_F.heapArray[count].mei_ReadsPtr->indName);
 
-						cluster_new->orientation_left = 'F';
-						cluster_new->orientation_right = 'F';
+						cluster_new->orientation_left = FORWARD;
+						cluster_new->orientation_right = FORWARD;
 						cluster_new->mapping_quality_left = H_F.heapArray[count].mei_ReadsPtr->mQual;
 						cluster_new->mapping_quality_right = H_F.heapArray[count].mei_ReadsPtr->mQual;
 						cluster_new->ten_x_barcode = NULL;
@@ -481,8 +467,8 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						cluster_new->individual_name = NULL;
 						set_str( &cluster_new->individual_name, H_R.heapArray[count].mei_ReadsPtr->indName);
 
-						cluster_new->orientation_left = 'R';
-						cluster_new->orientation_right = 'R';
+						cluster_new->orientation_left = REVERSE;
+						cluster_new->orientation_right = REVERSE;
 						cluster_new->mapping_quality_left = H_R.heapArray[count].mei_ReadsPtr->mQual;
 						cluster_new->mapping_quality_right = H_R.heapArray[count].mei_ReadsPtr->mQual;
 						cluster_new->ten_x_barcode = NULL;
@@ -593,36 +579,36 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 
 void MEICluster_Region( parameters* params, char* chromosome_name, int chroSize)
 {
-	int brkPointIndex=0;
+	int leftBreakPoint;
 	int boolMEITypeNewAdded = 0; // 0 or 1 indicates an new insertion of one of the 6 different types of MEI
 	int boolMEITypeNewRemoved = 0; // 0 or 1 indicates a new deletion of one of the 6 different types of MEI
 
-	for( brkPointIndex = 0; brkPointIndex < chroSize; brkPointIndex++)
+	for( leftBreakPoint = 0; leftBreakPoint < chroSize; leftBreakPoint++)
 	{
-		if( mReads[brkPointIndex] != NULL)
+		if( mReads[leftBreakPoint] != NULL)
 		{
-			add_F_Heap( brkPointIndex);
-			add_R_Heap( brkPointIndex);
-			add_S_Heap( brkPointIndex);
+			add_F_Heap( leftBreakPoint);
+			add_R_Heap( leftBreakPoint);
+			add_S_Heap( leftBreakPoint);
 			boolMEITypeNewAdded = 1;
 		}
 
-		if( ( ( H_R.heapSize > 0 && minValue_heapMEI( &H_R) == brkPointIndex) ||
-				( minValue_heapMEI( &H_F) == brkPointIndex && H_F.heapSize > 0) ||
-				( minValue_heapMEI( &H_S) == brkPointIndex && H_S.heapSize > 0)) && boolMEITypeNewAdded)
+		if( ( ( H_R.heapSize > 0 && minValue_heapMEI( &H_R) == leftBreakPoint) ||
+				( H_F.heapSize > 0 && minValue_heapMEI( &H_F) == leftBreakPoint) ||
+				( H_S.heapSize > 0 && minValue_heapMEI( &H_S) == leftBreakPoint)) && boolMEITypeNewAdded)
 		{
 			if( ( H_R.heapSize + H_F.heapSize + H_S.heapSize) > 0)
 				outputMEIClusters( params, chromosome_name);
 
 			boolMEITypeNewAdded = 0;
 		}
-		while( H_R.heapSize > 0 && minValue_heapMEI( &H_R) == brkPointIndex)
+		while( H_R.heapSize > 0 && minValue_heapMEI( &H_R) == leftBreakPoint)
 			heap_remove_topMEI( &H_R);
 
-		while( H_F.heapSize > 0 && minValue_heapMEI( &H_F) == brkPointIndex)
+		while( H_F.heapSize > 0 && minValue_heapMEI( &H_F) == leftBreakPoint)
 			heap_remove_topMEI( &H_F);
 
-		while( H_S.heapSize > 0 && minValue_heapMEI( &H_S) == brkPointIndex)
+		while( H_S.heapSize > 0 && minValue_heapMEI( &H_S) == leftBreakPoint)
 			heap_remove_topMEI( &H_S);
 	}
 }
@@ -636,6 +622,7 @@ void vh_freeLinkedListMEI( mei_Reads * cur)
 		free( cur->indName);
 		free( cur->libName);
 		free( cur->readName);
+		free( cur->MEI_Class);
 		free( cur->MEI_Subclass);
 		free( cur);
 		cur = next;
@@ -644,38 +631,40 @@ void vh_freeLinkedListMEI( mei_Reads * cur)
 
 void vh_finalizeReadMapping_Mei( int chroSize)
 {
-	int count;
+	int i;
 	mei_Reads *ptr, *ptrNext;
-	for( count = 0; count <= chroSize; count++)
+	for( i = 0; i < chroSize; i++)
 	{
-		vh_freeLinkedListMEI( mReads[count]);
-		mReads[count] = NULL;
+		vh_freeLinkedListMEI(mReads[i]);
+		mReads[i] = NULL;
 	}
+
 	if( mReads != NULL)
 	{
 		free( mReads);
 		mReads = NULL;
 	}
-	freeHeapMEI( &H_S);
-	freeHeapMEI( &H_R);
-	freeHeapMEI( &H_F);
 }
 
 
 void initializeReadMapping_MEI( bam_info** in_bams, parameters *params, char *chromosome_name, int chroSize)
 {
-	int count, mei_count;
-	mReads = (mei_Reads **) getMem( (chroSize + 1) * sizeof( mei_Reads *));
+	int i, mei_count;
+
+	mReads = (mei_Reads **) getMem( chroSize * sizeof( mei_Reads *));
 
 	if( mReads == NULL)
 		vh_logWarning ("Memory Problem in vh_createMaxClusterMEI");
 
-	for( count = 0; count <= chroSize; count++)
-		mReads[count] = NULL;
+	for( i = 0; i < chroSize; i++)
+		mReads[i] = NULL;
+
+	H_F.heapSize = 0;
+	H_R.heapSize = 0;
+	H_S.heapSize = 0;
 
 	if( running_mode == QUICK)
-		mei_count = addToGenomeIndex_MEI( in_bams, params, chromosome_name);
+		mei_count = addToGenomeIndex_MEI( in_bams, params, chromosome_name, chroSize);
 	else
-		mei_count = addToGenomeIndex_MEI_sensitive( params, chromosome_name);
-
+		mei_count = addToGenomeIndex_MEI_sensitive( params, chromosome_name, chroSize);
 }

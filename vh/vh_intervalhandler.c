@@ -70,8 +70,8 @@ int mei_filtering( ref_genome* ref, parameters *params)
 				set_str( &(divetReadMappingPtr->meiType), mei_left->repeat_class);
 
 				/*IF THE MEI INSERT IS + STRAND UPPERCASE IF - STRAND LOWER CASE*/
-				if ( ( divetReadMappingPtr->orientationLeft == 'F' && mei_left->strand == SONIC_STRAND_REV)
-						|| ( divetReadMappingPtr->orientationLeft == 'R' && mei_left->strand == SONIC_STRAND_FWD  ))
+				if ( ( divetReadMappingPtr->orientationLeft == FORWARD && mei_left->strand == SONIC_STRAND_REV)
+						|| ( divetReadMappingPtr->orientationLeft == REVERSE && mei_left->strand == SONIC_STRAND_FWD  ))
 				{
 					/* Horrible. Change this to the mei_code as described above */
 					//divetReadMappingPtr->meiType[0] = tolower(divetReadMappingPtr->meiType[0]);
@@ -113,8 +113,8 @@ int mei_filtering( ref_genome* ref, parameters *params)
 				set_str( &(divetReadMappingPtr->meiType), mei_right->repeat_class);
 
 				/*IF THE MEI INSERT IS + STRAND UPPERCASE IF - STRAND LOWER CASE*/
-				if ( ( divetReadMappingPtr->orientationRight == 'F' && mei_right->strand == SONIC_STRAND_REV)
-						|| ( divetReadMappingPtr->orientationRight == 'R' && mei_right->strand == SONIC_STRAND_FWD ))
+				if ( ( divetReadMappingPtr->orientationRight == FORWARD && mei_right->strand == SONIC_STRAND_REV)
+						|| ( divetReadMappingPtr->orientationRight == REVERSE && mei_right->strand == SONIC_STRAND_FWD ))
 				{
 					/* Horrible. Change this to the mei_code as described above */
 					//divetReadMappingPtr->meiType[0] = tolower(divetReadMappingPtr->meiType[0]);

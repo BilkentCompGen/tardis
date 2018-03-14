@@ -38,9 +38,7 @@ typedef struct library_properties
 	int num_sequences; /* number of paired-end sequences for this library */
 
 	struct softClip *listSoftClip;
-	struct discordantMapping *listRR_FF_Mapping;
-	struct discordantMapping *listFR_Mapping;
-	struct discordantMapping *listRF_Mapping;
+	struct discordantMapping **mappings_discordant;
 	struct discordantMappingMEI *listMEI_Mapping;
 } library_properties;
 

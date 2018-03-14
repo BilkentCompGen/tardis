@@ -11,7 +11,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "../processbam.h"
 #include "../common.h"
 #include "../variants.h"
 
@@ -122,7 +121,7 @@ typedef struct clusterEl{
 	int minDelLength;// Only used for deletion. Represents the minimum size of deletion predicted
 	int maxDelLength;//Only used for deletion. Represents the maximum size of deletion predicted
 	char SVtype; //V: inversion, D: Deletion, I: insertion, E: tandem duplication
-	int *indIdCount; //If this cluster is picked as one of the SVs it shows the number of supporting paired-end reads selected for each individual (0 : means that we have not picked any support for that inidividual for this SV. -1: means that for this individual this SV is in conflict with SVs picked before - NEVER PICK AN SV FOR AN IND WITH SUP -1 ).
+	int *indIdCount; //If this cluster is picked as one of the SVs it shows the number of supporting paired-end reads selected for each individual (0 : means that we have not picked any support for that individual for this SV. -1: means that for this individual this SV is in conflict with SVs picked before - NEVER PICK AN SV FOR AN IND WITH SUP -1 ).
 	int *sr_support;
 	int oldBestIsGood; // is the last best score computed for this SV still the best or things have changes
 	float oldBestScore; // Whats is the best old score
@@ -131,9 +130,10 @@ typedef struct clusterEl{
 	struct readMappingEl *next; //a array of number of individuals for each list of read mappings (i.e. for each individual we have a different list of read mappings and they should be sorted).
 	struct readMappingEl *readMappingSelected; // The link list of all the read mappings which have been selected by set cover for this SV.
 
-	float *CNV_Interest; // the CNV calculate for the region of interest
+	float *copyNumber; /* the copy number (CN) for the region of interest */
 	double *Del_Likelihood;
-	double probabilityCNV[totalNumInd][10];// Probability of CNV calculate for 0 to 9
+	double *Dup_Likelihood;
+	double CNV_probability[totalNumInd][10];// Probability of CNV calculated for 0 to 9
 	long *readDepth;
 
     double weight_without_homogeniety_score;
@@ -163,7 +163,8 @@ typedef struct barcode_list_element{
 	struct barcode_list_element* next;
 }barcode_list_element;
 
-float calWeight( ref_genome* ref, parameters *params, int clusterId, int *countBestSetPicked);
+float calWeight( parameters *params, int clusterId, int *countBestSetPicked);
 void vh_setcover( bam_info **in_bams, parameters *params, ref_genome* ref, FILE *fpVcf);
+int freeLinkList( readMappingEl *ptr);
 
 #endif

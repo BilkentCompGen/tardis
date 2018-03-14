@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "processbam.h"
+#include "processfq.h"
 
 void load_bam( bam_info* in_bam, char* path)
 {
@@ -66,9 +67,9 @@ void load_bam( bam_info* in_bam, char* path)
 		( in_bam->libraries)[i]->fastq1 = NULL;
 		( in_bam->libraries)[i]->fastq2 = NULL;
 		( in_bam->libraries)[i]->divet = NULL;
-		( in_bam->libraries)[i]->listRR_FF_Mapping = NULL;
-		( in_bam->libraries)[i]->listFR_Mapping = NULL;
-		( in_bam->libraries)[i]->listRF_Mapping = NULL;
+		( in_bam->libraries)[i]->mappings_discordant = ( discordantMapping **) getMem( (NHASH + 1) * sizeof( discordantMapping *));
+		for( j = 0; j < NHASH; j++)
+			( in_bam->libraries)[i]->mappings_discordant[j] = NULL;
 		( in_bam->libraries)[i]->listMEI_Mapping = NULL;
 		( in_bam->libraries)[i]->listSoftClip = NULL;
 	}
@@ -423,5 +424,85 @@ char* convertUCSCtoGRC( char* inputchr)
 	return output;
 }
 
+
+int is_concordant_bamonly( bam_alignment_region* bam_align, int min, int max)
+{
+	int flag = bam_align->flag;
+
+	if( ( flag & BAM_FPAIRED) == 0)
+	{
+		/* Read is single-end. Skip this by calling it concordant */
+		return RPCONC;
+	}
+
+	/*if( ( flag & BAM_FPROPER_PAIR) == 0)
+	{
+		/* Not proper pair
+		return RPUNMAPPED;
+	}*/
+
+	if( ( flag & BAM_FUNMAP) != 0)  // c.a.
+	{
+		/* Read unmapped; Orphan or OEA */
+		return RPUNMAPPED;
+	}
+
+	if( ( flag & BAM_FMUNMAP) != 0) // c.a.
+	{
+		/* Mate unmapped; Orphan or OEA */
+		return RPUNMAPPED;
+	}
+
+	if( ( flag & BAM_FREVERSE) != 0 && ( flag & BAM_FMREVERSE) != 0)
+	{
+		/* -- orientation = inversion */
+		return RPINV;
+	}
+
+	if( ( flag & BAM_FREVERSE) == 0 && ( flag & BAM_FMREVERSE) == 0)
+	{
+		/* ++ orientation = inversion */
+		return RPINV;
+	}
+
+	if( bam_align->chrID_left != bam_align->chrID_right)
+	{
+		/* On different chromosomes */
+		return RPINTERCHR;
+	}
+
+	if( bam_align->pos_left <= bam_align->pos_right) // c.a.
+	{
+		/* Read is placed BEFORE its mate */
+		if( ( flag & BAM_FREVERSE) != 0 && ( flag & BAM_FMREVERSE) == 0)
+		{
+			/* -+ orientation = tandem duplication */
+			return RPTDUP; //was 0 before
+		}
+	}
+	else
+	{
+		/* Read is placed AFTER its mate */
+		if( ( flag & BAM_FREVERSE) == 0 && ( flag & BAM_FMREVERSE) != 0)
+		{
+			/* +- orientation = tandem duplication */
+			return RPTDUP; //was 0 before
+		}
+	}
+
+	/* Passed all of the above. proper pair, both mapped, in +- orientation. Now check the isize */
+	if( abs( bam_align->isize) < min) // c.a.
+	{
+		/* Deletion or Insertion */
+		return RPINS;
+	}
+	else if( abs( bam_align->isize) > max)
+	{
+		return RPDEL;
+	}
+
+	/* All passed. Read is concordant */
+	return RPCONC;
+}
 
 

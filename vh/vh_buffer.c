@@ -4,11 +4,11 @@
 
 
 clusterInBuffer listClusterInBuffer[maxSizeOfBuffer];
-int countInBuffer;
+int countInBuffer = 0;
 float maxScoreInBuffer;
 
 
-int bufferIsUseful( ref_genome* ref, parameters *params)
+int bufferIsUseful( parameters *params)
 {
 	float bestWeight = inf;
 	int bestWeightId = -1;
@@ -18,7 +18,7 @@ int bufferIsUseful( ref_genome* ref, parameters *params)
 	{
 		if( listClusterEl[listClusterInBuffer[count].clusterId].oldBestIsGood == 0)
 		{
-			listClusterEl[listClusterInBuffer[count].clusterId].oldBestScore = calWeight( ref, params, listClusterInBuffer[count].clusterId, listClusterEl[listClusterInBuffer[count].clusterId].bestReadToRemove );
+			listClusterEl[listClusterInBuffer[count].clusterId].oldBestScore = calWeight( params, listClusterInBuffer[count].clusterId, listClusterEl[listClusterInBuffer[count].clusterId].bestReadToRemove );
 			listClusterEl[listClusterInBuffer[count].clusterId].oldBestIsGood = 1;
 			listClusterInBuffer[count].score = listClusterEl[listClusterInBuffer[count].clusterId].oldBestScore;
 		}
@@ -32,7 +32,7 @@ int bufferIsUseful( ref_genome* ref, parameters *params)
 			bestWeightId = count;
 		}
 	}
-
+	//fprintf(stderr,"%d %f %f\n", countInBuffer, bestWeight, maxScoreInBuffer);
 	if( bestWeight <= maxScoreInBuffer && bestWeight != inf)
 		return 1;
 	else
@@ -42,7 +42,7 @@ int bufferIsUseful( ref_genome* ref, parameters *params)
 int bestFromBuffer()
 {
 	int bestSet;
-	float bestSetScore=10000000;
+	float bestSetScore = 10000000;
 	int count;
 	for (count=0; count<countInBuffer; count++)
 	{
@@ -62,6 +62,7 @@ void emptyBuffer()
 	maxScoreInBuffer = 0;
 }
 
+/* Add top 100(min-weight) clusters to the buffer */
 int addToBuffer(float score, int clusterId)
 {
 	int count, count2;
@@ -83,7 +84,6 @@ int addToBuffer(float score, int clusterId)
 			{
 				listClusterInBuffer[count].score = score;
 				listClusterInBuffer[count].clusterId = clusterId;
-				//listClusterInBuffer[count].valid=true;
 				maxScoreInBuffer = 0;
 
 				for( count2 = 0; count2 < maxSizeOfBuffer; count2++)

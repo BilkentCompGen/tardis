@@ -8,22 +8,22 @@
 
 unsigned int vh_getHash (char *p)
 {
-  unsigned int h = 0;
-  for (; *p; p++)
-    h = MULT * h + *p;
-  return h % NHASH;
+	unsigned int h = 0;
+	for (; *p; p++)
+		h = MULT * h + *p;
+	return h % NHASH;
 }
 
 ReadName *getReadNameFromHash (ReadName * hash[], char *readName)
 {
-  int hashedVal = vh_getHash (readName);
-  ReadName *p = hash[hashedVal];
-  for (; p; p = p->next)
-    {
-      if (!strcmp (p->readName, readName))
+	int hashedVal = vh_getHash (readName);
+	ReadName *p = hash[hashedVal];
+	for (; p; p = p->next)
+	{
+		if (!strcmp (p->readName, readName))
+			return p;
+	}
 	return p;
-    }
-  return p;
 }
 
 ReadName *vh_addReadName (ReadName * hash[], char *s, double newEdit, double newPhred)
@@ -96,37 +96,37 @@ int vh_countNumReads (ReadName * hash[])
 #ifdef MAIN_HASH
 int main ()
 {
-  char buf[100];
-  for (int i = 0; i < NHASH; i++)
-    g_readNameHash[i] = NULL;
+	char buf[100];
+	for (int i = 0; i < NHASH; i++)
+		g_readNameHash[i] = NULL;
 
-  float min = 0;
-  float mean = 0;
-  for (int i = 0; i < 3; i++)
-    {
-      scanf ("%s", buf);
-      scanf ("%f", &min);
-      scanf ("%f", &mean);
+	float min = 0;
+	float mean = 0;
+	for (int i = 0; i < 3; i++)
+	{
+		scanf ("%s", buf);
+		scanf ("%f", &min);
+		scanf ("%f", &mean);
 
-      vh_addReadName (buf, min, mean);
-    }
-  for (int i = 0; i < NHASH; i++)
-    {
-      if (g_readNameHash[i] != NULL)
+		vh_addReadName (buf, min, mean);
+	}
+	for (int i = 0; i < NHASH; i++)
+	{
+		if (g_readNameHash[i] != NULL)
+			printf ("\n");
+		for (ReadName * p = g_readNameHash[i]; p != NULL; p = p->next)
+			printf ("|%s %d %f %f|\t", p->readName, p->occurrences, p->minEdit,
+					p->sumPhredValue);
+	}
 	printf ("\n");
-      for (ReadName * p = g_readNameHash[i]; p != NULL; p = p->next)
-	printf ("|%s %d %f %f|\t", p->readName, p->occurrences, p->minEdit,
-		p->sumPhredValue);
-    }
-  printf ("\n");
-  printf ("\n");
+	printf ("\n");
 
-  ReadName *p = vh_getReadNameFromHash ("sal");
-  if (p)
-    printf ("|%s %d %f %f|\n", p->readName, p->occurrences, p->minEdit,
-	    p->sumPhredValue);
-  else
-    printf ("No results found.\n");
-  return 0;
+	ReadName *p = vh_getReadNameFromHash ("sal");
+	if (p)
+		printf ("|%s %d %f %f|\n", p->readName, p->occurrences, p->minEdit,
+				p->sumPhredValue);
+	else
+		printf ("No results found.\n");
+	return 0;
 }
 #endif

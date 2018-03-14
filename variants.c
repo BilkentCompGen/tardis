@@ -3,13 +3,14 @@
 #include <time.h>
 #include <math.h>
 #include "variants.h"
-#include "vh_intervalhandler.h"
 
 int del_cnt = 0;
 int ins_cnt = 0;
 int inv_cnt = 0;
 int mei_cnt = 0;
 int tandup_cnt = 0;
+int invdup_cnt = 0;
+int dup_cnt = 0;
 int mei_cnt_filtered = 0;
 
 long total_del_length = 0;
@@ -17,6 +18,8 @@ long total_ins_length = 0;
 long total_inv_length = 0;
 long total_mei_length = 0;
 long total_tandup_length = 0;
+long total_invdup_length = 0;
+
 
 int sv_count;
 int sv_lowqual_count;
@@ -25,7 +28,7 @@ int indCount;
 // create a new structure and return address
 struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, char svtype,
 		float avg_edit, int min_svlen, int max_svlen, char *samples, double conf_score, bool filtered, bool mei_del,
-		char *mei_name, long depth[], float cn[], double del_likelihood[], int rp[], int sr[], double homogeneity_score,
+		char *mei_name, long depth[], float cn[], double del_likelihood[], double dup_likelihood[], int rp[], int sr[], double homogeneity_score,
 		float weight)
 {
 	int i;
@@ -55,6 +58,7 @@ struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int o
 		a_strvar->depth[i] = depth[i];
 		a_strvar->cn[i] = cn[i];
 		a_strvar->del_likelihood[i] = del_likelihood[i];
+		a_strvar->dup_likelihood[i] = dup_likelihood[i];
 		a_strvar->rp[i] = rp[i];
 		a_strvar->sr[i] = sr[i];
 	}
@@ -70,6 +74,7 @@ void print_sv_stats()
 	fprintf(logFile,"\tInsertion: %d\t sv length = %li\n", ins_cnt, total_ins_length);
 	fprintf(logFile,"\tInversion: %d\t sv length = %li\n", inv_cnt, total_inv_length);
 	fprintf(logFile,"\tTandem Duplication: %d\t sv length = %li\n", tandup_cnt, total_tandup_length);
+	fprintf(logFile,"\tInverted Duplication: %d\t sv length = %li\n", inv_cnt, total_invdup_length);
 	fprintf(logFile,"\tMEI: %d (%d filtered)\t sv length = %li\n", mei_cnt, mei_cnt_filtered, total_mei_length);
 }
 
@@ -101,7 +106,6 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t255\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_del_", ++del_cnt, ".", "<", "DEL", ">",( sv->filtered == false) ? "PASS" : "LowQual");
 		total_del_length += sv_len;
 	}
-
 	else if( sv->svtype == INSERTION)
 	{
 		fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_ins_", ++ins_cnt, ".", "<", "INS", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
@@ -123,8 +127,19 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	}
 	else if( sv->svtype == TANDEMDUP)
 	{
-		fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++tandup_cnt, ".", "<", "DUP:TANDEM", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+		fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:TANDEM", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+		tandup_cnt++;
 		total_tandup_length += sv_len;
+	}
+	else if( sv->svtype == INVDUPLEFT || sv->svtype == INVDUPRIGHT)
+	{
+		fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:INVERTED", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+		invdup_cnt++;
+		total_invdup_length += sv_len;
+	}
+	else
+	{
+		fprintf(stderr, "Problemmmm %c\n", sv->svtype);
 	}
 
 	if( sv->svtype == MEIFORWARD || sv->svtype == MEIREVERSE)
@@ -142,6 +157,8 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		fprintf( fpOut, "SVTYPE=MEI\t");
 	else if( sv->svtype == TANDEMDUP)
 		fprintf( fpOut, "SVTYPE=DUP\t");
+	else if( sv->svtype == INVDUPLEFT || sv->svtype == INVDUPRIGHT)
+		fprintf( fpOut, "SVTYPE=DUP\t");
 	else if( sv->svtype == INSERTION)
 		fprintf( fpOut, "SVTYPE=INS\t");
 	else if( sv->svtype == INVERSION)
@@ -149,9 +166,9 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 
 	/* Format field */
 	if (params->ten_x || params->output_hs)
-		fprintf( fpOut, "GT:DL:RD:CN:RP:SR:HS:WE");
+		fprintf( fpOut, "GT:DL:DUPL:RD:CN:RP:SR:HS:WE");
 	else
-		fprintf( fpOut, "GT:DL:RD:CN:RP:SR");
+		fprintf( fpOut, "GT:DL:DUPL:RD:CN:RP:SR");
 
 	control = 0;
 	fprintf( fpOut, "\t");
@@ -160,16 +177,16 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		if( in_bams[j]->contribution == false)
 		{
 			if (params->ten_x || params->output_hs)
-				fprintf( fpOut, "0/0:%.1f:%li:%.1f:%d:%d:%8.6f:%8.10f\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
+				fprintf( fpOut, "0/0:%.1f:%.1f:%li:%.1f:%d:%d:%8.6f:%8.10f\t", sv->del_likelihood[j], sv->dup_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
 			else 
-				fprintf( fpOut, "0/0:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
+				fprintf( fpOut, "0/0:%.1f:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->dup_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
 		}
 		else
 		{
 			if (params->ten_x || params->output_hs)
-				fprintf( fpOut, "0/1:%.1f:%li:%.1f:%d:%d:%8.6f:%8.10f\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
+				fprintf( fpOut, "0/1:%.1f:%.1f:%li:%.1f:%d:%d:%8.6f:%8.10f\t", sv->del_likelihood[j], sv->dup_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
 			else
-				fprintf( fpOut, "0/1:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
+				fprintf( fpOut, "0/1:%.1f:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->dup_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
 		}
 	}
 	fprintf( fpOut, "\n");
@@ -213,6 +230,7 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 	char header_format[] = "##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">\n"
 			"##FORMAT=<ID=CNQ,Number=1,Type=Float,Description=\"Copy number genotype quality for imprecise events\">\n"
 			"##FORMAT=<ID=DL,Number=1,Type=String,Description=\"Deletion Likelihood\">\n"
+			"##FORMAT=<ID=DUPL,Number=1,Type=String,Description=\"Duplication Likelihood\">\n"
 			"##FORMAT=<ID=FT,Number=.,Type=String,Description=\"Per-sample genotype filter, PASS for called genotypes or list of excluding filters\">\n"
 			"##FORMAT=<ID=GL,Number=3,Type=Float,Description=\"Genotype Likelihoods\">\n"
 			"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">\n"
@@ -242,88 +260,3 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 	}
 	fprintf( fpOut, "\n");
 }
-
-
-void free_sensitive(bam_info** in_bams, parameters *params, ref_genome* ref)
-{
-	int lib_index, i, j;
-
-	if ( params->run_rd == 1)
-	{
-		/* Free the RD array */
-		for( i = 0; i < params->num_bams; i++)
-		{
-			for( lib_index = 0; lib_index < in_bams[i]->num_libraries; lib_index++)
-			{
-				for( j = 0; j < params->this_sonic->number_of_chromosomes; j++)
-					free( in_bams[i]->read_depth[j]);
-				free( in_bams[i]->read_depth);
-			}
-		}
-	}
-
-	for( i = 0; i < params->num_bams; i++)
-	{
-		free( in_bams[i]->sample_name);
-		for( j = 0; j < in_bams[i]->num_libraries; j++)
-		{
-			free( in_bams[i]->libraries[j]->divet);
-			free( in_bams[i]->libraries[j]->fastq1);
-			free( in_bams[i]->libraries[j]->fastq2);
-			free( in_bams[i]->libraries[j]->libname);
-			free( in_bams[i]->libraries[j]->listSoftClip);
-		}
-		free( in_bams[i]);
-	}
-	free( in_bams);
-
-	free( params->bam_files);
-	free( params->bam_list_path);
-	free( params->dups);
-	free( params->gaps);
-	free( params->mei);
-	free( params->outprefix);
-	free( params->ref_genome);
-	free( params->reps);
-	free( params->sonic_file);
-	free( params);
-}
-
-void free_quick(bam_info** in_bams, parameters *params, ref_genome* ref)
-{
-	int lib_index, i, j;
-
-	/* Free refgenome struct */
-	free( ref->ref_name);
-	free( ref->in_bam);
-	free( ref);
-
-	/* Free bams and related libraries */
-	for( i = 0; i < params->num_bams; i++)
-	{
-		free( in_bams[i]->sample_name);
-		for( j = 0; j < in_bams[i]->num_libraries; j++)
-		{
-			free( in_bams[i]->libraries[j]->divet);
-			free( in_bams[i]->libraries[j]->fastq1);
-			free( in_bams[i]->libraries[j]->fastq2);
-			free( in_bams[i]->libraries[j]->libname);
-			free( in_bams[i]->libraries[j]->listSoftClip);
-		}
-		free( in_bams[i]);
-	}
-	free( in_bams);
-
-	/* Free params struct */
-	free( params->bam_files);
-	free( params->bam_list_path);
-	free( params->dups);
-	free( params->gaps);
-	free( params->mei);
-	free( params->outprefix);
-	free( params->reps);
-	free( params->sonic_file);
-	free( params);
-}
-
-

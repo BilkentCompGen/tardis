@@ -82,6 +82,12 @@ void vh_heapBubleDown (Heap * heapName)
 	}
 }
 
+int remove_Heap(Heap * heapName, int position)
+{
+	while( vh_minValue_heap( heapName) == position)
+		vh_heap_remove_top( heapName);
+}
+
 void vh_heap_remove_top (Heap * heapName)
 {
 	if (heapName->heapSize > 0)
@@ -174,9 +180,4 @@ void push_heap_mei(HeapMEI *heapName, HeapElMEI *newEl)
 		copyHeapElMEI(&(heapName->heapArray[(heapIndex + 1) / 2 -1]), &tempEl);
 		heapIndex = (heapIndex + 1) / 2 - 1;
 	}
-}
-
-void freeHeapMEI( HeapMEI *heapName)
-{
-	heapName->heapSize = 0;
 }

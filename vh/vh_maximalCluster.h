@@ -5,9 +5,12 @@
 #include "vh_heap.h"
 #include "../processbam.h"
 
+#define LEFTSIDE 0
+#define RIGHTSIDE 1
+
 typedef struct MappingOnGenome
 {
-	DivetRow *readMappingPtr;	//
+	DivetRow *readMappingPtr;
 	struct MappingOnGenome *next;
 } MappingOnGenome;
 
@@ -22,6 +25,10 @@ typedef struct RightBrkPointInterval
 	struct DivetRow *readMappingPtr;
 } RightBrkPointInterval;
 
+typedef struct outputElement{
+	struct DivetRow *readMappingPtr;
+	struct outputElement *next;
+}outputElement;
 
 typedef struct ClustersFound
 {
@@ -38,12 +45,19 @@ void vh_initializeReadMapping_Deletion (char *, int, sonic *);
 void vh_initializeReadMapping_Inversion (char *, int, sonic *);
 void vh_initializeReadMapping_Insertion (char *, int, sonic *);
 void vh_initializeReadMapping_TDup (char *, int, sonic *);
+void vh_initializeReadMapping_InvDup (char *chromosome_name, int chroSize, sonic *this_sonic, int side);
+void vh_initializeReadMapping_InterDup (char *chromosome_name, int chroSize, sonic *this_sonic, int side);
 void vh_finalizeReadMapping (char *, int);
+void vh_finalizeReadMapping_InvDup (char *chromosome_name, int chroSize);
+void vh_finalizeReadMapping_InterDup (char *chromosome_name, int chroSize);
 void vh_createDeletionClusters (int);
 void vh_createInversionClusters (int);
 void vh_createInsertionClusters (int);
 void vh_createTDupClusters (int);
+void vh_createInvDupClusters (int chroSize, int);
+void vh_createInterDupClusters (int chroSize, int);
 int vh_compare (const void *, const void *);
+int vh_compare2 (const void *, const void *);
 int vh_compareReadName (const void *, const void *);
 int vh_compareInt (const void *, const void *);
 int vh_comparePtr (const void *, const void *);
@@ -51,12 +65,13 @@ int vh_noGap (char *, int, int);
 int vh_max (int, int);
 int vh_min (int, int);
 void vh_freeLinkedList (struct MappingOnGenome *);
+int vh_freeLinkList2(PEAlistEls *ptr);
 void vh_finalizeReadMapping (char *, int);
 void vh_copyElBrkPointIntr (int, int);
 int vh_isItSubset (int *, int, int *, int);
 int vh_outputCluster (struct ClustersFound *, char);
 void vh_addToPotentialOutput (int, struct Heap *, char);
-void vh_flushOut (struct ClustersFound *, int, char);
+void vh_flushOut (int, char);
 void vh_createIntersectingIntervals (int, char);
 int vh_notBothDirections (struct ClustersFound *);
 
@@ -66,6 +81,7 @@ extern struct RightBrkPointInterval *g_tempListRightBrkPointIntr;
 extern int g_maxListBrkPointIntr;
 extern int g_listRightBrkPointIntrCount;
 extern int g_maxDeltaAmongLibs;
+extern int max_chromosome_size;
 extern struct ClustersFound *g_listPotClusterFound;
 
 #endif

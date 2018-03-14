@@ -33,11 +33,11 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	int index;
 	int o;
 	static int run_vh = 0, run_ns = 0, run_rd = 0, run_sr = 0, run_all = 1, sensitive = 0, no_soft_clip = 0, debug = 0;
-	static int skip_fastq = 0, skip_sort = 0, skip_remap = 0, skip_cluster = 0, quick = 0, ten_x = 0, output_hs = 0;
+	static int skip_fastq = 0, skip_sort = 0, skip_remap = 0, skip_cluster = 0, quick = 0, ten_x = 0, output_hs = 0, alt_mapping = 0;
 	static int make_sonic = 0;
 	static int load_sonic = 0;
 	static int do_remap = 0;
-	char *threshold = NULL, *mapping_qual = NULL, *rp_support = NULL, *alt_mapping = NULL;
+	char *threshold = NULL, *mapping_qual = NULL, *rp_support = NULL;
 
 	static struct option long_options[] = 
 	{
@@ -64,7 +64,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"vh"     , no_argument, &run_vh,     1 },
 			{"no-soft-clip" , no_argument, &no_soft_clip, 1 },
 			{"debug" , no_argument, &debug, 1 },
-			{"xa" , required_argument, 0, 'k' },
+			{"xa" , no_argument, &alt_mapping, 1 },
 			/*
 			{"rd"     , no_argument, &run_rd,     1 },
 			{"ns"     , no_argument, &run_ns,     1 },
@@ -176,10 +176,6 @@ int parse_command_line( int argc, char** argv, parameters* params)
 
 		case 'j':
 			set_str( &( rp_support), optarg);
-			break;
-
-		case 'k':
-			set_str( &( alt_mapping), optarg);
 			break;
 
 		case 'v':
@@ -328,13 +324,6 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		free( rp_support);
 	}
 
-	if( alt_mapping == NULL)
-		params->alt_mapping = 0;
-	else
-	{
-		params->alt_mapping = atoi(alt_mapping);
-		free( alt_mapping);
-	}
 
 	/* set flags */
 	params->run_vh = run_vh;
@@ -352,6 +341,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	params->make_sonic = make_sonic;
 	params->sensitive = sensitive;
 	params->number_of_different_mei_types = count_mei_columns( params->mei);
+	params->alt_mapping = alt_mapping;
+
 	debug_mode = debug;
 
 	if( debug_mode)
@@ -387,8 +378,18 @@ void print_help( void)
 	fprintf( stdout, "\t--ref   [reference genome] : Reference genome in FASTA format.\n");
 	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n");	
 	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]   : List of mobile element names.\n");
+	fprintf( stdout, "\t--10x                      : Take into account 10x barcode info of the read pairs\n");
 	fprintf( stdout, "\t--no-soft-clip             : Skip soft clip remapping.\n");
-
+	fprintf( stdout, "\t--xa					   : Look for the alternative mapping locations in BWA.\n");
+	/*
+	fprintf( stdout, "\t--xx                       : Sample is male.\n");
+	fprintf( stdout, "\t--xy                       : Sample is female.\n");
+	fprintf( stdout, "\t--vh                       : Run VariationHunter/CommonLAW (read pair + read depth).\n");
+	/* not  yet implemented, hide the parameters. No need for these anyway.
+	fprintf( stdout, "\t--ns                       : Run NovelSeq (read pair + assembly).\n");
+	fprintf( stdout, "\t--sr                       : Run SPLITREAD (split read).\n");
+	fprintf( stdout, "\t--all                      : Run all three algorithms above [DEFAULT].\n");
+	 */
 	fprintf( stdout, "\n\tAdditional parameters for sensitive mode:\n\n");
 	fprintf( stdout, "\t--sensitive                : Sensitive mode that uses all map locations. Requires mrFAST remapping.\n");
 	fprintf( stdout, "\t--skip-fastq               : Skip FASTQ dump for discordants. Use this only if you are regenerating the calls. Sensitive mode only.\n");
@@ -403,6 +404,9 @@ void print_help( void)
 	fprintf( stdout, "\t--dups  [dups file]        : Segmental duplication coordinates in BED3 format.\n"); 
 	fprintf( stdout, "\t--reps  [reps file]        : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.\n");
 
+	fprintf( stdout, "\n\tAdditional parameters for 10X Genomics Linked Reads (under development):\n\n");
+	fprintf( stdout, "\t--10x                      : Enable 10X Genomics Linked Reads mode.\n");
+	fprintf( stdout, "\t--output-hs                : Output the selected clusters homogeneity scores to the VCF file.");
 
 	fprintf( stdout, "\n\n\tInformation:\n");
 	fprintf( stdout, "\t--version                  : Print version and exit.\n");

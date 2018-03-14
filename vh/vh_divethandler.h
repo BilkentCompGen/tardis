@@ -44,6 +44,8 @@ typedef struct DivetRow
 	char orientationLeft;
 	int locMapRightStart;
 	int locMapRightEnd;
+	int startPosition;
+	int endPosition;
 	char orientationRight;
 	char svType;
 	int mQual1;
@@ -92,8 +94,15 @@ typedef struct discordantMapping // RR, FF, RF or FR (Ins>\delta)
 	char orient2;
 	int mQual1; // mapping qual1
 	int mQual2;
+	int editDistance_left;
 	int editDistance;
 	char svType;
+	char side;
+	int isize;
+	uint32_t* cigar;
+	uint32_t n_cigar;
+	uint16_t flag;
+	bool xa;
 	unsigned long ten_x_barcode; // Only for 10x genomics data
 
 	struct discordantMapping *next;
@@ -143,10 +152,11 @@ typedef struct softClip
 	posMapSoftClip *ptrPosMapSoftClip; // a linked list of all the positions that the soft clipped part of the read maps in the reference genome (chromosome_name:windowStart-windowEnd)
 }softClip;
 
+int load_Divet_bam( bam_info** in_bams, ref_genome* ref, parameters *params, int chr_index);
 struct DivetRow *vh_loadDivetRowFromString (struct ReadName *hash[], char *line, struct LibraryInfo *libInfo, int id);
 void vh_freeDivets ();
 struct DivetRow *vh_loadDivetFile (struct LibraryInfo *, sonic *);
-int read_Divet_bam( discordantMapping *discordantReadPtr, parameters *params, ref_genome* ref, LibraryInfo * libInfo, int chr_index, int counterDivetRow);
+int read_Divet_bam( discordantMapping **mapping, parameters *params, ref_genome* ref, LibraryInfo * libInfo, int chr_index, int counterDivetRow);
 int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, ref_genome* ref, LibraryInfo * libInfo, int chr_index, int read_len, int divet_row_count);
 void vh_printDivet (struct DivetRow *);
 

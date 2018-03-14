@@ -4,7 +4,8 @@
 /* htslib headers */
 #include <htslib/sam.h>
 #include <htslib/hts.h>
-#include "processfq.h"
+#include <stdbool.h>
+#include "common.h"
 
 /* Sample this many fragments to calculate avg/median/std per library */
 #define SAMPLEFRAG 1000000 
@@ -37,6 +38,25 @@ typedef struct _bam_info
 	struct library_properties** libraries; /* each library_properties struct holds statistical/other info */
 } bam_info;
 
+typedef struct bam_alignment_region
+{
+	char* read_name;
+	int32_t chrID_left;
+	int32_t chrID_right;
+	int32_t pos_left;
+	int32_t pos_right;
+	int32_t isize;
+	uint16_t flag;
+	char orientation;
+	uint32_t edit_distance;
+	uint16_t n_cigar;
+	uint32_t* cigar;
+	uint8_t qual;
+	unsigned long ten_x_barcode;
+	char side; /* Left 'L' or the right pair 'R' */
+	bool xa; /* True, if this is an alternative mapping */
+}bam_alignment_region;
+
 /* Function Prototypes */
 void load_bam( bam_info* in_bam, char* path);
 void create_fastq( bam_info* in_bam, char* bam_path, parameters *params);
@@ -45,7 +65,7 @@ void print_libs( bam_info* in_bam);
 int find_library_index( bam_info* in_bam, char* library_name);
 int sufficient_fragments_sampled( int* fragments_sampled, int num_libraries);
 void set_library_min_max( struct library_properties* in_lib);
-void freeDiscordantReads(bam_info* in_bam, char* bam_path, parameters *params);
+int is_concordant_bamonly( bam_alignment_region* bam_align, int min, int max);
 
 /* BAM Utility functions */
 void get_sample_name( bam_info* in_bam, char* header_text);

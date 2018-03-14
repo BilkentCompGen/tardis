@@ -9,9 +9,9 @@
 #include "tardis.h"
 #include "bamonly.h"
 #include "variants.h"
-#include "refgenome.h"
 #include "vh_main.h"
 #include "sonic/sonic.h"
+#include "processrefgen.h"
 
 FILE *logFile = NULL;
 
@@ -66,7 +66,7 @@ int main( int argc, char** argv)
 	/* make_sonic is standalone. Execute and return.  */
 	if ( params->make_sonic)
 	{
-	  return sonic_build(params->ref_genome, params->gaps, params->reps, params->dups, params->sonic_info, params->sonic_file );
+		return sonic_build(params->ref_genome, params->gaps, params->reps, params->dups, params->sonic_info, params->sonic_file );
 	} 
 
 	/* Load SONIC */
@@ -107,13 +107,13 @@ int main( int argc, char** argv)
 
 		/* Extract FASTQs of discordants, OEAs, and orphans */
 		if( params->skip_fastq == 0){
-		  for( i = 0; i < params->num_bams; i++){
-		    create_fastq( in_bams[i], params->bam_file_list[i], params);
-		  }
-		  fprintf( stderr, "All FASTQ files ready for remapping.\n");
+			for( i = 0; i < params->num_bams; i++){
+				create_fastq( in_bams[i], params->bam_file_list[i], params);
+			}
+			fprintf( stderr, "All FASTQ files ready for remapping.\n");
 		}
 		else
-		  fprintf( stderr, "Skipping FASTQ creation.\n");
+			fprintf( stderr, "Skipping FASTQ creation.\n");
 
 
 		/* Remap with mrFAST */
@@ -149,7 +149,7 @@ int main( int argc, char** argv)
 		fprintf( logFile, "(Running in quick mode)\n\n");
 		return_value = bamonly_run( refgen, params, in_bams);
 		if ( return_value != RETURN_SUCCESS)
-		  return EXIT_EXTERNAL_PROG_ERROR;
+			return EXIT_EXTERNAL_PROG_ERROR;
 
 		free_quick( in_bams, params, refgen);
 	}
