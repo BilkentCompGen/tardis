@@ -29,7 +29,7 @@ Type:
 SONIC file (annotations container)
 ==================================
 
-SONIC files are available under aux/
+SONIC files for some human genome reference versions are available at external repo: https://github.com/BilkentCompGen/sonic-prebuilt
 
  * human_g1k_v37.sonic: SONIC file for Human Reference Genome GRCh37 (1000 Genomes Project version)
  	* Also download the reference genome at: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz. 
