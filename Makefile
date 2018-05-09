@@ -1,4 +1,4 @@
-TARDIS_VERSION := "0.3"
+TARDIS_VERSION := "0.4"
 TARDIS_UPDATE := "May 9, 2018"
 TARDIS_DEBUG := 0
 BUILD_DATE := "$(shell date)"
