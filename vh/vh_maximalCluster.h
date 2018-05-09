@@ -41,12 +41,12 @@ typedef struct ClustersFound
 } ClustersFound;
 
 
-void vh_initializeReadMapping_Deletion (char *, int, sonic *);
-void vh_initializeReadMapping_Inversion (char *, int, sonic *);
-void vh_initializeReadMapping_Insertion (char *, int, sonic *);
-void vh_initializeReadMapping_TDup (char *, int, sonic *);
-void vh_initializeReadMapping_InvDup (char *chromosome_name, int chroSize, sonic *this_sonic, int side);
-void vh_initializeReadMapping_InterDup (char *chromosome_name, int chroSize, sonic *this_sonic, int side);
+void vh_initializeReadMapping_Deletion (sonic *this_sonic, int chr_index);
+void vh_initializeReadMapping_Inversion (sonic *this_sonic, int chr_index);
+void vh_initializeReadMapping_Insertion (sonic *this_sonic, int chr_index);
+void vh_initializeReadMapping_TDup (sonic *this_sonic, int chr_index);
+void vh_initializeReadMapping_InvDup( sonic *this_sonic, int chr_index, int invdup_location);
+void vh_initializeReadMapping_InterDup( sonic *this_sonic, int chr_index, int invdup_location);
 void vh_finalizeReadMapping (char *, int);
 void vh_finalizeReadMapping_InvDup (char *chromosome_name, int chroSize);
 void vh_finalizeReadMapping_InterDup (char *chromosome_name, int chroSize);

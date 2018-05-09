@@ -10,10 +10,14 @@
 
 #include "processfq.h"
 
-void find_alt_mappings(  bam_info* in_bam, ref_genome* ref, parameters* params, int lib_index, bam1_t* bam_alignment,
-		char* xa_string, int32_t *bamToRefIndex);
-int primRightAltLeftMappings( bam_info* in_bam, ref_genome* ref, parameters* params, int lib_index, bam1_t* bam_alignment, int32_t *bamToRefIndex);
-int primary_mapping( bam_info* in_bam, ref_genome* ref, parameters* params, int lib_index, bam1_t* bam_alignment, int32_t *bamToRefIndex);
+extern int altLeftPrimRight, primRightAltLeft, altLeftAltRight, primLeftAltRight;
+
+void find_alt_mappings(  bam_info* in_bam, parameters* params, int lib_index, bam1_t* bam_alignment,
+		char* xa_string);
+int primRightAltLeftMappings( library_properties* library, bam1_t* bam_alignment);
+int altLeftAltRightMappings( library_properties *library, bam1_t* bam_alignment, char altmap[4][1024]);
+int primLeftAltRightMappings( library_properties *library, bam1_t* bam_alignment, char altmap[4][1024]);
+int primary_mapping( bam_info* in_bam, parameters* params, int lib_index, bam1_t* bam_alignment, int32_t *bamToRefIndex);
 
 
 

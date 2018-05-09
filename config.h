@@ -18,7 +18,7 @@ typedef struct _configuration
 } configuration;
 
 /* Function Prototypes */
-void load_config( configuration* cfg);
+void load_config( configuration* cfg, parameters* params);
 void create_config( configuration* cfg, char* config_filename);
 
 #endif

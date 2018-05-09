@@ -5,50 +5,47 @@
 #include "vh_maximalCluster.h"
 
 
-void vh_addToGenomeIndex_TDup (char *chromosome_name, sonic *this_sonic, int chroSize)
+void vh_addToGenomeIndex_TDup (sonic *this_sonic, int chr_index)
 {
 	LibraryInfo *libInfo;
 	DivetRow *divetReadMappingPtr;
-	MappingOnGenome *newEl, *newEl2;
+	MappingOnGenome *newEl;
 	libInfo = g_libInfo;
-	//int i=0,j=0;
 	while (libInfo != NULL)
 	{
 		divetReadMappingPtr = libInfo->head;
 		while (divetReadMappingPtr != NULL)
 		{
-			//i++;
-			if (strcmp (divetReadMappingPtr->chromosome_name, chromosome_name) == 0 && divetReadMappingPtr->svType == TANDEMDUP
-				&& !sonic_is_gap (this_sonic, chromosome_name, divetReadMappingPtr->locMapLeftEnd, divetReadMappingPtr->locMapRightStart)
-				&& divetReadMappingPtr->locMapRightEnd < chroSize && divetReadMappingPtr->locMapLeftStart > 0)
+			if (strcmp (divetReadMappingPtr->chromosome_name, this_sonic->chromosome_names[chr_index]) == 0
+					&& !sonic_is_gap (this_sonic, this_sonic->chromosome_names[chr_index], divetReadMappingPtr->locMapLeftEnd, divetReadMappingPtr->locMapRightStart)
+					&& divetReadMappingPtr->locMapRightEnd < this_sonic->chromosome_lengths[chr_index] && divetReadMappingPtr->locMapLeftStart > 0)
 			{
-				//fprintf(stderr,"%d - %d\n", divetReadMappingPtr->locMapLeftEnd, divetReadMappingPtr->locMapRightStart);
-				//&& (divetReadMappingPtr->locMapRightStart - divetReadMappingPtr->locMapLeftEnd < maxDuplicationLen)
-				//j++;
-				newEl = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
-				newEl->readMappingPtr = divetReadMappingPtr;
-				newEl->next = g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd];
-				g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd] = newEl;
+				if( divetReadMappingPtr->svType == TANDEMDUP)
+				{
+					newEl = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
+					newEl->readMappingPtr = divetReadMappingPtr;
+					newEl->next = g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd];
+					g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd] = newEl;
+				}
 			}
 			divetReadMappingPtr = divetReadMappingPtr->next;
 		}
-		//fprintf(stderr,"%d\t%d\n",i,j);
 		libInfo = libInfo->next;
 	}
 }
 
-void vh_initializeReadMapping_TDup (char *chromosome_name, int chroSize, sonic *this_sonic)
+void vh_initializeReadMapping_TDup( sonic *this_sonic, int chr_index)
 {
 	int i;
 	LibraryInfo *libInfoPtr = g_libInfo;
 
 	/* Initializing the Genome Array */
-	g_genomeIndexStart = (MappingOnGenome **) getMem (chroSize * sizeof (MappingOnGenome *));
+	g_genomeIndexStart = (MappingOnGenome **) getMem (this_sonic->chromosome_lengths[chr_index] * sizeof (MappingOnGenome *));
 
 	if (g_genomeIndexStart == NULL)
 		vh_logWarning ("Memory Problem in vh_createMaxClusterDeletion.cpp:53");
 
-	for (i = 0; i < chroSize; i++)
+	for (i = 0; i < this_sonic->chromosome_lengths[chr_index]; i++)
 		g_genomeIndexStart[i] = NULL;
 
 	/* Initializing the list of begin and end of right side break point ranges */
@@ -60,7 +57,7 @@ void vh_initializeReadMapping_TDup (char *chromosome_name, int chroSize, sonic *
 		g_tempListRightBrkPointIntr[i].readMappingPtr = NULL;
 	}
 	g_listRightBrkPointIntrCount = 0;
-	vh_addToGenomeIndex_TDup (chromosome_name, this_sonic, chroSize);
+	vh_addToGenomeIndex_TDup (this_sonic, chr_index);
 
 
 	g_intersectInterval = (Heap *) getMem (sizeof (Heap));

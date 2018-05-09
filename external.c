@@ -48,10 +48,6 @@ int remap_mrfast( parameters *params, bam_info ** in_bams, configuration *cfg)
 				fprintf( stderr, "mrFAST remapping failed.\n");
 				return RETURN_ERROR;
 			}
-
-			/* to be implemented.
-				params->threads will be used for multithreading option of mrFAST
-			 */
 		}
 	}  
 

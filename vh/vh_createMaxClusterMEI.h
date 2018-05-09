@@ -11,6 +11,8 @@
 #include "../processbam.h"
 
 #define lenSplitReadBrakWindow 20
+#define MEILEFTPAIR 'X'
+#define MEIRIGHTPAIR 'M'
 
 typedef struct mei_Reads{
 	char *readName;
@@ -24,13 +26,13 @@ typedef struct mei_Reads{
 	char *libName;
 	char *indName;
 	int libId;
-	int readTypeSupport;// 0: ReadPair, 1: SplitRead (Soft clipping of the beginig of the read, 2: SplitRead (Soft clipping at the end of the read)
+	int readTypeSupport;// 0: ReadPair, 1: SplitRead (Soft clipping of the beginning of the read, 2: SplitRead (Soft clipping at the end of the read)
 
 	struct mei_Reads *next;
 } mei_Reads;
 
-void initializeReadMapping_MEI( bam_info** in_bams, parameters *params, char *chromosome_name, int chroSize);
-void MEICluster_Region( parameters* params, char* chromosome_name, int chroSize);
+void initializeReadMapping_MEI( bam_info** in_bams, parameters *params, int chr_index);
+void MEICluster_Region( parameters* params, int chr_index);
 void vh_finalizeReadMapping_Mei( int chroSize);
 
 

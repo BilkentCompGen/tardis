@@ -1,6 +1,5 @@
 #include "vh_maximalCluster.h"
 #include "vh_common.h"
-#include "vh_intervalhandler.h"
 #include "vh_setcover.h"
 
 MappingOnGenome **g_genomeIndexStart;
@@ -338,42 +337,22 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 
 				if( debug_mode)
 				{
-					if (ten_x_flag != 1 && output_hs_flag != 1)
-					{
-						/* Output to .clusters file */
-						fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->readName->readName);
-						fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chromosome_name);
-						fprintf (fileOutput, "%i ", start);
-						fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chromosome_name);
-						fprintf (fileOutput, "%i ", end);
-						fprintf (fileOutput, "%c ", SVtype);
-						fprintf (fileOutput, "%g ", cluster->readMappingPtrArray[readMapCount]->phredScore);
-						fprintf (fileOutput, "%g ", cluster->readMappingPtrArray[readMapCount]->editDistance);
-						fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->libInfo->libName);
-						fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->libInfo->indName);
-						fprintf (fileOutput, "%c ", cluster->readMappingPtrArray[readMapCount]->orientationLeft);
-						fprintf (fileOutput, "%c ", cluster->readMappingPtrArray[readMapCount]->orientationRight);
-						fprintf (fileOutput, "%d ", cluster->readMappingPtrArray[readMapCount]->mQual1);
-						fprintf (fileOutput, "%d ", cluster->readMappingPtrArray[readMapCount]->mQual2);
-					}
-					else
-					{
-						fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->readName->readName);
-						fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chromosome_name);
-						fprintf (fileOutput, "%i ", start);
-						fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chromosome_name);
-						fprintf (fileOutput, "%i ", end);
-						fprintf (fileOutput, "%c ", SVtype);
-						fprintf (fileOutput, "%g ", cluster->readMappingPtrArray[readMapCount]->phredScore);
-						fprintf (fileOutput, "%g ", cluster->readMappingPtrArray[readMapCount]->editDistance);
-						fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->libInfo->libName);
-						fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->libInfo->indName);
-						fprintf (fileOutput, "%c ", cluster->readMappingPtrArray[readMapCount]->orientationLeft);
-						fprintf (fileOutput, "%c ", cluster->readMappingPtrArray[readMapCount]->orientationRight);
-						fprintf (fileOutput, "%d ", cluster->readMappingPtrArray[readMapCount]->mQual1);
-						fprintf (fileOutput, "%d ", cluster->readMappingPtrArray[readMapCount]->mQual2);
-						fprintf (fileOutput, "%lu ", cluster->readMappingPtrArray[readMapCount]->ten_x_barcode);
-					}
+					/* Output to .clusters file */
+					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->readName->readName);
+					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chromosome_name);
+					fprintf (fileOutput, "%i ", start);
+					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->chromosome_name);
+					fprintf (fileOutput, "%i ", end);
+					fprintf (fileOutput, "%c ", SVtype);
+					fprintf (fileOutput, "%g ", cluster->readMappingPtrArray[readMapCount]->phredScore);
+					fprintf (fileOutput, "%g ", cluster->readMappingPtrArray[readMapCount]->editDistance);
+					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->libInfo->libName);
+					fprintf (fileOutput, "%s ", cluster->readMappingPtrArray[readMapCount]->libInfo->indName);
+					fprintf (fileOutput, "%c ", cluster->readMappingPtrArray[readMapCount]->orientationLeft);
+					fprintf (fileOutput, "%c ", cluster->readMappingPtrArray[readMapCount]->orientationRight);
+					fprintf (fileOutput, "%d ", cluster->readMappingPtrArray[readMapCount]->mQual1);
+					fprintf (fileOutput, "%d ", cluster->readMappingPtrArray[readMapCount]->mQual2);
+
 				}
 				/* Fill the clusters struct */
 				cluster_new = ( clusters_final *) getMem( sizeof( clusters_final));
@@ -405,11 +384,6 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 				cluster_new->mapping_quality_left = cluster->readMappingPtrArray[readMapCount]->mQual1;
 				cluster_new->mapping_quality_right = cluster->readMappingPtrArray[readMapCount]->mQual2;
 
-				if( ten_x_flag != 1 && output_hs_flag != 1)
-					cluster_new->ten_x_barcode = NULL;
-				else
-					cluster_new->ten_x_barcode = cluster->readMappingPtrArray[readMapCount]->ten_x_barcode;
-
 				cluster_new->mei_subclass = NULL;
 				cluster_new->mei_type = NULL;
 
@@ -435,8 +409,6 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 			}
 		}
 	}
-	//if( SVtype == INVDUPLEFT)
-	//fprintf(stderr, "\n");
 	if( debug_mode)
 		fprintf (fileOutput, "END\n");
 	cluster_count++;
@@ -465,12 +437,12 @@ void vh_createIntersectingIntervals (int leftBreakPoint, char SVtype)
 					newElAdded = 0;
 				}
 				vh_heap_remove_top (g_intersectInterval);
-			}
+			}/*
 			else
 			{
 				printf ("An Error Occured\n");
 				vh_writeHeap (g_intersectInterval);
-			}
+			}*/
 		}
 	}
 	g_intersectInterval->heapSize = 0;

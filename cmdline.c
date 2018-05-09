@@ -33,7 +33,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	int index;
 	int o;
 	static int run_vh = 0, run_ns = 0, run_rd = 0, run_sr = 0, run_all = 1, sensitive = 0, no_soft_clip = 0, debug = 0;
-	static int skip_fastq = 0, skip_sort = 0, skip_remap = 0, skip_cluster = 0, quick = 0, ten_x = 0, output_hs = 0, alt_mapping = 0;
+	static int skip_fastq = 0, skip_sort = 0, skip_remap = 0, skip_cluster = 0, quick = 0, alt_mapping = 0;
 	static int make_sonic = 0;
 	static int load_sonic = 0;
 	static int do_remap = 0;
@@ -56,8 +56,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"make-sonic"    , required_argument,	 0, 'c'},
 			{"sonic"    , required_argument,	 0, 's'},
 			{"sonic-info"    , required_argument,	 0, 'n'},
-			{"first-chrom", required_argument, 0, FIRST_CHROM},
-			{"last-chrom", required_argument, 0, LAST_CHROM},
+			{"first-chr", required_argument, 0, FIRST_CHROM},
+			{"last-chr", required_argument, 0, LAST_CHROM},
 			{"rd-ratio", required_argument, 0, 'a'},
 			{"mq", required_argument, 0, 'e'},
 			{"rp", required_argument, 0, 'j'},
@@ -78,8 +78,6 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"skip-cluster" , no_argument, &skip_cluster,  1 },
 			{"quick" , no_argument, &quick,  1 },
 			{"remap" , no_argument, &do_remap,  1 },
-			{"10x", no_argument, &ten_x, 1},
-			{"output-hs", no_argument, &output_hs, 1},
 			{0        , 0,                   0,  0 }
 	};
 
@@ -159,11 +157,11 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			break;
 
 		case FIRST_CHROM:
-			params->first_chrom = atoi(optarg);
+			params->first_chr = atoi(optarg);
 			break;
 
 		case LAST_CHROM:
-			params->last_chrom = atoi(optarg);
+			params->last_chr = atoi(optarg);
 			break;
 
 		case 'a':
@@ -336,8 +334,6 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	params->skip_remap = skip_remap;
 	params->skip_vhcluster = skip_cluster;
 	params->quick = quick; 
-	params->ten_x = ten_x;
-	params->output_hs = output_hs | ten_x;
 	params->make_sonic = make_sonic;
 	params->sensitive = sensitive;
 	params->number_of_different_mei_types = count_mei_columns( params->mei);
@@ -378,9 +374,9 @@ void print_help( void)
 	fprintf( stdout, "\t--ref   [reference genome] : Reference genome in FASTA format.\n");
 	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n");	
 	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]   : List of mobile element names.\n");
-	fprintf( stdout, "\t--10x                      : Take into account 10x barcode info of the read pairs\n");
 	fprintf( stdout, "\t--no-soft-clip             : Skip soft clip remapping.\n");
-	fprintf( stdout, "\t--xa					   : Look for the alternative mapping locations in BWA.\n");
+	fprintf( stdout, "\t--first-chr [chr_index]	   : Start running from specific a chromosome [index in reference file].\n");
+	fprintf( stdout, "\t--last-chr [chr_index]	   : Run up to a specific chromosome [index in reference file].\n");
 	/*
 	fprintf( stdout, "\t--xx                       : Sample is male.\n");
 	fprintf( stdout, "\t--xy                       : Sample is female.\n");
@@ -403,10 +399,6 @@ void print_help( void)
 	fprintf( stdout, "\t--gaps  [gaps file]        : Assembly gap coordinates in BED3 format.\n");
 	fprintf( stdout, "\t--dups  [dups file]        : Segmental duplication coordinates in BED3 format.\n"); 
 	fprintf( stdout, "\t--reps  [reps file]        : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.\n");
-
-	fprintf( stdout, "\n\tAdditional parameters for 10X Genomics Linked Reads (under development):\n\n");
-	fprintf( stdout, "\t--10x                      : Enable 10X Genomics Linked Reads mode.\n");
-	fprintf( stdout, "\t--output-hs                : Output the selected clusters homogeneity scores to the VCF file.");
 
 	fprintf( stdout, "\n\n\tInformation:\n");
 	fprintf( stdout, "\t--version                  : Print version and exit.\n");

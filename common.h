@@ -14,14 +14,26 @@
 #define DELETION 'D'
 #define TANDEMDUP 'E'
 
+#define INVDUP 'W'
 #define INVDUPLEFT 'S'
 #define INVDUPRIGHT 'T'
 
+#define INTERDUP 'X'
 #define INTERDUPLEFT 'H'
 #define INTERDUPRIGHT 'M'
 
 #define MEIFORWARD 'A'
 #define MEIREVERSE 'B'
+
+/* For split reads FFAB means reads are in Forward-Forward orientation and
+ * position of A is smaller than position of B */
+#define FFAB 'C'
+#define FFBA 'G'
+#define FRAB 'J'
+#define FRBA 'K'
+#define RFAB 'L'
+#define RFBA 'N'
+
 
 #define LEFT 'L'
 #define RIGHT 'R'
@@ -63,8 +75,6 @@
 #define QUICK 0
 #define SENSITIVE 1
 extern int running_mode;
-extern int ten_x_flag;
-extern int output_hs_flag;
 extern int debug_mode; /* boolean stand-in to work in debug mode - .name and .clusters are created */
 
 // Track memory usage
@@ -97,13 +107,13 @@ typedef struct _params
 	int num_bams; /* number of input BAM files */
 	int quick; /* boolean stand-in to work in bam-only mode (no divet) */
 	int sensitive; /* boolean stand-in to work in sensitive mode (divet) */
-	int ten_x; /*boolean for whether we're using 10x data*/
-	int output_hs; /*boolean for whether to record the homogeneity score (HS) in VCF regardless whether HS is used in set cover or not*/
+	//int ten_x; /*boolean for whether we're using 10x data*/
+	//int output_hs; /*boolean for whether to record the homogeneity score (HS) in VCF regardless whether HS is used in set cover or not*/
 	int make_sonic; /*make SONIC file and exit*/
 	int load_sonic; /*load SONIC file*/
 	char *sonic_info; /* SONIC reference information string for building */
-	int first_chrom; /*the first chromosome as indexed in the ref to be computer for. 0 by default*/
-	int last_chrom; /*the last chromosome as indexed in the ref to be computer for. ref->chrom_count by default*/
+	int first_chr; /*the first chromosome as indexed in sonic. 0 by default*/
+	int last_chr; /*the last chromosome as indexed in sonic. chrom_count by default*/
 	int rd_threshold; /* Threshold is used in RD filtering, calWeight() in vh_setcover.c */
 	int mq_threshold; /* Minimum mapping quality */
 	int rp_threshold; /* Minimum read pair support */
@@ -111,17 +121,6 @@ typedef struct _params
 	char *sonic_file; /* SONIC file name */
 	sonic *this_sonic; /* SONIC */
 } parameters;
-
-
-typedef struct _ref_genome
-{
-	char* ref_name; /* name of the chromosome */
-	bool* in_bam; /* if the chromosome is available in the bam file */
-	/* the following don't seem to be necessary any more. load_refgen now just copies the pointer from sonic to avoid substantial refactoring */
-	int chrom_count; /* number of chromosomes */
-	int* chrom_lengths; /* lengths of the chromosomes */
-	char** chrom_names; /* names of the chromosomes */
-}ref_genome;
 
 /* Parameter related TARDIS functions */
 void init_params( parameters**);
@@ -148,11 +147,12 @@ void reverse_string( char* str);
 /* Misc. Utility */
 int compare_size_int( const void* p, const void* q);
 void print_quote( void);
-int find_chr_index_bam(ref_genome*, char*, bam_hdr_t*);
+int find_chr_index_bam( char* chromosome_name, bam_hdr_t* bam_header);
 int max( int x, int y);
 int min( int x, int y);
 int hammingDistance( char *str1, char *str2, int len);
 int vh_cmprReadNameStr (const void *a, const void *b);
+int32_t calculateInsertSize( int32_t pos_left, int32_t pos_right,uint16_t flag, int read_length);
 
 // Memory allocation/tracking functions
 void* getMem( size_t size);

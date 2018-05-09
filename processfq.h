@@ -39,6 +39,7 @@ typedef struct library_properties
 
 	struct softClip *listSoftClip;
 	struct discordantMapping **mappings_discordant;
+	struct alternativeMapping **mappings_alternative;
 	struct discordantMappingMEI *listMEI_Mapping;
 } library_properties;
 

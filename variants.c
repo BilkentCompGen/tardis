@@ -10,6 +10,7 @@ int inv_cnt = 0;
 int mei_cnt = 0;
 int tandup_cnt = 0;
 int invdup_cnt = 0;
+int interdup_cnt = 0;
 int dup_cnt = 0;
 int mei_cnt_filtered = 0;
 
@@ -19,6 +20,7 @@ long total_inv_length = 0;
 long total_mei_length = 0;
 long total_tandup_length = 0;
 long total_invdup_length = 0;
+long total_interdup_length = 0;
 
 
 int sv_count;
@@ -27,9 +29,7 @@ int indCount;
 
 // create a new structure and return address
 struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, char svtype,
-		float avg_edit, int min_svlen, int max_svlen, char *samples, double conf_score, bool filtered, bool mei_del,
-		char *mei_name, long depth[], float cn[], double del_likelihood[], double dup_likelihood[], int rp[], int sr[], double homogeneity_score,
-		float weight)
+		bool filtered, bool mei_del, char *mei_name, double cnv_score[], int rp[], int sr[])
 {
 	int i;
 	struct strvar* a_strvar = getMem( sizeof( struct strvar));
@@ -40,25 +40,13 @@ struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int o
 	a_strvar->outer_end = outer_end;
 	a_strvar->inner_end = inner_end;
 	a_strvar->svtype = svtype;
-	a_strvar->avg_edit = avg_edit;
-	a_strvar->min_svlen = min_svlen;
-	a_strvar->max_svlen = max_svlen;
-	a_strvar->samples = samples;
 	a_strvar->mei_name = mei_name;
-	a_strvar->conf_score = conf_score;
-	a_strvar->next = NULL;
-	a_strvar->head = NULL;
 	a_strvar->filtered = filtered;
 	a_strvar->mei_del = mei_del;
-	a_strvar->homogeneity_score = homogeneity_score;
-	a_strvar->weight = weight;
 
 	for( i = 0; i < indCount; i++)
 	{
-		a_strvar->depth[i] = depth[i];
-		a_strvar->cn[i] = cn[i];
-		a_strvar->del_likelihood[i] = del_likelihood[i];
-		a_strvar->dup_likelihood[i] = dup_likelihood[i];
+		a_strvar->cnv_score[i] = cnv_score[i];
 		a_strvar->rp[i] = rp[i];
 		a_strvar->sr[i] = sr[i];
 	}
@@ -69,13 +57,14 @@ struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int o
 
 void print_sv_stats()
 {
-	fprintf(logFile,"\n\nTARDIS found %d SVs total\n", del_cnt + ins_cnt + inv_cnt + tandup_cnt + mei_cnt);
-	fprintf(logFile,"\tDeletion: %d\t sv length = %li\n", del_cnt, total_del_length);
-	fprintf(logFile,"\tInsertion: %d\t sv length = %li\n", ins_cnt, total_ins_length);
-	fprintf(logFile,"\tInversion: %d\t sv length = %li\n", inv_cnt, total_inv_length);
-	fprintf(logFile,"\tTandem Duplication: %d\t sv length = %li\n", tandup_cnt, total_tandup_length);
-	fprintf(logFile,"\tInverted Duplication: %d\t sv length = %li\n", inv_cnt, total_invdup_length);
-	fprintf(logFile,"\tMEI: %d (%d filtered)\t sv length = %li\n", mei_cnt, mei_cnt_filtered, total_mei_length);
+	fprintf(logFile,"\n\nTARDIS found %d SVs total\n", del_cnt + ins_cnt + inv_cnt + tandup_cnt + mei_cnt + interdup_cnt + invdup_cnt);
+	fprintf(logFile,"\tDeletion: %d\n", del_cnt);
+	fprintf(logFile,"\tInsertion: %d\n", ins_cnt);
+	fprintf(logFile,"\tInversion: %d\n", inv_cnt);
+	fprintf(logFile,"\tTandem Duplication: %d\n", tandup_cnt);
+	fprintf(logFile,"\tInterspersed Duplication: %d\n", interdup_cnt);
+	fprintf(logFile,"\tInterspersed (Inverted) Duplication: %d\n", invdup_cnt);
+	fprintf(logFile,"\tMEI: %d (%d filtered)\n", mei_cnt, mei_cnt_filtered);
 }
 
 //add the variation in ascending order according to inner_start
@@ -113,7 +102,7 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	}
 	else if( sv->svtype == INVERSION)
 	{
-		fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_inv_", ++inv_cnt, ".", "<", "INV", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+		fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_inv_", ++inv_cnt, ".", "<", "INV", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		total_inv_length += sv_len;
 	}
 	else if( sv->svtype == MEIFORWARD || sv->svtype == MEIREVERSE)
@@ -131,19 +120,37 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		tandup_cnt++;
 		total_tandup_length += sv_len;
 	}
-	else if( sv->svtype == INVDUPLEFT || sv->svtype == INVDUPRIGHT)
+	else if( sv->svtype == INVDUPRIGHT)
 	{
-		fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:INVERTED", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+		fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		invdup_cnt++;
 		total_invdup_length += sv_len;
 	}
-	else
+	else if( sv->svtype == INVDUPLEFT )
 	{
-		fprintf(stderr, "Problemmmm %c\n", sv->svtype);
+		fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+		invdup_cnt++;
+		total_invdup_length += sv_len;
 	}
+	else if( sv->svtype == INTERDUPRIGHT)
+	{
+		fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+		interdup_cnt++;
+		total_interdup_length += sv_len;
+	}
+	else if( sv->svtype == INTERDUPLEFT )
+	{
+		fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+		interdup_cnt++;
+		total_interdup_length += sv_len;
+	}
+	else
+		fprintf(stderr, "Problemmmm %c\n", sv->svtype);
 
 	if( sv->svtype == MEIFORWARD || sv->svtype == MEIREVERSE)
 		fprintf( fpOut, "END=%d;SVLEN=%d;TYPE=%s;RPSUP=%d;SRSUP=%d;", (sv->inner_end) + 1, sv_len, sv->mei_name, rp_total, sr_total);
+	else if( sv->svtype == INVERSION)
+		fprintf( fpOut, "END=%d;SVLEN=%d;RPSUP=%d;SRSUP=%d;", (sv->outer_end) + 1, sv_len, rp_total, sr_total);
 	else
 		fprintf( fpOut, "END=%d;SVLEN=%d;RPSUP=%d;SRSUP=%d;", (sv->inner_end) + 1, sv_len, rp_total, sr_total);
 
@@ -158,17 +165,17 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	else if( sv->svtype == TANDEMDUP)
 		fprintf( fpOut, "SVTYPE=DUP\t");
 	else if( sv->svtype == INVDUPLEFT || sv->svtype == INVDUPRIGHT)
-		fprintf( fpOut, "SVTYPE=DUP\t");
+		fprintf( fpOut, "SVTYPE=DUP;ISINV\t");
+	else if( sv->svtype == INTERDUPLEFT || sv->svtype == INTERDUPRIGHT)
+			fprintf( fpOut, "SVTYPE=DUP\t");
 	else if( sv->svtype == INSERTION)
 		fprintf( fpOut, "SVTYPE=INS\t");
 	else if( sv->svtype == INVERSION)
 		fprintf( fpOut, "SVTYPE=INV\t");
 
 	/* Format field */
-	if (params->ten_x || params->output_hs)
-		fprintf( fpOut, "GT:DL:DUPL:RD:CN:RP:SR:HS:WE");
-	else
-		fprintf( fpOut, "GT:DL:DUPL:RD:CN:RP:SR");
+
+	fprintf( fpOut, "GT:CNVL:RP:SR");
 
 	control = 0;
 	fprintf( fpOut, "\t");
@@ -176,17 +183,13 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	{
 		if( in_bams[j]->contribution == false)
 		{
-			if (params->ten_x || params->output_hs)
-				fprintf( fpOut, "0/0:%.1f:%.1f:%li:%.1f:%d:%d:%8.6f:%8.10f\t", sv->del_likelihood[j], sv->dup_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
-			else 
-				fprintf( fpOut, "0/0:%.1f:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->dup_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
+
+			fprintf( fpOut, "0/0:%2.6lf:%d:%d\t", sv->cnv_score[j], sv->rp[j], sv->sr[j]);
 		}
 		else
 		{
-			if (params->ten_x || params->output_hs)
-				fprintf( fpOut, "0/1:%.1f:%.1f:%li:%.1f:%d:%d:%8.6f:%8.10f\t", sv->del_likelihood[j], sv->dup_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
-			else
-				fprintf( fpOut, "0/1:%.1f:%.1f:%li:%.1f:%d:%d\t", sv->del_likelihood[j], sv->dup_likelihood[j], sv->depth[j], sv->cn[j], sv->rp[j], sv->sr[j]);
+
+			fprintf( fpOut, "0/1:%2.6f:%d:%d\t", sv->cnv_score[j], sv->rp[j], sv->sr[j]);
 		}
 	}
 	fprintf( fpOut, "\n");
@@ -235,6 +238,7 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 			"##FORMAT=<ID=GL,Number=3,Type=Float,Description=\"Genotype Likelihoods\">\n"
 			"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">\n"
 			"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
+			"##FORMAT=<ID=CNVL,Number=1,Type=Integer,Description=\"CNV Likelihood\">\n"
 			"##FORMAT=<ID=HS,Number=1,Type=Float,Description=\"10x Barcode Homogeneity Score\">\n"
 			"##FORMAT=<ID=RD,Number=1,Type=String,Description=\"Read Depth\">\n"
 			"##FORMAT=<ID=RP,Number=1,Type=String,Description=\"Read Pair Support\">\n"

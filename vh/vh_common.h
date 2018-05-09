@@ -28,7 +28,7 @@ extern FILE *fileOutput;	//Defined in vh_main.cpp
 
 #define maxInversionLen 5000000
 #define maxDeletionLen 1000000
-#define maxDuplicationLen 1000000
+#define maxDuplicationLen 100000
 
 void quitProgram (int exitCode);
 

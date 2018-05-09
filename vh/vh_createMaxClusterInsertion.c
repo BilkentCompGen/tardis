@@ -4,7 +4,7 @@
 #include "vh_heap.h"
 #include "vh_maximalCluster.h"
 
-void vh_addToGenomeIndex_Insertion (char *chromosome_name, sonic *this_sonic, int chroSize)
+void vh_addToGenomeIndex_Insertion (sonic *this_sonic, int chr_index)
 {
 	LibraryInfo *libInfo;
 	DivetRow *divetReadMappingPtr;
@@ -16,10 +16,10 @@ void vh_addToGenomeIndex_Insertion (char *chromosome_name, sonic *this_sonic, in
 		divetReadMappingPtr = libInfo->head;
 		while (divetReadMappingPtr != NULL)
 		{
-			if (strcmp (divetReadMappingPtr->chromosome_name, chromosome_name) == 0 && divetReadMappingPtr->svType == INSERTION
-			    && !sonic_is_gap (this_sonic, chromosome_name, divetReadMappingPtr->locMapLeftEnd, divetReadMappingPtr->locMapRightStart)
+			if (strcmp (divetReadMappingPtr->chromosome_name, this_sonic->chromosome_names[chr_index]) == 0 && divetReadMappingPtr->svType == INSERTION
+			    && !sonic_is_gap (this_sonic, this_sonic->chromosome_names[chr_index], divetReadMappingPtr->locMapLeftEnd, divetReadMappingPtr->locMapRightStart)
 					&& (divetReadMappingPtr->locMapRightStart > divetReadMappingPtr->locMapLeftEnd)
-					&& divetReadMappingPtr->locMapRightEnd < chroSize && divetReadMappingPtr->locMapLeftStart > 0)
+					&& divetReadMappingPtr->locMapRightEnd < this_sonic->chromosome_lengths[chr_index] && divetReadMappingPtr->locMapLeftStart > 0)
 			{
 				newEl = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
 				newEl->readMappingPtr = divetReadMappingPtr;
@@ -32,18 +32,18 @@ void vh_addToGenomeIndex_Insertion (char *chromosome_name, sonic *this_sonic, in
 	}
 }
 
-void vh_initializeReadMapping_Insertion (char *chromosome_name, int chroSize, sonic *this_sonic)
+void vh_initializeReadMapping_Insertion (sonic *this_sonic, int chr_index)
 {
 	//Gap info is global
 	LibraryInfo *libInfoPtr = g_libInfo;
 	int genomeIndexId, i;
 
 	//Initing the Genome Array
-	g_genomeIndexStart = (MappingOnGenome **) getMem (chroSize * sizeof (MappingOnGenome *));
+	g_genomeIndexStart = (MappingOnGenome **) getMem (this_sonic->chromosome_lengths[chr_index] * sizeof (MappingOnGenome *));
 
 	if (g_genomeIndexStart == NULL)
 		vh_logWarning ("Memory Problem");
-	for (genomeIndexId = 0; genomeIndexId < chroSize; genomeIndexId++)
+	for (genomeIndexId = 0; genomeIndexId < this_sonic->chromosome_lengths[chr_index]; genomeIndexId++)
 	{
 		g_genomeIndexStart[genomeIndexId] = NULL;
 	}
@@ -57,7 +57,7 @@ void vh_initializeReadMapping_Insertion (char *chromosome_name, int chroSize, so
 		g_tempListRightBrkPointIntr[i].readMappingPtr = NULL;
 	}
 	g_listRightBrkPointIntrCount = 0;
-	vh_addToGenomeIndex_Insertion (chromosome_name, this_sonic, chroSize);
+	vh_addToGenomeIndex_Insertion (this_sonic, chr_index);
 
 	/////Malocing the intersectingInterval (intersectinterval) heap
 	g_intersectInterval = (Heap *) getMem (sizeof (Heap));

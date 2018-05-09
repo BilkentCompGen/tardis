@@ -6,9 +6,11 @@
 #include <htslib/faidx.h>
 #include <stdbool.h>
 #include "vh/vh_logger.h"
+#include "processfq.h"
 
 #define STR_SIZE 255
 
+/*
 int load_refgen( ref_genome** ref, parameters* params)
 {
 	int i;
@@ -24,43 +26,47 @@ int load_refgen( ref_genome** ref, parameters* params)
 		( *ref)->in_bam[i] = false;
 
 	return RETURN_SUCCESS;
-}
+}*/
 
-void init_rd( bam_info* in_bam, parameters* param, ref_genome* ref)
+void init_rd( bam_info* in_bam, parameters* param)
 {
 	int i, chr, lib_index;
 
-
-	in_bam->read_depth = ( short**) getMem( ref->chrom_count * sizeof( short*));
+	in_bam->read_depth = ( short**) getMem( param->this_sonic->number_of_chromosomes * sizeof( short*));
 	in_bam->read_count = 0;
 
-	for( chr = 0; chr < ref->chrom_count; chr++)
+	for( chr = param->first_chr; chr <= param->last_chr; chr++)
 	{
-		in_bam->read_depth[chr] = ( short*) getMem( sizeof( short) * (ref->chrom_lengths[chr]));
+		in_bam->read_depth[chr] = ( short*) getMem( sizeof( short) * ( param->this_sonic->chromosome_lengths[chr]));
+		memset (in_bam->read_depth[chr], 0, (param->this_sonic->chromosome_lengths[chr] * sizeof(short)));
 
-		memset (in_bam->read_depth[chr], 0, (ref->chrom_lengths[chr] * sizeof(short)));
+		/* Initialize all the depths to zero */
+		for( i = 0; i < param->this_sonic->chromosome_lengths[chr]; i++)
+		{
+			in_bam->read_depth[chr][i] = 0;
+		}
 	}
 }
 
 
-void init_rd_per_chr( bam_info* in_bam, parameters* param, ref_genome* ref, int chr_index)
+void init_rd_per_chr( bam_info* in_bam, parameters* param, int chr_index)
 {
 	int i, lib_index;
 
 	in_bam->read_count = 0;
-	in_bam->read_depth_per_chr = ( short*) getMem( sizeof( short) * ( ref->chrom_lengths[chr_index]));
+	in_bam->read_depth_per_chr = ( short*) getMem( sizeof( short) * ( param->this_sonic->chromosome_lengths[chr_index]));
 
-	memset (in_bam->read_depth_per_chr, 0, (ref->chrom_lengths[chr_index] * sizeof(short)));
+	memset (in_bam->read_depth_per_chr, 0, (param->this_sonic->chromosome_lengths[chr_index] * sizeof(short)));
 }
 
 
-void calc_mu_per_chr( ref_genome* ref, bam_info* in_bam, int chr_index)
+void calc_mu_per_chr( bam_info* in_bam, int chromosome_length)
 {
 	int i;
 	long rd_cnt = 0, window_total = 0;
 	double cov;
 
-	for( i = 0; i < ref->chrom_lengths[chr_index]; i++)
+	for( i = 0; i < chromosome_length; i++)
 	{
 		rd_cnt += (long) in_bam->read_depth_per_chr[i];
 		window_total++;
@@ -72,23 +78,19 @@ void calc_mu_per_chr( ref_genome* ref, bam_info* in_bam, int chr_index)
 
 	//cov = ( double) rd_cnt * (in_bam->libraries[lib_index]->read_length) / ( double) ( window_total * WINDOWSIZE );
 	//fprintf( logFile,"Coverage is %.0lfx\n", round(cov));
-
 }
 
 
-void calc_mu( ref_genome* ref, bam_info* in_bam)
+void calc_mu( bam_info* in_bam, parameters *params)
 {
 	int chr,i;
 	long rd_cnt = 0, window_total = 0;
 	double cov;
 
 	/* Count the reads for each chromosome */
-	for( chr = 0; chr < ref->chrom_count; chr++)
+	for( chr = params->first_chr; chr <= params->last_chr; chr++)
 	{
-		if( ref->in_bam[chr] == false)
-			continue;
-
-		for( i = 0; i < ref->chrom_lengths[chr]; i++)
+		for( i = 0; i <= params->this_sonic->chromosome_lengths[chr]; i++)
 		{
 			rd_cnt += (long)in_bam->read_depth[chr][i];
 			window_total++;
@@ -98,20 +100,17 @@ void calc_mu( ref_genome* ref, bam_info* in_bam)
 	/* Calculate mu values */
 	in_bam->mean = ( double)(rd_cnt) / ( double)window_total;
 
-	//fprintf( stderr, "RDX= %li RDY=%li length_x=%li length_y=%li\n", rd_cnt_x, rd_cnt_y, length_x, length_y);
-
-	fprintf( logFile, "Read Count:%li  mean=%f\n",rd_cnt, in_bam->mean);
-
-	fprintf( logFile,"Coverage is %.0lfx\n", round(in_bam->mean));
+	fprintf( logFile, "Total Read Count= %li\tMean= %f\tCoverage= %.0lfx\n",rd_cnt, in_bam->mean,
+			round( in_bam->mean * in_bam->libraries[0]->read_length));
 }
 
 
-void calc_mean( ref_genome* ref, parameters *params, bam_info* in_bam)
+void calc_mean( parameters *params, bam_info* in_bam)
 {
-	int lib_index, chr, i, gc_val, window_per_gc[101];
+	int chr, i, gc_val, window_per_gc[101];
 	long rd_per_gc[101];
 
-	calc_mu( ref, in_bam);
+	calc_mu( in_bam, params);
 
 	/* Calculate mu_GC values */
 	for( i = 0; i < 101; i++)
@@ -119,14 +118,11 @@ void calc_mean( ref_genome* ref, parameters *params, bam_info* in_bam)
 		rd_per_gc[i] = 0;
 		window_per_gc[i] = 0;
 	}
-	for( chr = 0; chr < ref->chrom_count; chr++)
+	for( chr = params->first_chr; chr <= params->last_chr; chr++)
 	{
-		if( ref->in_bam[chr] == false)
-			continue;
-
-		for( i = 0; i < ref->chrom_lengths[chr]; i++)
+		for( i = 0; i < params->this_sonic->chromosome_lengths[chr]; i++)
 		{
-			gc_val = (int) round ( sonic_get_gc_content(params->this_sonic, ref->chrom_names[chr], i, i+WINDOWSLIDE));
+			gc_val = (int) round ( sonic_get_gc_content(params->this_sonic, params->this_sonic->chromosome_names[chr], i, ( i + WINDOWSLIDE)));
 			rd_per_gc[gc_val] += ( long) in_bam->read_depth[chr][i];
 			window_per_gc[gc_val]++;
 		}
@@ -141,12 +137,12 @@ void calc_mean( ref_genome* ref, parameters *params, bam_info* in_bam)
 	}
 }
 
-void calc_mean_per_chr( ref_genome* ref, parameters *params, bam_info* in_bam, int chr_index)
+void calc_mean_per_chr( parameters *params, bam_info* in_bam, int chr_index)
 {
 	int lib_index, i, gc_val, window_per_gc[101];
 	long rd_per_gc[101];
 
-	calc_mu_per_chr( ref, in_bam, chr_index);
+	calc_mu_per_chr( in_bam, params->this_sonic->chromosome_lengths[chr_index]);
 
 	/* Calculate mu_GC values */
 	for( i = 0; i < 101; i++)
@@ -155,9 +151,9 @@ void calc_mean_per_chr( ref_genome* ref, parameters *params, bam_info* in_bam, i
 		window_per_gc[i] = 0;
 	}
 
-	for( i = 0; i < ref->chrom_lengths[chr_index]; i++)
+	for( i = 0; i < params->this_sonic->chromosome_lengths[chr_index]; i++)
 	{
-		gc_val = (int) round ( sonic_get_gc_content( params->this_sonic, ref->chrom_names[chr_index], i, i + WINDOWSLIDE));
+		gc_val = (int) round ( sonic_get_gc_content( params->this_sonic, params->this_sonic->chromosome_names[chr_index], i, i + WINDOWSLIDE));
 		rd_per_gc[gc_val] += ( long) in_bam->read_depth_per_chr[i];
 		window_per_gc[gc_val]++;
 	}
@@ -172,77 +168,64 @@ void calc_mean_per_chr( ref_genome* ref, parameters *params, bam_info* in_bam, i
 	}
 }
 
-int run_rd( bam_info** in_bam, parameters* params, ref_genome* ref)
+int run_rd( bam_info** in_bam, parameters* params)
 {
 	/* Variables */
-	int return_value, lib_index, chr_index, bam_index, posLoc, i;
-	int chrid_left;
-	char* library_name = NULL, *chr_name;
-	int *bamToRefIndex;
+	int return_value, chr_index, bam_index, i;
+	int chr_index_bam;
 
-	htsFile* bam_file;
-	bam_hdr_t* bam_header;
 	bam1_t*	bam_alignment;
 	bam1_core_t bam_alignment_core;
-	hts_itr_t *iter;
-	hts_idx_t *idx;
-
-	if( ten_x_flag)
-		fprintf( stderr,"10x flag: %d\n", ten_x_flag);
 
 	for ( bam_index = 0; bam_index < params->num_bams; bam_index++)
 	{
 		/* Initialize the read depth(rd) array of each library for each bam file */
-		init_rd( in_bam[bam_index], params, ref);
+		init_rd( in_bam[bam_index], params);
 
 		/* HTS implementation */
-		bam_file = safe_hts_open( params->bam_file_list[bam_index], "r");
+		in_bam[bam_index]->bam_file = safe_hts_open( params->bam_file_list[bam_index], "r");
 
 		/* Read in BAM header information */
-		bam_header = bam_hdr_read( ( bam_file->fp).bgzf);
+		in_bam[bam_index]->bam_header = bam_hdr_read( ( in_bam[bam_index]->bam_file->fp).bgzf);
 		bam_alignment = bam_init1();
 
 		/* Load the bam index file */
-		idx = sam_index_load( bam_file, params->bam_file_list[bam_index]);
-		if( idx == NULL)
-			fprintf( stderr, "Error: IDX NULL");
-
-		/* The array is used to map the chromosome indices in bam file to the ones in reference genome in case there is a difference */
-		bamToRefIndex = ( int *) getMem( bam_header->n_targets * sizeof( int));
-		for( i = 0; i < bam_header->n_targets; i++){
-			bamToRefIndex[i] = sonic_refind_chromosome_index( params->this_sonic, bam_header->target_name[i]);
-		}
-		for ( chr_index = 0; chr_index < bam_header->n_targets; chr_index++)
+		in_bam[bam_index]->bam_file_index = sam_index_load( in_bam[bam_index]->bam_file, params->bam_file_list[bam_index]);
+		if( in_bam[bam_index]->bam_file_index == NULL)
 		{
-			chr_name = bam_header->target_name[chr_index];
+			fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load)\n");
+			exit( 1);
+		}
 
-			/* If a chromosome in bam is missing in the reference, skip it */
-			if( bamToRefIndex[chr_index] == -1)
+		for ( chr_index = params->first_chr; chr_index <= params->last_chr; chr_index++)
+		{
+			chr_index_bam = find_chr_index_bam( params->this_sonic->chromosome_names[chr_index], in_bam[bam_index]->bam_header);
+			if( chr_index_bam == -1)
+			{
+				fprintf( stderr, "\nCannot find chromosome name %s in bam %s", params->this_sonic->chromosome_names[chr_index], in_bam[bam_index]->sample_name);
 				continue;
+			}
 
 			fprintf( stderr, "\r                                                        ");
 			fflush( stderr);
-			fprintf( stderr, "\rReading the bam file of %s - chromosome %s", in_bam[bam_index]->sample_name, chr_name);
+			fprintf( stderr, "\rReading BAM [%s] - Chromosome %s", in_bam[bam_index]->sample_name,
+					in_bam[bam_index]->bam_header->target_name[chr_index_bam]);
 			fflush( stderr);
 
-			iter = bam_itr_queryi( idx, chr_index, 0, bam_header->target_len[chr_index]);
-			if( iter == NULL)
-				fprintf( stderr, "Error: Iter NULL");
+			in_bam[bam_index]->iter = bam_itr_queryi( in_bam[bam_index]->bam_file_index, chr_index_bam, 0, in_bam[bam_index]->bam_header->target_len[chr_index_bam]);
+			if( in_bam[bam_index]->iter == NULL)
+			{
+				fprintf( stderr, "Error: Iterator cannot be loaded (bam_itr_queryi)\n");
+				exit( 1);
+			}
 
-			ref->in_bam[bamToRefIndex[chr_index]] = true;
-
-			while( bam_itr_next( bam_file, iter, bam_alignment) > 0)
+			while( bam_itr_next( in_bam[bam_index]->bam_file, in_bam[bam_index]->iter, bam_alignment) > 0)
 			{
 				bam_alignment_core = bam_alignment->core;
-				chrid_left = bamToRefIndex[bam_alignment_core.tid];
-
-				/* Get library index */
-				set_str( &library_name, bam_aux_get( bam_alignment, "RG"));
-				lib_index = find_library_index( in_bam[bam_index], library_name + 1);
 
 				/* Increase the read count and depth */
 				in_bam[bam_index]->read_count++;
-				in_bam[bam_index]->read_depth[chrid_left][bam_alignment_core.pos]++;
+				in_bam[bam_index]->read_depth[chr_index][bam_alignment_core.pos]++;
 			}
 		}
 
@@ -251,19 +234,19 @@ int run_rd( bam_info** in_bam, parameters* params, ref_genome* ref)
 		vh_logInfo( "Finished reading the bam file");
 
 		/* Mean value (mu) calculation */
-		calc_mean( ref, params, in_bam[bam_index]);
+		calc_mean( params, in_bam[bam_index]);
 
 		/* Close the BAM file */
-		return_value = hts_close( bam_file);
+		return_value = hts_close( in_bam[bam_index]->bam_file);
 		if( return_value != 0)
 		{
 			fprintf( stderr, "Error closing BAM file\n");
 			exit( 1);
 		}
-		free(bamToRefIndex);
-
 		/* Free the bam related files */
-		bam_hdr_destroy( bam_header);
+		bam_itr_destroy( in_bam[bam_index]->iter);
+		bam_hdr_destroy( in_bam[bam_index]->bam_header);
+		hts_idx_destroy( in_bam[bam_index]->bam_file_index);
 	}
 	return RETURN_SUCCESS;
 }

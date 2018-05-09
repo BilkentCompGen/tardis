@@ -332,7 +332,6 @@ void create_fastq_library( struct library_properties* in_lib, char* sample_name,
 		/* overwrite with the forced read length */
 		in_lib->read_length = params->force_read_length;
 	}
-
 	while( return_value != -1)
 	{		
 		flag = bam_alignment_core.flag;
@@ -350,12 +349,6 @@ void create_fastq_library( struct library_properties* in_lib, char* sample_name,
 
 			/* Line 1: Read Name */
 			strncpy( qname, bam_get_qname( bam_alignment), bam_alignment_core.l_qname);
-
-			/*If 10x flag is on, concatenate it encoded to the qname*/
-			if (params->ten_x == 1){
-				ten_x_barcode = encode_ten_x_barcode(bam_aux_get(bam_alignment, "BX"));
-				sprintf(qname + strlen(qname), "%020lu", ten_x_barcode); // 20 is the number of digits in the largest unsigned long value
-			}
 
 			/* Line 2: Sequence */
 			strncpy( sequence, bam_get_seq( bam_alignment), bam_alignment_core.l_qseq);

@@ -3,7 +3,7 @@
 #include <string.h>
 #include "config.h"
 
-void load_config( configuration* cfg)
+void load_config( configuration* cfg, parameters* params)
 {
 	FILE* config;
 	char* next_line = NULL;
@@ -60,10 +60,10 @@ void load_config( configuration* cfg)
 				{
 					set_str( &( cfg->path_megablast), next_line + strlen("MEGABLAST = "));
 				}
-				else
+				/*else
 				{
 					fprintf( stderr, "Configuration file has wrong format or unspecified external tools used.\n");
-				}
+				}*/
 				i = i + 1;
 			} 
 		}
@@ -94,16 +94,18 @@ void load_config( configuration* cfg)
 			fprintf( stderr, "bcftools path: %s\n", cfg->path_bcftools);
 		}
 		 */
-
-		if( cfg->path_mrfast == NULL)
+		if( ( running_mode == SENSITIVE) && ( params->skip_remap == 0))
 		{
-			fprintf( stderr, "Warning: mrfast path is not in the configuration file.\n");
+			if( cfg->path_mrfast == NULL)
+			{
+				fprintf( stderr, "Warning: mrfast path is not in the configuration file.\n");
+			}
+			else
+			{
+				fprintf( stderr, "mrfast path: %s\n", cfg->path_mrfast);
+			}
 		}
-		else
-		{
-			fprintf( stderr, "mrfast path: %s\n", cfg->path_mrfast);
-		}
-
+		/*
 		if( cfg->path_gnuplot == NULL)
 		{
 			fprintf( stderr, "Warning: gnuplot path is not in the configuration file.\n");
@@ -111,7 +113,7 @@ void load_config( configuration* cfg)
 		else
 		{
 			fprintf( stderr, "gnuplot path: %s\n", cfg->path_gnuplot);
-		}
+		}*/
 
 		/*
 		if( cfg->path_megablast == NULL)

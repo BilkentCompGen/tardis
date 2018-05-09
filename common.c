@@ -13,8 +13,6 @@
 // Track memory usage
 long long memUsage = 0;
 int running_mode = QUICK;
-int ten_x_flag = 0;
-int output_hs_flag = 0;
 int debug_mode = 0;
 
 void init_params( parameters** params)
@@ -44,10 +42,8 @@ void init_params( parameters** params)
 	( *params)->skip_fastq = 0;
 	( *params)->skip_sort = 0;
 	( *params)->skip_remap = 0;
-	( *params)->ten_x = 0;
-	( *params)->output_hs = 0;
-	( *params)->first_chrom = 0;
-	( *params)->last_chrom = -1;
+	( *params)->first_chr = 0;
+	( *params)->last_chr = -1;
 	( *params)->make_sonic = 0;
 	( *params)->load_sonic = 0;
 	( *params)->sonic_info = NULL;
@@ -77,9 +73,8 @@ void print_params( parameters* params)
 	fprintf( logFile, "%-30s%s\n","Reference genome:", params->ref_genome);
 	fprintf( logFile, "%-30s%s\n","SONIC file:", params->sonic_file);
 	fprintf( logFile, "%-30s%s\n","Mobile Elements:", params->mei);
-	fprintf( logFile, "%-30s%d\n","10x Tag:", params->ten_x);
-	fprintf( logFile, "%-30s%d\n","First chrom:", params->first_chrom);
-	fprintf( logFile, "%-30s%d\n","Last chrom:", params->last_chrom);
+	fprintf( logFile, "%-30s%d\n","First chrom:", params->first_chr);
+	fprintf( logFile, "%-30s%d\n","Last chrom:", params->last_chr);
 }
 
 void print_error( char* msg)
@@ -405,7 +400,7 @@ int hammingDistance( char *str1, char *str2, int len)
 	return dist;
 }
 
-int find_chr_index_bam( ref_genome* ref, char* chromosome_name, bam_hdr_t* bam_header)
+int find_chr_index_bam( char* chromosome_name, bam_hdr_t* bam_header)
 {
 	int i, len;
 	char *tmp;
@@ -415,7 +410,7 @@ int find_chr_index_bam( ref_genome* ref, char* chromosome_name, bam_hdr_t* bam_h
 		if( strcmp( chromosome_name, bam_header->target_name[i]) == 0)
 			return i;
 
-		/* Check if the chromosome name contains chr at the beginning */
+		/* Check if the chromosome name contains chr at the beginning
 		len = strlen( chromosome_name) + 4;
 		tmp = ( char*) getMem( sizeof( char) * len);
 		strcpy( tmp, "chr");
@@ -426,7 +421,7 @@ int find_chr_index_bam( ref_genome* ref, char* chromosome_name, bam_hdr_t* bam_h
 			free( tmp);
 			return i;
 		}
-		free( tmp);
+		free( tmp);*/
 	}
 	return -1;
 }
@@ -470,4 +465,34 @@ unsigned long encode_ten_x_barcode(char* source){
 		}
 	}
 	return result;
+}
+
+
+int32_t calculateInsertSize( int32_t pos_left, int32_t pos_right,uint16_t flag, int read_length)
+{
+	int32_t isize = 0;
+
+	/*
+	if( chrID_left != chrID_right)
+		isize = 0;
+		*/
+
+	/* Calculate the insert size */
+	if( ( flag & BAM_FREVERSE) == 0) /* if left pair is forward */
+	{
+		/*If right pair is reverse */
+		if( ( flag & BAM_FMREVERSE) != 0)
+			isize = ( pos_right + read_length) - ( pos_left);
+		else
+			isize = pos_right - pos_left;
+	}
+	else if( ( flag & BAM_FREVERSE) != 0) /* if left pair is reverse */
+	{
+		/*If right pair is reverse */
+		if( ( flag & BAM_FMREVERSE) != 0)
+			isize = ( pos_right + read_length) - ( pos_left + read_length);
+		else
+			isize = ( pos_right) - ( pos_left + read_length);
+	}
+	return isize;
 }

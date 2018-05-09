@@ -23,17 +23,14 @@ long inv_cnt_bam = 0;
 long mei_cnt_bam = 0;
 long tandup_cnt_bam = 0;
 long sr_cnt_bam = 0;
+long alt_cnt_bam = 0;
+
 long total_read_count = 0;
 
-long del_cnt_div = 0;
-long ins_cnt_div = 0;
-long inv_cnt_div = 0;
-long tandup_cnt_div = 0;
-long sr_cnt_div = 0;
 
 char **allReadNameList;
 
-void findUniqueReads( bam_info** in_bam, parameters *params, ref_genome* ref, char *outputread)
+void findUniqueReads( bam_info** in_bam, parameters *params, char *outputread)
 {
 	int i, j, k;
 	int totalCountRead = 0;
@@ -42,6 +39,7 @@ void findUniqueReads( bam_info** in_bam, parameters *params, ref_genome* ref, ch
 	softClip *softClipPtr;
 	discordantMappingMEI *discordantReadPtrMEI;
 	discordantMapping *discordantReadPtr;
+	alternativeMapping *discordantReadPtrAlt;
 
 	FILE *fileOutputReadName;
 
@@ -68,6 +66,21 @@ void findUniqueReads( bam_info** in_bam, parameters *params, ref_genome* ref, ch
 					set_str( &(allReadNameList[read_name_count]), discordantReadPtr->readName);
 					read_name_count++;
 					discordantReadPtr = discordantReadPtr->next;
+				}
+			}
+
+			if( params->alt_mapping != 0)
+			{
+				for( k = 0; k < NHASH; k++)
+				{
+					discordantReadPtrAlt = in_bam[i]->libraries[j]->mappings_alternative[k];
+					while( discordantReadPtrAlt != NULL)
+					{
+						allReadNameList[read_name_count] = NULL;
+						set_str( &(allReadNameList[read_name_count]), discordantReadPtrAlt->readName);
+						read_name_count++;
+						discordantReadPtrAlt = discordantReadPtrAlt->next;
+					}
 				}
 			}
 
@@ -141,31 +154,23 @@ void findUniqueReads( bam_info** in_bam, parameters *params, ref_genome* ref, ch
 }
 
 
-void discordant_mapping( ref_genome* ref, library_properties *library, parameters* params, bam_alignment_region* bam_align, int svType, int chrID)
+void discordant_mapping( library_properties *library, parameters* params, bam_alignment_region* bam_align, int svType, int chrID)
 {
 	int len, h;
 
 	discordantMapping *newEl;
 	newEl = ( discordantMapping *) getMem( sizeof( discordantMapping));
 
-	/* Need to be put into into divet row */
-	if ( params->ten_x)
-		newEl->ten_x_barcode = bam_align->ten_x_barcode;
-
 	/* This is the first read */
 	if( bam_align->pos_left < bam_align->pos_right)
 	{
-
 		newEl->readName = NULL;
 		set_str( &(newEl->readName), bam_align->read_name);
 
-		newEl->side = bam_align->side;
-		newEl->xa = bam_align->xa;
-
 		/* Get the name of the chromosome */
-		len = strlen( ref->chrom_names[chrID]);
+		len = strlen( params->this_sonic->chromosome_names[chrID]);
 		newEl->chromosome_name = ( char *) getMem( sizeof ( char) * len + 1);
-		strcpy( newEl->chromosome_name, ref->chrom_names[chrID]);
+		strcpy( newEl->chromosome_name, params->this_sonic->chromosome_names[chrID]);
 
 		newEl->pos1 = bam_align->pos_left;
 		newEl->pos2 = bam_align->pos_right;
@@ -234,23 +239,20 @@ void discordant_mapping( ref_genome* ref, library_properties *library, parameter
 
 		newEl->pos1_End = newEl->pos1 + library->read_length;
 
-		if( bam_align->side == LEFT)
-		{
-			if( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S')
-				newEl->pos1_End = newEl->pos1_End - bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]);
+		if( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S')
+			newEl->pos1_End = newEl->pos1_End - bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]);
 
-			if( bam_cigar_opchr( bam_align->cigar[0]) == 'S')
-				newEl->pos1_End = newEl->pos1_End - bam_cigar_oplen( bam_align->cigar[0]);
-		}
+		if( bam_cigar_opchr( bam_align->cigar[0]) == 'S')
+			newEl->pos1 = newEl->pos1 + bam_cigar_oplen( bam_align->cigar[0]);
 
 		newEl->pos1_End--;
 		//newEl->pos1++;
 		newEl->pos2_End = newEl->pos2 + library->read_length;
 
-		newEl->isize = bam_align->isize;
 		newEl->flag = bam_align->flag;
 
 		h = vh_getHash( newEl->readName);
+
 		newEl->next = library->mappings_discordant[h];
 		library->mappings_discordant[h] = newEl;
 
@@ -258,13 +260,13 @@ void discordant_mapping( ref_genome* ref, library_properties *library, parameter
 	/* This is the second read */
 	else if( bam_align->pos_left > bam_align->pos_right)
 	{
+		/* Check primary mappings */
 		h = vh_getHash( bam_align->read_name);
 		newEl = library->mappings_discordant[h];
 
 		while( newEl != NULL)
 		{
-			if( strncmp( newEl->readName, bam_align->read_name, strlen( bam_align->read_name)) == 0 &&
-					( newEl->pos2 == bam_align->pos_left))
+			if( strncmp( newEl->readName, bam_align->read_name, strlen( bam_align->read_name)) == 0)
 			{
 				newEl->editDistance = newEl->editDistance_left + bam_align->edit_distance;
 
@@ -273,7 +275,7 @@ void discordant_mapping( ref_genome* ref, library_properties *library, parameter
 					newEl->pos2_End = newEl->pos2_End - bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]);
 
 				if( bam_cigar_opchr( bam_align->cigar[0]) == 'S')
-					newEl->pos2_End = newEl->pos2_End - bam_cigar_oplen( bam_align->cigar[0]);
+					newEl->pos2 = newEl->pos2 + bam_cigar_oplen( bam_align->cigar[0]);
 
 				newEl->pos2_End--;
 				//newEl->pos2++;
@@ -284,7 +286,7 @@ void discordant_mapping( ref_genome* ref, library_properties *library, parameter
 	}
 }
 
-void discordant_mapping_MEI( ref_genome* ref, library_properties *library, parameters* params,
+void discordant_mapping_MEI( library_properties *library, parameters* params,
 		bam_alignment_region* bam_align, char* mei_subclass, char* mei_class, int MEI_Type, int chrID)
 {
 	int len;
@@ -293,17 +295,13 @@ void discordant_mapping_MEI( ref_genome* ref, library_properties *library, param
 	discordantMappingMEI *newEl;
 	newEl = ( discordantMappingMEI *) getMem( sizeof( discordantMappingMEI));
 
-	/* Need to be put into into divet row */
-	if ( params->ten_x)
-		newEl->ten_x_barcode = bam_align->ten_x_barcode;
-
 	newEl->readName = NULL;
 	set_str( &(newEl->readName), bam_align->read_name);
 
 	/* Get the name of the chromosome */
-	len = strlen( ref->chrom_names[chrID]);
+	len = strlen( params->this_sonic->chromosome_names[chrID]);
 	newEl->chromosome_name = NULL;
-	set_str( &(newEl->chromosome_name), ref->chrom_names[chrID]);
+	set_str( &(newEl->chromosome_name), params->this_sonic->chromosome_names[chrID]);
 
 	/* Get the name of the mei subclass */
 	len = strlen( mei_subclass);
@@ -340,7 +338,7 @@ void discordant_mapping_MEI( ref_genome* ref, library_properties *library, param
 }
 
 
-int find_mei_bam( ref_genome* ref, parameters *params, char *chromosome_name, char** mei_subclass, char** mei_class, int start, int end, int flag)
+int find_mei_bam( parameters *params, char *chromosome_name, char** mei_subclass, char** mei_class, int start, int end, int flag)
 {
 	int ind, len;
 	int return_type = NOTMEI;
@@ -368,7 +366,7 @@ int find_mei_bam( ref_genome* ref, parameters *params, char *chromosome_name, ch
 	return return_type;
 }
 
-int read_mapping( library_properties *library, parameters* params, ref_genome* ref, bam1_t* bam_alignment, int32_t *bamToRefIndex, bam_alignment_region* bam_align)
+int read_mapping( library_properties *library, parameters* params, bam1_t* bam_alignment, int32_t *bamToRefIndex, bam_alignment_region* bam_align)
 {
 	int svType, meiType = NOTMEI, left_end_id, right_end_id, i, insLen;
 	char* mei_subclass, *mei_class;
@@ -392,30 +390,30 @@ int read_mapping( library_properties *library, parameters* params, ref_genome* r
 	insLen = abs( bam_align->pos_left - bam_align->pos_right);
 
 	/* Find the SVs */
-	if( !sonic_is_satellite( params->this_sonic, ref->chrom_names[left_end_id], bam_align->pos_left, bam_align->pos_left + library->read_length)
-			&& !sonic_is_satellite( params->this_sonic, ref->chrom_names[right_end_id], bam_align->pos_right, bam_align->pos_right + library->read_length)
-			&& insLen < (ref->chrom_lengths[left_end_id]) - (2 * library->conc_max) && bam_align->qual > params->mq_threshold
+	if( !sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[left_end_id], bam_align->pos_left, bam_align->pos_left + library->read_length)
+			&& !sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[right_end_id], bam_align->pos_right, bam_align->pos_right + library->read_length)
+			&& insLen < (params->this_sonic->chromosome_lengths[left_end_id]) - (2 * library->conc_max) && bam_align->qual > params->mq_threshold
 			&& is_proper( bam_align->flag) && !( ( left_end_id == right_end_id) && ( insLen < MIN_INS_LEN)))
 		/* Remove the paired-ends that both end overlap each other */
 	{
-		svType = is_concordant_bamonly( bam_align, library->conc_min, library->conc_max);
+		svType = is_concordant_bamonly( bam_align->pos_left, bam_align->pos_right, bam_align->flag,
+				bam_align->isize, library->conc_min, library->conc_max);
 
-		if( svType != RPCONC)
+		if( svType != RPCONC && svType != RPUNMAPPED)
 		{
-			if( bam_align->xa == false)
-				meiType = find_mei_bam( ref, params, ref->chrom_names[right_end_id], &mei_subclass, &mei_class, bam_align->pos_right,
-						bam_align->pos_right + library->read_length, bam_align->flag);
+			meiType = find_mei_bam( params, params->this_sonic->chromosome_names[right_end_id], &mei_subclass, &mei_class, bam_align->pos_right,
+					bam_align->pos_right + library->read_length, bam_align->flag);
 
 			/* MEI */
-			if( bam_align->xa == false && meiType != NOTMEI && ( left_end_id != right_end_id ||
+			if( meiType != NOTMEI && ( left_end_id != right_end_id ||
 					abs( bam_align->pos_left - bam_align->pos_right) > MIN_MEI_DISTANCE))
-				discordant_mapping_MEI( ref, library, params, bam_align, mei_subclass, mei_class, meiType, left_end_id);
+				discordant_mapping_MEI( library, params, bam_align, mei_subclass, mei_class, meiType, left_end_id);
 			/* Deletion, Insertion or Tandem Duplication */
 			else if( svType != RPINV && left_end_id == right_end_id)
-				discordant_mapping( ref, library, params, bam_align, svType, left_end_id);
+				discordant_mapping( library, params, bam_align, svType, left_end_id);
 			/* Inversion */
 			else if( left_end_id == right_end_id && abs( bam_align->pos_left - bam_align->pos_right) < MAX_INV_LEN)
-				discordant_mapping( ref, library, params, bam_align, svType, left_end_id);
+				discordant_mapping( library, params, bam_align, svType, left_end_id);
 		}
 		/* Soft Clipping */
 		if( !params->no_soft_clip && bam_align->n_cigar < MAX_NUM_CIGAR && params->alt_mapping == 0)
@@ -424,14 +422,15 @@ int read_mapping( library_properties *library, parameters* params, ref_genome* r
 			if( ( bam_cigar_opchr( bam_align->cigar[0]) == 'S' && bam_cigar_oplen( bam_align->cigar[0]) > MIN_SOFTCLIP_LEN) ||
 					( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S' &&
 							bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]) > MIN_SOFTCLIP_LEN))
-				addSoftClip( ref, library, bam_align, bam_alignment, left_end_id);
+				addSoftClip( library, bam_align, bam_alignment, params->this_sonic->chromosome_names[left_end_id]);
 		}
+
 		return RETURN_SUCCESS;
 	}
 	return -1;
 }
 
-void read_bam( bam_info* in_bam, parameters* params, ref_genome* ref)
+void read_bam( bam_info* in_bam, parameters* params)
 {
 	/* Variables */
 	int i, chr_index_bam, return_type, ed, len, lib_index;
@@ -453,7 +452,7 @@ void read_bam( bam_info* in_bam, parameters* params, ref_genome* ref)
 		set_str( &library_name, bam_aux_get( bam_alignment, "RG"));
 		lib_index = find_library_index( in_bam, library_name + 1);
 
-		return_type = primary_mapping( in_bam, ref, params, lib_index, bam_alignment, bamToRefIndex);
+		return_type = primary_mapping( in_bam, params, lib_index, bam_alignment, bamToRefIndex);
 		if( return_type == -1)
 			continue;
 
@@ -468,19 +467,20 @@ void read_bam( bam_info* in_bam, parameters* params, ref_genome* ref)
 			set_str( &xa_str, bam_aux_get( bam_alignment, "XA"));
 
 			if( xa_str != NULL)
-				find_alt_mappings( in_bam, ref, params, lib_index, bam_alignment, ( xa_str + 1), bamToRefIndex);
+				find_alt_mappings( in_bam, params, lib_index, bam_alignment, ( xa_str + 1));
 		}
 	}
-	//fprintf(stderr,"alt_left=%d, prim_right=%d\n",prim_left_cnt,prim_right);
 	bam_destroy1( bam_alignment);
-	fprintf( stderr, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI clusters and %li split reads found in BAM.\n", del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam);
-	fprintf( logFile, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI clusters and %li split reads found in BAM.\n", del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam);
+	fprintf( stderr, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li Split Read and %li XA regions found in BAM.\n",
+			del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam, alt_cnt_bam);
+	fprintf( logFile, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li Split Read and %li XA regions found in BAM.\n",
+			del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam, alt_cnt_bam);
 }
 
 
-void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *params)
+void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 {
-	int i, bam_index, chr_index, chr_index_bam, return_value, not_in_bam = 0, invdup_location;
+	int i, bam_index, chr_index, chr_index_bam, return_value, not_in_bam = 0, invdup_location, interdup_location;
 	int total_sv = 0, total_sv_lowqual = 0, divet_row_count;
 	char outputfile[MAX_SEQ];
 	char outputread[MAX_SEQ];
@@ -496,24 +496,20 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 
 	print_vcf_header( fpVcf, in_bams, params);
 
-	for( chr_index = 0; chr_index < params->this_sonic->number_of_chromosomes; chr_index++)
+	for( chr_index = params->first_chr; chr_index <= params->last_chr; chr_index++)
 	{
-		if (chr_index < params->first_chrom)
-			chr_index = params->first_chrom;
-
-		if (chr_index > params->last_chrom)
-		{
-			chr_index = params->this_sonic->number_of_chromosomes;
+		if( strstr( params->this_sonic->chromosome_names[chr_index], "GL000220") != NULL)
 			continue;
-		}
+
+		sprintf( outputfile, "%s.clusters", params->outprefix);
 
 		if( !params->no_soft_clip)
 		{
 			fprintf( stderr, "\nReading reference genome");
-			readReferenceSeq( ref, params, chr_index);
+			readReferenceSeq( params, chr_index);
 		}
 
-		for ( bam_index = 0; bam_index < params->num_bams; bam_index++)
+		for( bam_index = 0; bam_index < params->num_bams; bam_index++)
 		{
 			/* HTS implementation */
 			in_bams[bam_index]->bam_file = safe_hts_open( params->bam_file_list[bam_index], "r");
@@ -529,22 +525,21 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 				exit( 1);
 			}
 
-			chr_index_bam = find_chr_index_bam( ref, ref->chrom_names[chr_index], in_bams[bam_index]->bam_header);
+			chr_index_bam = find_chr_index_bam( params->this_sonic->chromosome_names[chr_index], in_bams[bam_index]->bam_header);
 			not_in_bam = 0;
 			if( chr_index_bam == -1)
 			{
-				fprintf( stderr, "\nCannot find chromosome name %s in bam %s", ref->chrom_names[chr_index], in_bams[bam_index]->sample_name);
+				fprintf( stderr, "\nCannot find chromosome name %s in bam %s", params->this_sonic->chromosome_names[chr_index], in_bams[bam_index]->sample_name);
 				not_in_bam = 1;
 				continue;
 			}
 
-			in_bams[bam_index]->iter = bam_itr_queryi( in_bams[bam_index]->bam_file_index, chr_index_bam, 0, ref->chrom_lengths[chr_index]);
+			in_bams[bam_index]->iter = bam_itr_queryi( in_bams[bam_index]->bam_file_index, chr_index_bam, 0, params->this_sonic->chromosome_lengths[chr_index]);
 			if( in_bams[bam_index]->iter == NULL)
 			{
 				fprintf( stderr, "Error: Iterator cannot be loaded (bam_itr_queryi)\n");
 				exit( 1);
 			}
-			ref->in_bam[chr_index] = true;
 
 			fprintf( stderr, "\n                                                        ");
 			fflush( stderr);
@@ -552,22 +547,27 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 			fflush( stderr);
 
 			/* Initialize the read depth and read count */
-			init_rd_per_chr( in_bams[bam_index], params, ref, chr_index);
+			init_rd_per_chr( in_bams[bam_index], params, chr_index);
 
 			/* Read bam file for this chromosome */
-			read_bam( in_bams[bam_index], params, ref);
+			read_bam( in_bams[bam_index], params);
+
+			//fprintf( stderr, "%d altLeftPrimRight, %d primRightAltLeft, %d altLeftAltRight, %d primLeftAltRight\n", altLeftPrimRight, primRightAltLeft, altLeftAltRight, primLeftAltRight);
 
 			if( !params->no_soft_clip)
 			{
 				/* Count the number of softclip reads which are clustering for each read */
-				fprintf( stderr, "\nCollecting soft clipped read information");
-				countNumSoftClipInCluster( params, ref, in_bams[bam_index], chr_index);
-				fprintf( stderr, "\nRemapping soft clipped reads");
-				mapSoftClipToRef( in_bams[bam_index], params, ref, chr_index);
+				//fprintf( stderr, "\nCollecting soft clipped read information");
+				fprintf( stderr, "\nRunning Split Read..");
+				countNumSoftClipInCluster( params, in_bams[bam_index], chr_index);
+				fprintf( stderr, "..");
+				//fprintf( stderr, "\nRemapping soft clipped reads");
+				mapSoftClipToRef( in_bams[bam_index], params, chr_index);
+				fprintf( stderr, "..");
 			}
 
 			/* Mean value (mu) calculation */
-			calc_mean_per_chr( ref, params, in_bams[bam_index], chr_index);
+			calc_mean_per_chr( params, in_bams[bam_index], chr_index);
 
 			/* Close the BAM file */
 			return_value = hts_close( in_bams[bam_index]->bam_file);
@@ -579,11 +579,11 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 			/* Free the bam related files */
 			bam_itr_destroy( in_bams[bam_index]->iter);
 			bam_hdr_destroy( in_bams[bam_index]->bam_header);
-			hts_idx_destroy(in_bams[bam_index]->bam_file_index);
+			hts_idx_destroy( in_bams[bam_index]->bam_file_index);
 
 			/* Increase the total read count for this chromosome and make the number of SVs 0 for this bam */
-			total_read_count += del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + sr_cnt_bam;
-			del_cnt_bam = 0, ins_cnt_bam = 0, inv_cnt_bam = 0, mei_cnt_bam = 0, tandup_cnt_bam = 0, sr_cnt_bam = 0;
+			total_read_count += del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + sr_cnt_bam + alt_cnt_bam;
+			del_cnt_bam = 0, ins_cnt_bam = 0, inv_cnt_bam = 0, mei_cnt_bam = 0, tandup_cnt_bam = 0, sr_cnt_bam = 0, alt_cnt_bam = 0;
 		}
 		if( not_in_bam == 1)
 			continue;
@@ -594,7 +594,7 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 			free_HashIndex();
 		}
 
-		divet_row_count = load_Divet_bam( in_bams, ref, params, chr_index);
+		divet_row_count = load_Divet_bam( in_bams, params, chr_index);
 
 		/* Open the .clusters file if running in debug mode */
 		if( debug_mode)
@@ -602,78 +602,104 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 
 		/* Deletion */
 		fprintf( stderr, "\nPreparing Deletion clusters");
-		vh_initializeReadMapping_Deletion( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index], params->this_sonic);
-		fprintf( stderr, ".");
+		vh_initializeReadMapping_Deletion( params->this_sonic, chr_index);
+		fprintf( stderr, "..");
 		fflush( stderr);
-		vh_createDeletionClusters( ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		vh_createDeletionClusters( params->this_sonic->chromosome_lengths[chr_index]);
+		fprintf( stderr, "..");
 		fflush( stderr);
-		vh_finalizeReadMapping( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		vh_finalizeReadMapping( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+		fprintf( stderr, "..");
 		fflush( stderr);
 
 		/* Inversion */
 		fprintf( stderr, "\nPreparing Inversion clusters");
-		vh_initializeReadMapping_Inversion( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index], params->this_sonic);
-		fprintf( stderr, ".");
+		vh_initializeReadMapping_Inversion( params->this_sonic, chr_index);
+		fprintf( stderr, "..");
 		fflush( stderr);
-		vh_createInversionClusters( ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		vh_createInversionClusters( params->this_sonic->chromosome_lengths[chr_index]);
+		fprintf( stderr, "..");
 		fflush( stderr);
-		vh_finalizeReadMapping( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		vh_finalizeReadMapping( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+		fprintf( stderr, "..");
 		fflush( stderr);
 
 		/* Insertion */
 		fprintf( stderr, "\nPreparing Insertion clusters");
-		vh_initializeReadMapping_Insertion( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index], params->this_sonic);
-		fprintf( stderr, ".");
+		vh_initializeReadMapping_Insertion( params->this_sonic, chr_index);
+		fprintf( stderr, "..");
 		fflush( stderr);
-		vh_createInsertionClusters( ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		vh_createInsertionClusters( params->this_sonic->chromosome_lengths[chr_index]);
+		fprintf( stderr, "..");
 		fflush( stderr);
-		vh_finalizeReadMapping( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		vh_finalizeReadMapping( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+		fprintf( stderr, "..");
 		fflush( stderr);
 
 		/* Tandem Duplication */
-		fprintf( stderr, "\nPreparing Tandem Dup clusters");
-		vh_initializeReadMapping_TDup( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index], params->this_sonic);
-		fprintf( stderr, ".");
+		fprintf( stderr, "\nPreparing Tandem Duplication clusters");
+		vh_initializeReadMapping_TDup( params->this_sonic, chr_index);
+		fprintf( stderr, "..");
 		fflush( stderr);
-		vh_createTDupClusters( ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		vh_createTDupClusters( params->this_sonic->chromosome_lengths[chr_index]);
+		fprintf( stderr, "..");
 		fflush( stderr);
-		vh_finalizeReadMapping( ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		vh_finalizeReadMapping( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+		fprintf( stderr, "..");
 		fflush( stderr);
 
-		/* Mei filtering */
+		/* Mei */
 		fprintf( stderr, "\nPreparing MEI clusters");
-		initializeReadMapping_MEI( in_bams, params, ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		initializeReadMapping_MEI( in_bams, params, chr_index);
+		fprintf( stderr, "..");
 		fflush( stderr);
-		MEICluster_Region( params, ref->chrom_names[chr_index], ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		MEICluster_Region( params, chr_index);
+		fprintf( stderr, "..");
 		fflush( stderr);
-		vh_finalizeReadMapping_Mei( ref->chrom_lengths[chr_index]);
-		fprintf( stderr, ".");
+		vh_finalizeReadMapping_Mei( params->this_sonic->chromosome_lengths[chr_index]);
+		fprintf( stderr, "..");
 		fflush( stderr);
 
+		/* Interspersed Direct Duplication */
+		fprintf( stderr, "\nPreparing Interspersed Duplication clusters");
+		for( interdup_location = 0; interdup_location <= RIGHTSIDE; interdup_location++)
+		{
+			vh_initializeReadMapping_InterDup( params->this_sonic, chr_index, interdup_location);
+			fprintf( stderr, ".");
+			fflush( stderr);
+			vh_createInterDupClusters( params->this_sonic->chromosome_lengths[chr_index], interdup_location);
+			fprintf( stderr, ".");
+			fflush( stderr);
+			vh_finalizeReadMapping_InterDup( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+			fprintf( stderr, ".");
+			fflush( stderr);
+		}
+
+		/* Interspersed Inverted Duplication */
+		fprintf( stderr, "\nPreparing Interspersed Duplication (Inverted) clusters");
+		for( invdup_location = 0; invdup_location <= RIGHTSIDE; invdup_location++)
+		{
+			vh_initializeReadMapping_InvDup( params->this_sonic, chr_index, invdup_location);
+			fprintf( stderr, ".");
+			fflush( stderr);
+			vh_createInvDupClusters( params->this_sonic->chromosome_lengths[chr_index], invdup_location);
+			fprintf( stderr, ".");
+			fflush( stderr);
+			vh_finalizeReadMapping_InvDup( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+			fprintf( stderr, ".");
+			fflush( stderr);
+		}
 
 		fprintf( stderr, "\n");
 
-		if( debug_mode)
-			fclose( fileOutput);
-
-		findUniqueReads( in_bams, params, ref, outputread);
+		findUniqueReads( in_bams, params, outputread);
 
 		/* Free the mappings and libraries */
-		free_mappings( in_bams, ref, params);
+		free_mappings( in_bams, params);
 		free_libraries();
 
 		/* Apply Set-Cover */
-		vh_setcover( in_bams, params, ref, fpVcf);
+		vh_setcover( in_bams, params, fpVcf);
 
 		total_sv += sv_count;
 		total_sv_lowqual += sv_lowqual_count;
@@ -683,18 +709,19 @@ void bamonly_vh_clustering( bam_info** in_bams, ref_genome* ref, parameters *par
 	fprintf( stderr, "\n");
 	fclose( fpVcf);
 
+	if( debug_mode)
+		fclose( fileOutput);
+
 	fflush( stderr);
 	fprintf( stderr, "\n");
 
-	if( debug_mode)
-		fprintf( stderr, "TARDIS is complete. Found %d SVs and %d LowQual.", total_sv, total_sv_lowqual);
-	else
-		fprintf( stderr, "TARDIS is complete. Found %d SVs", total_sv);
+
+	fprintf( stderr, "TARDIS is complete. Found %d SVs", total_sv);
 
 	print_sv_stats();
 }
 
-int bamonly_run( ref_genome* ref, parameters *params, bam_info ** in_bams)
+int bamonly_run( parameters *params, bam_info ** in_bams)
 {
 	int rd_del_filtered, bam_index;
 	int sv_total, i, len;
@@ -708,7 +735,7 @@ int bamonly_run( ref_genome* ref, parameters *params, bam_info ** in_bams)
 			"(RD Threshold: %d; Mapping Quality Threshold: %d; RP Support Threshold: %d)\n\n"
 			, params->rd_threshold, params->mq_threshold, params->rp_threshold);
 
-	bamonly_vh_clustering( in_bams, ref, params);
+	bamonly_vh_clustering( in_bams, params);
 
 	return RETURN_SUCCESS;
 }

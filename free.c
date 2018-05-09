@@ -26,13 +26,14 @@ void free_alignments2( bam_alignment_region** bam_align)
 	*bam_align = NULL;
 }
 
-void free_mappings( bam_info** in_bams, ref_genome* ref, parameters* params)
+void free_mappings( bam_info** in_bams, parameters* params)
 {
 	int i, k, bam_index;
 	struct LibraryInfo *cursor, *t;
 
 	softClip *sfcPtr, *sfcPtrNext;
 	discordantMapping *ptrDisMap, *ptrDisMapNext;
+	alternativeMapping *ptrAltMap, *ptrAltMapNext;
 	discordantMappingMEI *ptrMEIMap, *ptrMEIMapNext;
 
 	for( bam_index = 0; bam_index < params->num_bams; bam_index++)
@@ -89,6 +90,25 @@ void free_mappings( bam_info** in_bams, ref_genome* ref, parameters* params)
 				}
 				in_bams[bam_index]->libraries[i]->mappings_discordant[k] = NULL;
 			}
+			if( params->alt_mapping != 0)
+			{
+				for( k = 0; k < NHASH; k++)
+				{
+					ptrAltMap = in_bams[bam_index]->libraries[i]->mappings_alternative[k];
+					while( ptrAltMap != NULL)
+					{
+						ptrAltMapNext = ptrAltMap->next;
+						if( ptrAltMap->chromosome_name != NULL)
+							free( ptrAltMap->chromosome_name);
+						if( ptrAltMap->readName != NULL)
+							free( ptrAltMap->readName);
+						if( ptrAltMap != NULL)
+							free( ptrAltMap);
+						ptrAltMap = ptrAltMapNext;
+					}
+					in_bams[bam_index]->libraries[i]->mappings_alternative[k] = NULL;
+				}
+			}
 		}
 	}
 }
@@ -140,16 +160,10 @@ void free_the_rest( bam_info** in_bams, parameters* params)
 		/* Free the read depth array*/
 		free( in_bams[bam_index]->read_depth_per_chr);
 	}
-
-	del_cnt_div = 0;
-	ins_cnt_div = 0;
-	inv_cnt_div = 0;
-	tandup_cnt_div = 0;
-	sr_cnt_div = 0;
 }
 
 
-void free_sensitive(bam_info** in_bams, parameters *params, ref_genome* ref)
+void free_sensitive(bam_info** in_bams, parameters *params)
 {
 	int lib_index, i, j;
 
@@ -194,14 +208,9 @@ void free_sensitive(bam_info** in_bams, parameters *params, ref_genome* ref)
 	free( params);
 }
 
-void free_quick(bam_info** in_bams, parameters *params, ref_genome* ref)
+void free_quick(bam_info** in_bams, parameters *params)
 {
 	int lib_index, i, j;
-
-	/* Free refgenome struct */
-	free( ref->ref_name);
-	free( ref->in_bam);
-	free( ref);
 
 	/* Free bams and related libraries */
 	for( i = 0; i < params->num_bams; i++)
@@ -214,6 +223,7 @@ void free_quick(bam_info** in_bams, parameters *params, ref_genome* ref)
 			free( in_bams[i]->libraries[j]->fastq2);
 			free( in_bams[i]->libraries[j]->libname);
 			free( in_bams[i]->libraries[j]->listSoftClip);
+			free( in_bams[i]->libraries[j]->listMEI_Mapping);
 		}
 		free( in_bams[i]);
 	}

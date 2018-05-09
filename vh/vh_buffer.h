@@ -35,5 +35,5 @@ extern float maxScoreInBuffer;
 int addToBuffer(float, int);
 int bestFromBuffer();
 void emptyBuffer();
-int bufferIsUseful( parameters *params);
+int bufferIsUseful( bam_info **in_bams, parameters *params);
 #endif

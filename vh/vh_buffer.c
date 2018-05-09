@@ -8,7 +8,7 @@ int countInBuffer = 0;
 float maxScoreInBuffer;
 
 
-int bufferIsUseful( parameters *params)
+int bufferIsUseful( bam_info **in_bams, parameters *params)
 {
 	float bestWeight = inf;
 	int bestWeightId = -1;
@@ -18,7 +18,7 @@ int bufferIsUseful( parameters *params)
 	{
 		if( listClusterEl[listClusterInBuffer[count].clusterId].oldBestIsGood == 0)
 		{
-			listClusterEl[listClusterInBuffer[count].clusterId].oldBestScore = calWeight( params, listClusterInBuffer[count].clusterId, listClusterEl[listClusterInBuffer[count].clusterId].bestReadToRemove );
+			listClusterEl[listClusterInBuffer[count].clusterId].oldBestScore = calWeight( in_bams, params, listClusterInBuffer[count].clusterId, listClusterEl[listClusterInBuffer[count].clusterId].bestReadToRemove );
 			listClusterEl[listClusterInBuffer[count].clusterId].oldBestIsGood = 1;
 			listClusterInBuffer[count].score = listClusterEl[listClusterInBuffer[count].clusterId].oldBestScore;
 		}

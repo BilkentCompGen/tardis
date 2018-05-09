@@ -4,8 +4,8 @@
 #include <math.h>
 #include "vh_setcover.h"
 #include "vh_buffer.h"
-#include "vh_intervalhandler.h"
 #include "vh_conflict.h"
+#include "../processfq.h"
 
 #define hashtable_size 10000
 
@@ -18,7 +18,6 @@ int numCallsRequested; //maximum number of SVs the users wants to us to output
 int multiLibsCount;
 int cluster_count = 0;
 int minimumSupNeeded;
-int minimumSupNeededNoRD;
 float mismatchPenalty = 0;
 char multiInd[totalNumInd][strSize]; //Name of each individual
 struct barcode_list_element* hashtable[hashtable_size];
@@ -28,6 +27,8 @@ struct clusters_final* clusters_all[MaxClusterCount];
 struct readEl *read_names; // Array of all reads
 long read_names_count;// number of total reads
 
+FILE *cnvscoreFile = NULL;
+FILE *debugSR = NULL;
 //clusterElRead clusterElRead_Single; // the name of cluster which each new cluster is read to it
 
 void free_clusters()
@@ -135,7 +136,6 @@ readMappingEl *addToListOfReads(readMappingEl *linkList, readMappingEl element)
 	newEl->mapq2 = element.mapq2;
 	newEl->correctMappingQual = element.correctMappingQual;
 	newEl->next = linkList;
-	newEl->ten_x_barcode = element.ten_x_barcode;
 
 	return newEl;
 }
@@ -160,73 +160,30 @@ readMappingEl *addToListOfReads2(readMappingEl *linkList, clusters_final *elemen
 	newEl->mapq2 = element->mapping_quality_right;
 	//newEl->correctMappingQual = element.correctMappingQual;
 	newEl->next = linkList;
-	newEl->ten_x_barcode = element->ten_x_barcode;
 
 	return newEl;
 }
 
-void calculateLikelihoodCNV(bam_info **in_bam, ref_genome* ref, parameters *params, int posS, int posE, int clusterId, double cnvProb[][10])
-{
-	int count, gc_val, i;
-	float expectedReadCount, lambda;
-	int totalReadCount, chr = -1;
-
-	if( running_mode == SENSITIVE)
-	{
-		chr = sonic_refind_chromosome_index(params->this_sonic, listClusterEl[clusterId].chromosome_name);
-		if( chr == -1)
-		{
-			fprintf(stderr, "ERROR - cannot find the chromosome in ref");
-			exit( 1);
-		}
-	}
-
-	for( count = 0; count < multiIndCount; count++)
-	{
-		expectedReadCount = 0;
-		totalReadCount = 0;
-
-		for( i = posS; i < posE; i++)
-		{
-			gc_val = ( int)round ( sonic_get_gc_content(params->this_sonic, listClusterEl[clusterId].chromosome_name, i, i + WINDOWSLIDE));
-			expectedReadCount += in_bam[count]->mean_rd_per_gc[gc_val];
-			if( running_mode == QUICK)
-				totalReadCount += in_bam[count]->read_depth_per_chr[i];
-			else if( running_mode == SENSITIVE)
-				totalReadCount += in_bam[count]->read_depth[chr][i];
-		}
-		listClusterEl[clusterId].readDepth[count] = ( long)totalReadCount;
-		//fprintf(stderr,"\nCluster ID= %d   SVTYPE=%c\n",clusterId, listClusterEl[clusterId].SVtype);
-		for( i = 0; i < 10; i++)
-		{
-			if( i > 0)
-			{
-				lambda = ( ( ( float)i / ( float)2 ) * expectedReadCount);
-				cnvProb[count][i] =  exp( totalReadCount * log( lambda) - lambda - lgamma( totalReadCount + 1));
-
-				//fprintf(stderr, "i = %d read cnt= %d expected=%f - CNV=%lf\n", i, totalReadCount, expectedReadCount, cnvProb[count][i]);
-			}
-			else if( i == 0)
-			{
-				if( totalReadCount < ( 0.2) * expectedReadCount)
-					cnvProb[count][i] = 1;
-				else
-				{
-					lambda = ( ( 0.01) * expectedReadCount);
-					cnvProb[count][i] = exp( totalReadCount * log( lambda) - lambda - lgamma( totalReadCount + 1));
-
-					//fprintf(stderr, "i = %d read cnt= %d expected=%f - CNV=%lf\n", i, totalReadCount, expectedReadCount, cnvProb[count][i]);
-				}
-			}
-		}
-	}
+double lpoisson(int d, double lambda, int type) {
+	double penalty;
+	if (type == 0)
+		// read pair
+		penalty = 0.001;
+	else
+		penalty = 0.01;
+	if  (lambda == 0.0)
+		return log(penalty) * d;
+	return d*log(lambda) - lambda - lgamma(d+1);
 }
 
-void calculateExpectedCN( bam_info **in_bam, ref_genome* ref, parameters *params, int posS, int posE, int clusterId, float *CN)
-{
-	int count, pos, gc_val, i;
-	float totalReadCount, expectedReadCount;
-	int chr = -1;
+// Calculate score for Deletion, Inversion, Inverted Dup, Inter Dup, Tandem
+void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, char SV_type, bool isMEI, double *score) {
+	int gc_val, i, count, gc_window, chr = -1;
+	double observedReadDepth, expectedReadDepth, observedDiscordantRead, expectedDiscordantRead, mean, std;
+	int delta_min, delta_max, read_length;
+	int start = 0, end = 0, breakpoint;
+
+	double lhomo, lhete, lnone;
 
 	if( running_mode == SENSITIVE)
 	{
@@ -238,26 +195,163 @@ void calculateExpectedCN( bam_info **in_bam, ref_genome* ref, parameters *params
 		}
 	}
 
+	if (SV_type == DELETION) {
+		start = listClusterEl[clusterId].posStartSV;
+		end = listClusterEl[clusterId].posEndSV;
+		breakpoint = listClusterEl[clusterId].posStartSV_Outer;
+	}
+	else if (SV_type == INVERSION) {
+		start = listClusterEl[clusterId].posStartSV_Outer;
+		end = listClusterEl[clusterId].posStartSV;
+		breakpoint = listClusterEl[clusterId].posStartSV_Outer;
+	}
+	else if (SV_type == INVDUPLEFT || SV_type == INTERDUPLEFT) {
+		start = listClusterEl[clusterId].posEndSV;
+		end = listClusterEl[clusterId].posEndSV_Outer;
+		breakpoint = listClusterEl[clusterId].posStartSV_Outer;
+	}
+	else if (SV_type == INVDUPRIGHT || SV_type == INTERDUPRIGHT) {
+		start = listClusterEl[clusterId].posStartSV_Outer;
+		end = listClusterEl[clusterId].posStartSV;
+		breakpoint = listClusterEl[clusterId].posEndSV_Outer;
+	}
+	else if (SV_type == TANDEMDUP) {
+		start = listClusterEl[clusterId].posStartSV;
+		end = listClusterEl[clusterId].posEndSV;
+		breakpoint = listClusterEl[clusterId].posEndSV_Outer;
+	}
+	else if (SV_type == MEIFORWARD) {
+		breakpoint = listClusterEl[clusterId].posStartSV_Outer;
+	}
+	else if (SV_type == MEIREVERSE) {
+		breakpoint = listClusterEl[clusterId].posEndSV_Outer;
+	}
+	else if(SV_type == INSERTION) {
+		breakpoint = listClusterEl[clusterId].posStartSV_Outer;
+	}
+
 	for( count = 0; count < multiIndCount; count++)
 	{
-		totalReadCount = 0;
-		expectedReadCount = 0;
+		observedReadDepth = 0;
+		expectedReadDepth = 0;
 
-		for( i = posS; i < posE; i++)
+		for( i = start; i < end; i++)
 		{
 			gc_val = ( int)round ( sonic_get_gc_content(params->this_sonic, listClusterEl[clusterId].chromosome_name, i, i + WINDOWSLIDE));
-			expectedReadCount += in_bam[count]->mean_rd_per_gc[gc_val];
+			expectedReadDepth += in_bam[count]->mean_rd_per_gc[gc_val];
 
 			if( running_mode == QUICK)
 			{
-				totalReadCount += ( float)in_bam[count]->read_depth_per_chr[i];
+				observedReadDepth += ( double)in_bam[count]->read_depth_per_chr[i];
 			}
 			else if( running_mode == SENSITIVE)
 			{
-				totalReadCount += ( float)in_bam[count]->read_depth[chr][i];
+				observedReadDepth += ( double)in_bam[count]->read_depth[chr][i];
 			}
 		}
-		CN[count] = ( float)( 2 * totalReadCount) / ( float)( expectedReadCount);
+
+		observedDiscordantRead = 0;
+		expectedDiscordantRead = 0;
+		readMappingEl *ptr = listClusterEl[clusterId].next;
+
+		while (ptr != NULL) {
+			if (read_names[ptr->readId].readCovered == 0){
+				observedDiscordantRead++;
+			}
+			ptr = ptr->next;
+		}
+
+		delta_min = in_bam[count]->libraries[0]->conc_min;
+		delta_max = in_bam[count]->libraries[0]->conc_max;
+		mean = in_bam[count]->libraries[0]->frag_avg;
+		std = in_bam[count]->libraries[0]->frag_std;
+		read_length = in_bam[count]->libraries[0]->read_length;
+
+		for( i = read_length; i <= delta_max; i++){
+			expectedDiscordantRead += 1 - 0.5 * ( 1 + erf( ( i - mean) / ( std * sqrt( 2.))));
+		}
+
+		gc_val = ( int)round ( sonic_get_gc_content(params->this_sonic, listClusterEl[clusterId].chromosome_name, breakpoint, breakpoint + WINDOWSLIDE));
+		expectedDiscordantRead *= in_bam[count]->mean_rd_per_gc[gc_val];
+
+
+		fprintf(cnvscoreFile,"chr= %s Id= %d observedRD= %lf expectedRD= %lf observedRP= %lf expectedRP= %lf\n", listClusterEl[clusterId].chromosome_name, clusterId, observedReadDepth, expectedReadDepth, observedDiscordantRead, expectedDiscordantRead);
+		fprintf(cnvscoreFile, "Id= %d start= %d end= %d breakpoint= %d gc_val= %d meanrdpergc= %lf\n", clusterId, start, end, breakpoint, gc_val, in_bam[count]->mean_rd_per_gc[gc_val]);
+		//fprintf(cnvscoreFile,"Id= %d delta_min= %d delta_max= %d mean= %lf std= %lf\n", clusterId, delta_min, delta_max, mean, std);
+
+		int READPAIR = 0;
+		int READDEPTH = 1;
+
+
+		if (SV_type == DELETION && isMEI == true) {
+			lhomo = lpoisson(observedDiscordantRead,  expectedDiscordantRead, READPAIR);
+			lhete = lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone = lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			score[count] = max(lhomo, lhete) / lnone;
+			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= DELETION MEI lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
+		}
+		else if (SV_type == DELETION && isMEI == false) {
+			lhomo = lpoisson(observedReadDepth, 0.0, READDEPTH) + lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
+			lhete = lpoisson(observedReadDepth, 0.5 * expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone = lpoisson(observedReadDepth, expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			score[count] = max(lhomo, lhete) / lnone;
+			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= DELETION lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
+		}
+		else if (SV_type == INVERSION) {
+			lhomo = lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
+			lhete = lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone = lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			score[count] = max(lhomo, lhete) / lnone;
+			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= INVERSION lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
+		}
+		else if (SV_type == INVDUPLEFT || SV_type == INVDUPRIGHT) {
+			lhomo = lpoisson(observedReadDepth, 2 * expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
+			lhete = lpoisson(observedReadDepth, 1.5 * expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone = lpoisson(observedReadDepth, expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			score[count] = max(lhomo, lhete) / lnone;
+			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= INVDUP lhomo= %lf lhete= %lf lnone=%lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
+		}
+		else if (SV_type == INTERDUPLEFT || SV_type == INTERDUPRIGHT) {
+			lhomo = lpoisson(observedReadDepth, 2 * expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
+			lhete = lpoisson(observedReadDepth, 1.5 * expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone = lpoisson(observedReadDepth, expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			score[count] = max(lhomo, lhete) / lnone;
+			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= INTERDUP lhomo= %lf lhete= %lf lnone=%lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
+		}
+		else if (SV_type == TANDEMDUP) {
+			lhomo = lpoisson(observedReadDepth, 2 * expectedReadDepth, READDEPTH) +  lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
+			lhete = lpoisson(observedReadDepth, 1.5 * expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone = lpoisson(observedReadDepth, expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			score[count] = max(lhomo, lhete) / lnone;
+			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= TANDEMDUP lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
+		}
+		else if (SV_type == MEIFORWARD || SV_type == MEIREVERSE) {
+			lhomo =  lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
+			lhete =  lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone =  lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			score[count] = max(lhomo, lhete) / lnone;
+			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= MEI lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
+		}
+		else if (SV_type == INSERTION) {
+			lhomo =  lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
+			lhete =  lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone =  lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			score[count] = max(lhomo, lhete) / lnone;
+			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= Insertion lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
+		}
+		else {
+			score[count] = inf;
+			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= %c lhomo= xxx lhete= xxx lnone= xxx score= inf\n", clusterId, count, SV_type);
+		}
+
+		if (observedDiscordantRead != 0){
+			score[count] = score[count] / observedDiscordantRead;
+			fprintf(cnvscoreFile,"Id= %d newscore(score/num_reads)= %lf\n", clusterId, score[count]);
+		}
+		else{
+			score[count] = inf;
+			fprintf(cnvscoreFile,"Id= %d newscore(score/num_reads)=inf\n", clusterId);
+		}
 	}
 }
 
@@ -341,130 +435,6 @@ unsigned long hashing_function(unsigned char *str)
 	return hash;
 }
 
-/*Iterate over the cluster. Count total number of reads in cluster.
- *Count total number of reads per barcode using hashtable structure.
- *Iterate over the hashtable calculating sum for all over |B_i|^2, where |B_i| is the number of reads that has barcode B_i
- *Return 1/n^2 times the sum
- */
-
-void init_barcode_homogeneity_hashtable()
-{
-	int hashtable_index;
-
-	//initialize the heads of the chains in the hashtable
-	for( hashtable_index = 0; hashtable_index < hashtable_size; hashtable_index++){
-		hashtable[hashtable_index] = ( barcode_list_element*) getMem( sizeof( barcode_list_element));
-		hashtable[hashtable_index]->ten_x_barcode = 0;
-		hashtable[hashtable_index]->count = 0;
-		hashtable[hashtable_index]->next = NULL;
-	}
-}
-
-void free_barcode_homogeneity_hashtable()
-{
-	int i;
-	struct barcode_list_element *temp_ptr;
-	for( i = 0; i < hashtable_size; i++)
-	{
-		while(hashtable[i]->next)
-		{
-			temp_ptr = hashtable[i]->next->next;
-			free( hashtable[i]->next);
-			hashtable[i]->next = temp_ptr;
-		}
-		free( hashtable[i]);
-	}
-}
-
-double barcode_homogeneity_score(int clusterId)
-{
-	unsigned long total_read_count = 0;
-	double sum = 0.0, score = 1.0;
-	int i, found, hashtable_index;
-
-	struct barcode_list_element *current_list_element;
-	struct barcode_list_element *temp_ptr;
-	readMappingEl *ptrReadMapping;
-
-	ptrReadMapping = listClusterEl[clusterId].next;
-	while( ptrReadMapping != NULL)
-	{
-		if( ( read_names[ptrReadMapping->readId].readCovered == 0)
-				&& ( listClusterEl[clusterId].indIdCount[ptrReadMapping->indId] > -1)
-				&& ( signed long)ptrReadMapping->ten_x_barcode != -1)
-		{
-
-			total_read_count++;
-
-			hashtable_index = ptrReadMapping->ten_x_barcode % hashtable_size;
-			current_list_element = hashtable[hashtable_index];
-
-			found = 0;
-			while( current_list_element->next)
-			{
-				if( current_list_element->next->ten_x_barcode == ptrReadMapping->ten_x_barcode)
-				{
-					current_list_element->next->count++;
-					found = 1;
-					break;
-				}
-				current_list_element = current_list_element->next;
-			}
-
-			if( found == 0)
-			{
-				current_list_element->next = ( barcode_list_element*)getMem( sizeof( barcode_list_element));
-				current_list_element->next->ten_x_barcode = ptrReadMapping->ten_x_barcode;
-				current_list_element->next->count = 1;
-				current_list_element->next->next = NULL;
-			}
-		}
-		ptrReadMapping = ptrReadMapping->next;
-	}
-
-	for( hashtable_index = 0; hashtable_index < hashtable_size; hashtable_index++)
-	{
-		current_list_element = hashtable[hashtable_index];
-
-		while( current_list_element->next)
-		{
-			sum = sum + ( ( double)current_list_element->next->count * ( double)current_list_element->next->count);
-			current_list_element = current_list_element->next;
-		}
-	}
-
-	for( i = 0; i < hashtable_size; i++)
-	{
-		while( hashtable[i]->next)
-		{
-			temp_ptr = hashtable[i]->next->next;
-			free(hashtable[i]->next);
-			hashtable[i]->next = temp_ptr;
-		}
-	}
-
-	if( total_read_count == 0)
-	{
-		listClusterEl[clusterId].homogeneity_score = score;
-		return 1.0;
-	}
-
-	score = sum / ( total_read_count * total_read_count);
-
-	listClusterEl[clusterId].homogeneity_score = score;
-
-	if( ten_x_flag != 1)
-		return 1.0;
-
-	if( !( score > 1 || score < 0))
-		return score;
-
-	printf("Err: score isn't between 0-1: %f\n", score);
-
-	return inf;
-}
-
-
 float avgEditDistReadSupportingCluster(readMappingEl *list)
 {
 	int countTotal = 0, editDistanceSum = 0;
@@ -497,33 +467,11 @@ float avgEditDistIndReadSupportCluster(readMappingEl *list, int countInd)
 		return ( ( float)( editDistanceSum) / ( float)countTotal);
 }
 
-
-double* calculateTheHeuristicScore(readMappingEl *list)
-{
-	double *result;
-	result = (double *) getMem(multiIndCount * sizeof(double));
-	int count = 0;
-	for( count = 0; count < multiIndCount; count++)
-	{
-		result[count] = 0;
-	}
-
-	while( list != NULL)
-	{
-		result[read_names[list->readId].indId] = result[read_names[list->readId].indId] + list->probEditDist;
-		list = list->next;
-	}
-	return result;
-
-}
-
-
 void markReadsCovered( int clusterId, int *countReads)
 {
 	int minDelLength = 1000000000, maxDelLength = 1000000000, totalReadRemove = 0, count;
 	int readsToMark[totalNumInd];
 
-	listClusterEl[clusterId].weight_without_homogeniety_score_at_read_covering = listClusterEl[clusterId].weight_without_homogeniety_score;
 	readMappingEl *ptrRead;
 	clusterIdEl *ptrClusterId;
 	ptrRead = listClusterEl[clusterId].next;
@@ -577,7 +525,7 @@ void markReadsCovered( int clusterId, int *countReads)
 }
 
 
-void outputCluster( bam_info** in_bams, parameters* params, ref_genome* ref, int cluster_id, FILE *fpVcf)
+void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE *fpVcf)
 {
 	int i;
 	char mobileName[strSize];
@@ -643,11 +591,8 @@ void outputCluster( bam_info** in_bams, parameters* params, ref_genome* ref, int
 	{
 		var_example = new_strvar( listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV,
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
-				avgEditDistReadSupportingCluster( listClusterEl[cluster_id].readMappingSelected), listClusterEl[cluster_id].minDelLength,
-				listClusterEl[cluster_id].maxDelLength, NULL, 1.1, MEI_Filter, false, listClusterEl[cluster_id].mobileName,
-				listClusterEl[cluster_id].readDepth, listClusterEl[cluster_id].copyNumber, listClusterEl[cluster_id].Del_Likelihood, listClusterEl[cluster_id].Dup_Likelihood,
-				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support, listClusterEl[cluster_id].homogeneity_score,
-				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering);
+				MEI_Filter, false, listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].CNV_Score,
+				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
@@ -655,11 +600,8 @@ void outputCluster( bam_info** in_bams, parameters* params, ref_genome* ref, int
 	{
 		var_example = new_strvar( listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV,
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
-				avgEditDistReadSupportingCluster( listClusterEl[cluster_id].readMappingSelected),listClusterEl[cluster_id].minDelLength,
-				listClusterEl[cluster_id].maxDelLength, NULL, 1.1, MEI_Filter, false, listClusterEl[cluster_id].mobileName,
-				listClusterEl[cluster_id].readDepth, listClusterEl[cluster_id].copyNumber, listClusterEl[cluster_id].Del_Likelihood, listClusterEl[cluster_id].Dup_Likelihood,
-				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support, listClusterEl[cluster_id].homogeneity_score,
-				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering);
+				MEI_Filter, false, listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].CNV_Score,
+				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
@@ -667,17 +609,15 @@ void outputCluster( bam_info** in_bams, parameters* params, ref_genome* ref, int
 	{
 		var_example = new_strvar( listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV,
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
-				avgEditDistReadSupportingCluster( listClusterEl[cluster_id].readMappingSelected), listClusterEl[cluster_id].minDelLength,
-				listClusterEl[cluster_id].maxDelLength, NULL, 1.1, listClusterEl[cluster_id].LowQual, listClusterEl[cluster_id].MEI_Del,
-				listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].readDepth, listClusterEl[cluster_id].copyNumber,
-				listClusterEl[cluster_id].Del_Likelihood, listClusterEl[cluster_id].Dup_Likelihood, listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support,
-				listClusterEl[cluster_id].homogeneity_score, listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering);
+				listClusterEl[cluster_id].LowQual, listClusterEl[cluster_id].MEI_Del,
+				listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].CNV_Score,
+				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
 }
 
-void outputPickedCluster( bam_info** in_bams, parameters* params, ref_genome* ref, FILE *fpVcf)
+void outputPickedCluster( bam_info** in_bams, parameters* params, FILE *fpVcf)
 {
 	int cluster_id, ind_id, total_rp_sup, total_sr_sup;
 
@@ -694,13 +634,13 @@ void outputPickedCluster( bam_info** in_bams, parameters* params, ref_genome* re
 			}
 
 			if( ( total_rp_sup > params->rp_threshold) || (listClusterEl[cluster_id].LowQual == true && debug_mode))
-				outputCluster( in_bams, params, ref, cluster_id, fpVcf);
+				outputCluster( in_bams, params, cluster_id, fpVcf);
 		}
 	}
 }
 
 
-float calWeight( parameters *params, int clusterId, int *countBestSetPicked)
+float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *countBestSetPicked)
 {
 	//int idIndCanBePicked = 0; // the id of individuals which we are considering to have this SV in this round
 	//int editDistanceSum[totalNumInd]; // the total sum of edit distance for paired-end reads considered till now
@@ -771,112 +711,18 @@ float calWeight( parameters *params, int clusterId, int *countBestSetPicked)
 
 	if( numReadCanBeCovered > 0)
 	{
-		for( count = 0; count < multiIndCount; count++)
-		{
-			if( supOfIndSeen[count] >= minimumSupNeeded)
-				normalizedWeightedSup = normalizedWeightedSup + supOfIndSeen[count];
-		}
-		bestScore = ( ( float)weightNew / ( float)normalizedWeightedSup);
-
 		mei = sonic_is_mobile_element(params->this_sonic, listClusterEl[clusterId].chromosome_name, listClusterEl[clusterId].posStartSV - 20,
 				listClusterEl[clusterId].posEndSV + 20, params->mei);
 
-		if( ( listClusterEl[clusterId].SVtype == DELETION) && mei == NULL)
+		if( mei != NULL)
 		{
-			listClusterEl[clusterId].MEI_Del = false;
-			maxRDlikelihoodDel = 0;
-			bestScoreRD = 0;
-			for( i = 0; i < multiIndCount; i++)
-			{
-				sumLikelihoodDup = 0;
-				sumLikelihoodDel = 0;
-				sumLikelihoodNorm = 0;
-				sumLikelihoodNorm = listClusterEl[clusterId].CNV_probability[i][2];
-				sumLikelihoodDel = listClusterEl[clusterId].CNV_probability[i][0] + listClusterEl[clusterId].CNV_probability[i][1];
-				sumLikelihoodDup = listClusterEl[clusterId].CNV_probability[i][3] + listClusterEl[clusterId].CNV_probability[i][4] +
-						listClusterEl[clusterId].CNV_probability[i][5] + listClusterEl[clusterId].CNV_probability[i][6];
-				listClusterEl[clusterId].Del_Likelihood[i] = sumLikelihoodDel / (double)( sumLikelihoodDup + sumLikelihoodNorm + epsilon);
-
-				if( supOfIndSeen[i] >= minimumSupNeeded)
-				{
-					if( listClusterEl[clusterId].Del_Likelihood[i] > maxRDlikelihoodDel)
-						maxRDlikelihoodDel = listClusterEl[clusterId].Del_Likelihood[i];
-
-					if( listClusterEl[clusterId].Del_Likelihood[i] > params->rd_threshold)
-						bestScoreRD++;
-					else
-						bestScoreRD--;
-				}
-			}
-			if( ( maxRDlikelihoodDel * multiIndCount > params->rd_threshold) &&
-					(listClusterEl[clusterId].posEndSV - listClusterEl[clusterId].posStartSV > 300) && ( bestScoreRD >= 0))
-			{
-				bestScore = ( float)bestScore / ( float)( bestScoreRD + 1);
-				listClusterEl[clusterId].LowQual = false;
-			}
-			else if( maxRDlikelihoodDel * multiIndCount <= params->rd_threshold)
-			{
-				bestScore = inf;
-				listClusterEl[clusterId].LowQual = true;
-			}
+			calculateCNVScore(in_bams, params, clusterId, listClusterEl[clusterId].SVtype, true, listClusterEl[clusterId].CNV_Score);
+			bestScore = listClusterEl[clusterId].CNV_Score[0];
 		}
-		else if( ( listClusterEl[clusterId].SVtype == DELETION) && mei != NULL)
+		else
 		{
-			listClusterEl[clusterId].mobileName = NULL;
-			set_str( &(listClusterEl[clusterId].mobileName), mei->repeat_type);
-			passMinSup = false;
-			listClusterEl[clusterId].MEI_Del = true;
-
-			for( i = 0; i < multiIndCount; i++)
-			{
-				listClusterEl[clusterId].Del_Likelihood[i] = -1;
-
-				if( supOfIndSeen[i] > minimumSupNeededNoRD)
-					passMinSup = true;
-			}
-			if( passMinSup == false)
-				bestScore = inf;
-		}
-		else if( listClusterEl[clusterId].SVtype == MEIFORWARD || listClusterEl[clusterId].SVtype == MEIREVERSE)
-		{
-			float averageCNV_Temp = 0;
-			for( i = 0; i < multiIndCount; i++)
-				averageCNV_Temp += listClusterEl[clusterId].copyNumber[i];
-
-			if( ( float)averageCNV_Temp / ( float)multiIndCount > 5)
-				bestScore = inf;
-		}
-		else if( listClusterEl[clusterId].SVtype == TANDEMDUP)
-		{
-			bestScoreRD = 0;
-			for( i = 0; i < multiIndCount; i++)
-			{
-				sumLikelihoodNorm = listClusterEl[clusterId].CNV_probability[i][2];
-				sumLikelihoodDel = listClusterEl[clusterId].CNV_probability[i][0] + listClusterEl[clusterId].CNV_probability[i][1];
-				sumLikelihoodDup = listClusterEl[clusterId].CNV_probability[i][3] + listClusterEl[clusterId].CNV_probability[i][4] +
-						listClusterEl[clusterId].CNV_probability[i][5] + listClusterEl[clusterId].CNV_probability[i][6];
-				listClusterEl[clusterId].Dup_Likelihood[i] = sumLikelihoodDup / (double)( sumLikelihoodDel + sumLikelihoodNorm + epsilon);
-
-				//fprintf(stderr,"notm=%lf del=%lf dup=%lf duplkh=%lf\n",sumLikelihoodNorm,sumLikelihoodDel, sumLikelihoodDup, listClusterEl[clusterId].Dup_Likelihood[i] );
-				if( supOfIndSeen[i] >= minimumSupNeeded)
-				{
-					if( listClusterEl[clusterId].Dup_Likelihood[i] > 5)
-						bestScoreRD++;
-					else
-						bestScoreRD--;
-				}
-			}
-
-			if( bestScoreRD >= 0)
-			{
-				bestScore = ( float)bestScore / ( float)( bestScoreRD + 1);
-				listClusterEl[clusterId].LowQual = false;
-			}
-			else
-			{
-				bestScore = inf;
-				listClusterEl[clusterId].LowQual = true;
-			}
+			calculateCNVScore(in_bams, params, clusterId, listClusterEl[clusterId].SVtype, false, listClusterEl[clusterId].CNV_Score);
+			bestScore = listClusterEl[clusterId].CNV_Score[0];
 		}
 	}
 	else
@@ -888,9 +734,7 @@ float calWeight( parameters *params, int clusterId, int *countBestSetPicked)
 			countBestSetPicked[count] = supOfIndSeen[count];
 	}
 
-	listClusterEl[clusterId].weight_without_homogeniety_score = bestScore;
-	if( bestScore < inf && (ten_x_flag == 1 || output_hs_flag == 1))
-		bestScore = ( float) bestScore * barcode_homogeneity_score(clusterId);
+	//fprintf(stderr, "%.4lf - %.4lf\n", tmp, listClusterEl[clusterId].weight_without_homogeniety_score);
 
 	listClusterEl[clusterId].oldBestIsGood = 1;
 	listClusterEl[clusterId].oldBestScore = bestScore;
@@ -900,8 +744,30 @@ float calWeight( parameters *params, int clusterId, int *countBestSetPicked)
 	return bestScore;
 }
 
+void debug_split_reads(int clusterId, float bestWeight) {
+	fprintf(debugSR,"Id= %d weight= %f StartOuter= %d Start= %d End= %d EndOuter= %d SVtype= %c sr_support[0]= %d readNamesNotCovered= \t",
+			clusterId, bestWeight, listClusterEl[clusterId].posStartSV_Outer, listClusterEl[clusterId].posStartSV,
+			listClusterEl[clusterId].posEndSV, listClusterEl[clusterId].posEndSV_Outer,
+			listClusterEl[clusterId].SVtype, listClusterEl[clusterId].sr_support[0]);
 
-int pickSet( parameters *params)
+	readMappingEl *ptrReadMapping;
+	ptrReadMapping = listClusterEl[clusterId].next;
+
+	int countSupport = 0;
+
+	while( ptrReadMapping != NULL)
+	{
+		if( read_names[ptrReadMapping->readId].readCovered == 0)
+		{
+			fprintf(debugSR,"%s\t", read_names[ptrReadMapping->readId].readName);
+			countSupport++;
+		}
+		ptrReadMapping = ptrReadMapping->next;
+	}
+	fprintf(debugSR,"CountSupport= %d\n", countSupport);
+}
+
+int pickSet(bam_info **in_bams, parameters *params)
 {
 	float bestWeight;
 	float newWeight;
@@ -910,22 +776,26 @@ int pickSet( parameters *params)
 	int bestWeightCluster;
 	int count, clusterCounter;
 	maxScoreInBuffer = inf - 1;
-	int k=0;
+	//int isClusterSelected[sizeListClusterEl];
 
-	if (ten_x_flag == 1 || output_hs_flag ==1)
-		init_barcode_homogeneity_hashtable();
+	//for( clusterCounter = 0; clusterCounter < sizeListClusterEl; clusterCounter++)
+		//isClusterSelected[clusterCounter] = 0;
 
 	while( numCallsRequested > 0)
 	{
 		bestWeight = inf;
 		bestWeightCluster = -1;
 
-		if( !bufferIsUseful( params))
+		if( !bufferIsUseful( in_bams, params))
 		{
 			emptyBuffer();
+			//fprintf(stderr, "EMPTY BUFFER\n");
 			for( clusterCounter = 0; clusterCounter < sizeListClusterEl; clusterCounter++)
 			{
-				newWeight = calWeight( params, clusterCounter, countReads);
+				//if (isClusterSelected[clusterCounter]) continue;
+
+				newWeight = calWeight(in_bams, params, clusterCounter, countReads);
+
 				addToBuffer( newWeight, clusterCounter);
 
 				if( newWeight < bestWeight)
@@ -953,7 +823,9 @@ int pickSet( parameters *params)
 		{
 			if( conflictResFlag == 0 || conflictsAny( bestWeightCluster, bestReads) == -1)
 			{
+				//debug_split_reads(bestWeightCluster, bestWeight);
 				markReadsCovered( bestWeightCluster, bestReads);
+				//isClusterSelected[bestWeightCluster] = 1; // mark cluster as selected
 
 				if( conflictResFlag == 1)
 					addToConflict( bestWeightCluster, bestReads);
@@ -963,19 +835,14 @@ int pickSet( parameters *params)
 			}
 		}
 		else
-		{
-			if (ten_x_flag == 1 || output_hs_flag == 1)
-				free_barcode_homogeneity_hashtable();
 			return 0;
-		}
 	}
-	if (ten_x_flag == 1 || output_hs_flag == 1)
-		free_barcode_homogeneity_hashtable();
 	return 1;
 }
 
+
 /* Each new cluster is copied into a new cell in array of clusters (listClusterEl) in index (clusterId) */
-void processTheSV( bam_info **in_bams, ref_genome* ref, parameters *params, int listClusterId, int cluster_count)
+void processTheSV( bam_info **in_bams, parameters *params, int listClusterId, int cluster_count)
 {
 	int posStartSV = -1, posEndSV = maxChroSize;
 	int posStartSV_Outer = maxChroSize, posEndSV_Outer = -1;
@@ -999,21 +866,15 @@ void processTheSV( bam_info **in_bams, ref_genome* ref, parameters *params, int 
 	listClusterEl[listClusterId].SVtype = tmp_cluster->SV_type;
 	listClusterEl[listClusterId].next = NULL;
 
-	listClusterEl[listClusterId].readDepth = (long *) getMem( multiIndCount * sizeof( long));
-	listClusterEl[listClusterId].Del_Likelihood = (double *) getMem( multiIndCount * sizeof( double));
-	listClusterEl[listClusterId].Dup_Likelihood = (double *) getMem( multiIndCount * sizeof( double));
-	listClusterEl[listClusterId].copyNumber = (float *) getMem( multiIndCount * sizeof( float));
+	listClusterEl[listClusterId].CNV_Score = (double *) getMem( multiIndCount * sizeof( double));
 	listClusterEl[listClusterId].indIdCount = (int *) getMem( multiIndCount * sizeof( int));
 	listClusterEl[listClusterId].sr_support = (int *) getMem( multiIndCount * sizeof( int));
 
 	for( count = 0; count < multiIndCount; count++)
 	{
-		listClusterEl[listClusterId].Del_Likelihood[count] = 0;
-		listClusterEl[listClusterId].Dup_Likelihood[count] = 0;
+		listClusterEl[listClusterId].CNV_Score[count] = 0;
 		listClusterEl[listClusterId].indIdCount[count] = 0;
 		listClusterEl[listClusterId].sr_support[count] = 0;
-		listClusterEl[listClusterId].readDepth[count] = 0;
-		listClusterEl[listClusterId].copyNumber[count] = 0;
 	}
 
 	if( listClusterEl[listClusterId].SVtype == MEIFORWARD)
@@ -1060,6 +921,46 @@ void processTheSV( bam_info **in_bams, ref_genome* ref, parameters *params, int 
 			tmp_cluster = tmp_cluster->next;
 		}
 	}
+	else if( listClusterEl[listClusterId].SVtype == INVDUPLEFT || listClusterEl[listClusterId].SVtype == INVDUPRIGHT
+			|| listClusterEl[listClusterId].SVtype == INTERDUPLEFT || listClusterEl[listClusterId].SVtype == INTERDUPRIGHT)
+	{
+		while( tmp_cluster != NULL)
+		{
+			if( tmp_cluster->orientation_left == FORWARD)
+			{
+				if( tmp_cluster->start_position > posStartSV)
+					posStartSV = tmp_cluster->start_position;
+
+				if( tmp_cluster->start_position - 100 < posStartSV_Outer)
+					posStartSV_Outer = max(0, tmp_cluster->start_position - 100);
+
+				if( tmp_cluster->end_position - 100 < posEndSV)
+					posEndSV = max(0, tmp_cluster->end_position - 100);
+
+				if( tmp_cluster->end_position > posEndSV_Outer)
+					posEndSV_Outer = tmp_cluster->end_position;
+
+				listClusterEl[listClusterId].next = addToListOfReads2( listClusterEl[listClusterId].next, tmp_cluster);
+			}
+			else if( tmp_cluster->orientation_left == REVERSE)
+			{
+				if( tmp_cluster->start_position + 100 > posStartSV)
+					posStartSV = tmp_cluster->start_position + 100;
+
+				if( tmp_cluster->start_position < posStartSV_Outer)
+					posStartSV_Outer = tmp_cluster->start_position;
+
+				if( tmp_cluster->end_position < posEndSV)
+					posEndSV = tmp_cluster->end_position;
+
+				if( tmp_cluster->end_position + 100 > posEndSV_Outer)
+					posEndSV_Outer = max(0, tmp_cluster->end_position + 100);
+
+				listClusterEl[listClusterId].next = addToListOfReads2( listClusterEl[listClusterId].next, tmp_cluster);
+			}
+			tmp_cluster = tmp_cluster->next;
+		}
+	}
 	else
 	{
 		while( tmp_cluster != NULL)
@@ -1081,26 +982,10 @@ void processTheSV( bam_info **in_bams, ref_genome* ref, parameters *params, int 
 	listClusterEl[listClusterId].posStartSV_Outer = posStartSV_Outer;
 	listClusterEl[listClusterId].posEndSV = posEndSV;
 	listClusterEl[listClusterId].posEndSV_Outer = posEndSV_Outer;
-
-	if( listClusterEl[listClusterId].SVtype == DELETION)
-	{
-		calculateExpectedCN( in_bams, ref, params, listClusterEl[listClusterId].posStartSV, listClusterEl[listClusterId].posEndSV, listClusterId, listClusterEl[listClusterId].copyNumber);
-		calculateLikelihoodCNV( in_bams, ref, params, listClusterEl[listClusterId].posStartSV, listClusterEl[listClusterId].posEndSV, listClusterId, listClusterEl[listClusterId].CNV_probability);
-	}
-	else if( listClusterEl[listClusterId].SVtype == MEIFORWARD || listClusterEl[listClusterId].SVtype == MEIREVERSE)
-	{
-		calculateExpectedCN( in_bams, ref, params, listClusterEl[listClusterId].posStartSV_Outer, listClusterEl[listClusterId].posEndSV_Outer, listClusterId, listClusterEl[listClusterId].copyNumber);
-		calculateLikelihoodCNV( in_bams, ref, params, listClusterEl[listClusterId].posStartSV, listClusterEl[listClusterId].posEndSV, listClusterId, listClusterEl[listClusterId].CNV_probability);
-	}
-	else if( listClusterEl[listClusterId].SVtype == TANDEMDUP)
-	{
-		calculateExpectedCN( in_bams, ref, params, listClusterEl[listClusterId].posStartSV, listClusterEl[listClusterId].posEndSV, listClusterId, listClusterEl[listClusterId].copyNumber);
-		calculateLikelihoodCNV( in_bams, ref, params, listClusterEl[listClusterId].posStartSV, listClusterEl[listClusterId].posEndSV, listClusterId, listClusterEl[listClusterId].CNV_probability);
-	}
 }
 
 
-void init(bam_info **in_bams, parameters *params, ref_genome* ref)
+void init(bam_info **in_bams, parameters *params)
 {
 	int i, j, count, multiIndId, return_value, listClusterElId, readId, cluster_size = 0, len;
 
@@ -1142,6 +1027,16 @@ void init(bam_info **in_bams, parameters *params, ref_genome* ref)
 			multiLibs[multiLibsCount].readLen = 0;
 			multiLibsCount++;
 		}
+		if( running_mode == QUICK && params->alt_mapping != 0)
+		{
+			multiLibs[multiLibsCount].libName = NULL;
+			set_str( &multiLibs[multiLibsCount].libName, "Alternative");
+			multiLibs[multiLibsCount].indId = addNewInd( in_bams[j]->sample_name);
+			multiLibs[multiLibsCount].maxInstSize =  0;
+			multiLibs[multiLibsCount].minInstSize = 0;
+			multiLibs[multiLibsCount].readLen = 0;
+			multiLibsCount++;
+		}
 	}
 	/* We use indCount in variants.c */
 	indCount = multiIndCount;
@@ -1153,7 +1048,6 @@ void init(bam_info **in_bams, parameters *params, ref_genome* ref)
 		listClusterEl[count].clusterId = 0;
 		listClusterEl[count].oldBestIsGood = -1;
 		listClusterEl[count].next = NULL;
-		listClusterEl[count].homogeneity_score = 1.0;
 	}
 	listClusterElId = 0;
 
@@ -1188,7 +1082,7 @@ void init(bam_info **in_bams, parameters *params, ref_genome* ref)
 		}
 		/* If all the SVs are processed in the cluster */
 		if( cluster_size > 0)
-			processTheSV( in_bams, ref, params, listClusterElId, count);
+			processTheSV( in_bams, params, listClusterElId, count);
 
 		len = listClusterEl[listClusterElId].posEndSV - listClusterEl[listClusterElId].posStartSV;
 
@@ -1220,7 +1114,7 @@ void init(bam_info **in_bams, parameters *params, ref_genome* ref)
 }
 
 
-void vh_setcover( bam_info **in_bams, parameters *params, ref_genome* ref, FILE *fpVcf)
+void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 {
 	int i;
 
@@ -1229,24 +1123,32 @@ void vh_setcover( bam_info **in_bams, parameters *params, ref_genome* ref, FILE 
 	sv_count = 0;
 	sv_lowqual_count = 0;
 	minimumSupNeeded = params->rp_threshold;
-	minimumSupNeededNoRD = params->rp_threshold;
 
-	fprintf( stderr, "\nApplying set cover");
-	init( in_bams, params, ref);
+	fprintf( stderr, "\nApplying set cover for %d clusters", cluster_count);
+
+	if( running_mode == SENSITIVE)
+		fprintf( logFile, "Total Cluster Count= %d\n", cluster_count);
+
+	cnvscoreFile = safe_fopen("output.score", "w");
+	debugSR = safe_fopen("debug.sr", "w");
+	init( in_bams, params);
+
 	fprintf( stderr, ".");
 	fflush( stderr);
-	pickSet( params);
+	pickSet( in_bams, params);
 	fprintf( stderr, ".");
 	fflush( stderr);
-	outputPickedCluster( in_bams, params, ref, fpVcf);
+	outputPickedCluster( in_bams, params, fpVcf);
 	fprintf( stderr, ".");
 	fflush( stderr);
 	fprintf( stderr, "\n\n");
 
-	if( running_mode == QUICK && debug_mode)
-		fprintf( stderr, "There are %d SVs and %d LowQual\n", sv_count, sv_lowqual_count);
-	else
-		fprintf( stderr, "There are %d SVs\n", sv_count);
+
+	fprintf( stderr, "There are %d SVs\n", sv_count);
+
+	fclose(cnvscoreFile);
+	fclose(debugSR);
+
 
 	/* Free the structures, etc */
 	if( listClusterEl != NULL)
@@ -1256,10 +1158,7 @@ void vh_setcover( bam_info **in_bams, parameters *params, ref_genome* ref, FILE 
 			free( listClusterEl[i].mobileName);
 			free( listClusterEl[i].chromosome_name);
 			free( listClusterEl[i].indIdCount);
-			free( listClusterEl[i].readDepth);
-			free( listClusterEl[i].copyNumber);
-			free( listClusterEl[i].Del_Likelihood);
-			free( listClusterEl[i].Dup_Likelihood);
+			free( listClusterEl[i].CNV_Score);
 			free_readMappingEl( listClusterEl[i].next);
 			free_readMappingEl( listClusterEl[i].readMappingSelected);
 		}

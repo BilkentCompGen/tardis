@@ -1,10 +1,10 @@
 #include "vh_createMaxClusterMEI.h"
 #include "vh_common.h"
-#include "vh_intervalhandler.h"
 #include "vh_divethandler.h"
 #include "vh_hash.h"
 #include "vh_setcover.h"
 #include "vh_heap.h"
+#include "../bamonly.h"
 
 mei_Reads **mReads = NULL;
 HeapMEI H_F; /* The forward mapping heap from left of breakpoint */
@@ -28,7 +28,6 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 		{
 			discordantReadPtr = in_bams[numSample]->libraries[count]->listMEI_Mapping;
 			softClipPtr = in_bams[numSample]->libraries[count]->listSoftClip;
-
 			while( discordantReadPtr != NULL)
 			{
 				is_satellite = sonic_is_satellite (params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos, discordantReadPtr->pos_End);
@@ -119,7 +118,7 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 							}
 							else if( softClipPtr->op[softClipPtr->opCount - 1] == 4) // soft cliped at the end of the read. Horrible. Replace with #define
 							{
-								tmpMEI_Reads->readTypeSupport=2;
+								tmpMEI_Reads->readTypeSupport = 2;
 								tmpMEI_Reads->next = mReads[tmpMEI_Reads->pos + softClipPtr->opl[0] - lenSplitReadBrakWindow];
 								mReads[tmpMEI_Reads->pos + softClipPtr->opl[0] - lenSplitReadBrakWindow] = tmpMEI_Reads;
 							}
@@ -234,7 +233,7 @@ void add_R_Heap( int pos)
 	{
 		if (mei_ReadsPtr->orient == REVERSE && mei_ReadsPtr->readTypeSupport == 0)
 		{
-			newEl=(HeapElMEI *)getMem(sizeof(HeapElMEI));
+			newEl = (HeapElMEI *)getMem(sizeof(HeapElMEI));
 			newEl->mei_ReadsPtr = mei_ReadsPtr;
 			newEl->priorityValue = mei_ReadsPtr->pos;
 			push_heap_mei(&H_R, newEl);
@@ -398,7 +397,6 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						cluster_new->orientation_right = FORWARD;
 						cluster_new->mapping_quality_left = H_F.heapArray[count].mei_ReadsPtr->mQual;
 						cluster_new->mapping_quality_right = H_F.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->ten_x_barcode = NULL;
 
 						cluster_new->mei_type = NULL;
 						set_str( &cluster_new->mei_type, H_F.heapArray[count].mei_ReadsPtr->MEI_Class);
@@ -471,7 +469,6 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						cluster_new->orientation_right = REVERSE;
 						cluster_new->mapping_quality_left = H_R.heapArray[count].mei_ReadsPtr->mQual;
 						cluster_new->mapping_quality_right = H_R.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->ten_x_barcode = NULL;
 
 						cluster_new->mei_type = NULL;
 						set_str( &cluster_new->mei_type, H_R.heapArray[count].mei_ReadsPtr->MEI_Class);
@@ -541,7 +538,6 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						cluster_new->orientation_right = 'S';
 						cluster_new->mapping_quality_left = H_S.heapArray[count].mei_ReadsPtr->mQual;
 						cluster_new->mapping_quality_right = H_S.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->ten_x_barcode = NULL;
 
 						cluster_new->mei_type = NULL;
 						set_str( &cluster_new->mei_type, H_S.heapArray[count].mei_ReadsPtr->MEI_Class);
@@ -577,13 +573,13 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 	}
 }
 
-void MEICluster_Region( parameters* params, char* chromosome_name, int chroSize)
+void MEICluster_Region( parameters* params, int chr_index)
 {
 	int leftBreakPoint;
 	int boolMEITypeNewAdded = 0; // 0 or 1 indicates an new insertion of one of the 6 different types of MEI
 	int boolMEITypeNewRemoved = 0; // 0 or 1 indicates a new deletion of one of the 6 different types of MEI
 
-	for( leftBreakPoint = 0; leftBreakPoint < chroSize; leftBreakPoint++)
+	for( leftBreakPoint = 0; leftBreakPoint < params->this_sonic->chromosome_lengths[chr_index]; leftBreakPoint++)
 	{
 		if( mReads[leftBreakPoint] != NULL)
 		{
@@ -598,7 +594,7 @@ void MEICluster_Region( parameters* params, char* chromosome_name, int chroSize)
 				( H_S.heapSize > 0 && minValue_heapMEI( &H_S) == leftBreakPoint)) && boolMEITypeNewAdded)
 		{
 			if( ( H_R.heapSize + H_F.heapSize + H_S.heapSize) > 0)
-				outputMEIClusters( params, chromosome_name);
+				outputMEIClusters( params, params->this_sonic->chromosome_names[chr_index]);
 
 			boolMEITypeNewAdded = 0;
 		}
@@ -646,17 +642,79 @@ void vh_finalizeReadMapping_Mei( int chroSize)
 	}
 }
 
+int mei_regions( parameters *params, char* chromosome_name)
+{
+	int i, mei_count = 0;
+	char *svtype;
 
-void initializeReadMapping_MEI( bam_info** in_bams, parameters *params, char *chromosome_name, int chroSize)
+	LibraryInfo *libInfo;
+	DivetRow *divetReadMappingPtr;
+
+	sonic_repeat *mei_left, *mei_right;
+
+	libInfo = g_libInfo;
+
+	while ( libInfo != NULL)
+	{
+		divetReadMappingPtr = libInfo->head;
+		while ( ( divetReadMappingPtr != NULL) && ( strcmp( divetReadMappingPtr->chromosome_name, chromosome_name) == 0))
+		{
+			/* Check the mei table whether the right or left read is inside a mobile element */
+			mei_left  = sonic_is_mobile_element( params->this_sonic, divetReadMappingPtr->chromosome_name, divetReadMappingPtr->locMapLeftStart, divetReadMappingPtr->locMapLeftEnd, params->mei);
+			mei_right = sonic_is_mobile_element( params->this_sonic, divetReadMappingPtr->chromosome_name, divetReadMappingPtr->locMapRightStart, divetReadMappingPtr->locMapRightEnd, params->mei);
+
+			if( mei_left != NULL)
+			{
+				divetReadMappingPtr->svType = MEILEFTPAIR;
+				divetReadMappingPtr->mei_subclass = NULL;
+				set_str( &(divetReadMappingPtr->mei_subclass), mei_left->repeat_type);
+
+				divetReadMappingPtr->meiType = NULL;
+				set_str( &(divetReadMappingPtr->meiType), mei_left->repeat_class);
+
+				/*IF THE MEI INSERT IS + STRAND UPPERCASE IF - STRAND LOWER CASE*/
+				if ( ( divetReadMappingPtr->orientationLeft == FORWARD && mei_left->strand == SONIC_STRAND_REV)
+						|| ( divetReadMappingPtr->orientationLeft == REVERSE && mei_left->strand == SONIC_STRAND_FWD  ))
+					divetReadMappingPtr->mei_code = (mei_left->mei_code * 2) + 1;
+				else
+					divetReadMappingPtr->mei_code = mei_left->mei_code * 2;
+				mei_count++;
+			}
+			if( mei_right != NULL)
+			{
+				divetReadMappingPtr->svType = MEIRIGHTPAIR;
+				divetReadMappingPtr->mei_subclass = NULL;
+				set_str( &(divetReadMappingPtr->mei_subclass), mei_right->repeat_type);
+
+				divetReadMappingPtr->meiType = NULL;
+				set_str( &(divetReadMappingPtr->meiType), mei_right->repeat_class);
+
+				/*IF THE MEI INSERT IS + STRAND UPPERCASE IF - STRAND LOWER CASE*/
+				if ( ( divetReadMappingPtr->orientationRight == FORWARD && mei_right->strand == SONIC_STRAND_REV)
+						|| ( divetReadMappingPtr->orientationRight == REVERSE && mei_right->strand == SONIC_STRAND_FWD ))
+					divetReadMappingPtr->mei_code = (mei_right->mei_code * 2) + 1;
+				else
+					divetReadMappingPtr->mei_code = mei_right->mei_code * 2;
+				mei_count++;
+			}
+			divetReadMappingPtr = divetReadMappingPtr->next;
+		}
+		libInfo = libInfo->next;
+	}
+	return mei_count;
+}
+
+
+void initializeReadMapping_MEI( bam_info** in_bams, parameters *params, int chr_index)
 {
 	int i, mei_count;
 
-	mReads = (mei_Reads **) getMem( chroSize * sizeof( mei_Reads *));
+	mReads = (mei_Reads **) getMem( params->this_sonic->chromosome_lengths[chr_index] * sizeof( mei_Reads *));
 
 	if( mReads == NULL)
 		vh_logWarning ("Memory Problem in vh_createMaxClusterMEI");
 
-	for( i = 0; i < chroSize; i++)
+	for( i = 0; i < params->this_sonic->chromosome_lengths[chr_index]; i++)
 		mReads[i] = NULL;
 
 	H_F.heapSize = 0;
@@ -664,7 +722,13 @@ void initializeReadMapping_MEI( bam_info** in_bams, parameters *params, char *ch
 	H_S.heapSize = 0;
 
 	if( running_mode == QUICK)
-		mei_count = addToGenomeIndex_MEI( in_bams, params, chromosome_name, chroSize);
+		mei_count = addToGenomeIndex_MEI( in_bams, params, params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
 	else
-		mei_count = addToGenomeIndex_MEI_sensitive( params, chromosome_name, chroSize);
+	{
+		/* find the MEI sites */
+		mei_count = mei_regions( params, params->this_sonic->chromosome_names[chr_index]);
+		fprintf(logFile,"MEI regions count= %d\t", mei_count);
+		mei_count = addToGenomeIndex_MEI_sensitive( params, params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+		fprintf(logFile,"%d MEI in clusters\n", mei_count);
+	}
 }

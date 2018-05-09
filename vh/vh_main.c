@@ -4,8 +4,8 @@
 #include "vh_createMaxClusterMEI.h"
 #include "vh_divethandler.h"
 #include "vh_maximalCluster.h"
-#include "vh_intervalhandler.h"
 #include "vh_setcover.h"
+#include "../free.h"
 
 FILE *fileOutput = NULL;
 
@@ -54,33 +54,8 @@ void vh_quitProgram (int exitCode)
 }
 
 
-void vh_pruneAndNormalizeDivets (struct LibraryInfo *lib, double preProsPrune, int overMapLimit)
-{
-	struct DivetRow *cursor = lib->head->next;
-	if (cursor == NULL)
-		return;
 
-	//We are not checking the first and last one
-	while (cursor != NULL && cursor->next != NULL)
-	{
-		if (((cursor->next->phredScore / cursor->next->readName->sumPhredValue) < preProsPrune)
-				|| (cursor->next->readName->occurrences > overMapLimit))
-		{
-			struct DivetRow *toBeDeleted = cursor->next;
-			cursor->next = cursor->next->next;
-			lib->size--;
-			free (toBeDeleted->chromosome_name);
-			free (toBeDeleted);
-		}
-		else
-		{
-			cursor->next->phredScore = cursor->next->phredScore / cursor->next->readName->sumPhredValue;
-			cursor = cursor->next;
-		}
-	}
-}
-
-void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double preProsPrune, char *outputFile, char *outputRead, int overMapLimit)
+void vh_init(bam_info** in_bams, parameters *params, double preProsPrune, char *outputFile, char *outputRead, int overMapLimit)
 {
 	int totalNumUniqueReads = 0;
 	int indexStart = 0;
@@ -115,7 +90,7 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 				newLibInfo->maxDelta = 0;
 			newLibInfo->readLen = in_bams[k]->libraries[i]->read_length;
 
-			fprintf(logFile,"Min Delta for %s = %d\nMax Delta for %s = %d\n",newLibInfo->libName, newLibInfo->minDelta, newLibInfo->libName, newLibInfo->maxDelta);
+			fprintf( logFile,"Min and Max Delta for %s = %d - %d\n", newLibInfo->libName, newLibInfo->minDelta, newLibInfo->maxDelta);
 
 			/* We store the reads in hash[] based on the hash values of read names */
 			newLibInfo->hash =(struct ReadName **) getMem (NHASH * sizeof (struct ReadName *));
@@ -149,16 +124,14 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 
 	for (; cursor; cursor = cursor->next)
 	{
-		vh_logInfo ("Reading Divet Files ...");
-		vh_loadDivetFile (cursor, params->this_sonic);
-		sprintf (g_loggerMsgBuffer, "%d rows loaded successfully.",cursor->size);
-		vh_logInfo (g_loggerMsgBuffer);
-		fprintf(logFile,"There are %d divet rows - ",cursor->size);
+		vh_logInfo( "Reading Divet Files ...");
+		vh_loadDivetFile( cursor, params->this_sonic);
+		sprintf( g_loggerMsgBuffer, "%d rows loaded successfully.",cursor->size);
+		vh_logInfo( g_loggerMsgBuffer);
 
-		vh_pruneAndNormalizeDivets (cursor, preProsPrune, overMapLimit);
-		sprintf (g_loggerMsgBuffer, "%d rows after pruning.", cursor->size);
-		vh_logInfo (g_loggerMsgBuffer);
-		fprintf(logFile,"%d left after pruning\n",cursor->size);
+		vh_pruneAndNormalizeDivets( cursor, preProsPrune, overMapLimit);
+		sprintf( g_loggerMsgBuffer, "%d rows after pruning.", cursor->size);
+		vh_logInfo( g_loggerMsgBuffer);
 	}
 
 	vh_logInfo ("Writing ReadName Sorted");
@@ -182,7 +155,7 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 	if( debug_mode)
 		fprintf (fileOutputReadName, "%i\n", totalNumUniqueReads);
 
-	fprintf (logFile, "There are %d unique reads \n", totalNumUniqueReads);
+	fprintf( logFile, "Unique Read Count = %d\n", totalNumUniqueReads);
 
 	/* Write the read names to read_names structure for set_cover */
 	read_names = (readEl *) getMem( ( totalNumUniqueReads + 1) * sizeof( readEl));
@@ -190,7 +163,7 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 	for (count = 0; count < totalNumUniqueReads; count++)
 	{
 		if( debug_mode)
-			fprintf (fileOutputReadName, "%s\n", allReadNameList[count]);
+			fprintf( fileOutputReadName, "%s\n", allReadNameList[count]);
 
 		read_names[count].readName = NULL;
 		set_str( &(read_names[count].readName), allReadNameList[count]);
@@ -204,88 +177,112 @@ void vh_init(bam_info** in_bams, ref_genome* ref, parameters *params, double pre
 
 	if( debug_mode)
 		fclose (fileOutputReadName);
-
-	//TODO: Someone should free the memory allocated for the divets and for the libraryinfos
-	//free(newLibInfo);
 }
 
-void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, double preProsPrune, char *outputFile, char *outputRead, int overMapLimit)
+void vh_clustering (bam_info** in_bams, parameters *params, double preProsPrune, char *outputFile, char *outputRead, int overMapLimit)
 {
-	int i, return_value;
+	int chr_index, return_value, invdup_location, interdup_location;
 	int mei_count;
 	struct LibraryInfo *cursor, *t;
 
 	/* Initialization function */
-	vh_init(in_bams, ref, params, preProsPrune, outputFile, outputRead, overMapLimit);
+	vh_init( in_bams, params, preProsPrune, outputFile, outputRead, overMapLimit);
 
-	/* MEI Filtering */
-	mei_count = mei_filtering( ref, params);
-	fprintf(logFile,"%d mobile elements filtered\n", mei_count);
-	sprintf (g_loggerMsgBuffer, "%d mobile elements filtered.", mei_count);
-	vh_logInfo (g_loggerMsgBuffer);
-
-	for (i = 0; i < ref->chrom_count; i++)
+	for( chr_index = params->first_chr; chr_index <= params->last_chr; chr_index++)
 	{
-		if(ref->in_bam[i] == false)
-			continue;
 
-		fprintf(stderr, "\r                                                        ");
+		fprintf(stderr, "\n                                                        ");
 		fflush(stderr);
-		fprintf(stderr, "\rProcessing chromosome %s", ref->chrom_names[i]);
+		fprintf(stderr, "\nProcessing chromosome %s\n", params->this_sonic->chromosome_names[chr_index]);
 		fflush(stderr);
 
 		/* Deletion */
-		vh_initializeReadMapping_Deletion (ref->chrom_names[i], ref->chrom_lengths[i], params->this_sonic);
+		fprintf( stderr, "\nPreparing Deletion clusters");
+		vh_initializeReadMapping_Deletion( params->this_sonic, chr_index);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		vh_createDeletionClusters (ref->chrom_lengths[i]);
+		vh_createDeletionClusters( params->this_sonic->chromosome_lengths[chr_index]);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		vh_finalizeReadMapping (ref->chrom_names[i], ref->chrom_lengths[i]);
+		vh_finalizeReadMapping( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
 		fprintf(stderr, ".");
 		fflush(stderr);
 
 		/* Inversion */
-		vh_initializeReadMapping_Inversion (ref->chrom_names[i], ref->chrom_lengths[i], params->this_sonic);
+		fprintf( stderr, "\nPreparing Inversion clusters");
+		vh_initializeReadMapping_Inversion( params->this_sonic, chr_index);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		vh_createInversionClusters (ref->chrom_lengths[i]);
+		vh_createInversionClusters( params->this_sonic->chromosome_lengths[chr_index]);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		vh_finalizeReadMapping (ref->chrom_names[i], ref->chrom_lengths[i]);
+		vh_finalizeReadMapping( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
 		fprintf(stderr, ".");
 		fflush(stderr);
 
 		/* Insertion */
-		vh_initializeReadMapping_Insertion (ref->chrom_names[i], ref->chrom_lengths[i], params->this_sonic);
+		fprintf( stderr, "\nPreparing Insertion clusters");
+		vh_initializeReadMapping_Insertion( params->this_sonic, chr_index);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		vh_createInsertionClusters (ref->chrom_lengths[i]);
+		vh_createInsertionClusters( params->this_sonic->chromosome_lengths[chr_index]);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		vh_finalizeReadMapping (ref->chrom_names[i], ref->chrom_lengths[i]);
+		vh_finalizeReadMapping( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
 		fprintf(stderr, ".");
 		fflush(stderr);
 
 		/* Tandem Duplication */
-		vh_initializeReadMapping_TDup (ref->chrom_names[i], ref->chrom_lengths[i], params->this_sonic);
+		fprintf( stderr, "\nPreparing Tandem Duplication clusters");
+		vh_initializeReadMapping_TDup( params->this_sonic, chr_index);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		vh_createTDupClusters (ref->chrom_lengths[i]);
+		vh_createTDupClusters( params->this_sonic->chromosome_lengths[chr_index]);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		vh_finalizeReadMapping (ref->chrom_names[i], ref->chrom_lengths[i]);
+		vh_finalizeReadMapping( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
 		fprintf(stderr, ".");
 		fflush(stderr);
 
+		/* Interspersed Direct Duplication
+		fprintf( stderr, "\nPreparing Interspersed Duplication clusters");
+		for( interdup_location = 0; interdup_location <= RIGHTSIDE; interdup_location++)
+		{
+			vh_initializeReadMapping_InterDup( params->this_sonic, chr_index, interdup_location);
+			fprintf( stderr, ".");
+			fflush( stderr);
+			vh_createInterDupClusters( params->this_sonic->chromosome_lengths[chr_index], interdup_location);
+			fprintf( stderr, ".");
+			fflush( stderr);
+			vh_finalizeReadMapping_InterDup( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+			fprintf( stderr, ".");
+			fflush( stderr);
+		}
+
+		/* Interspersed Inverted Duplication
+		fprintf( stderr, "\nPreparing Interspersed Duplication (Inverted) clusters");
+		for( invdup_location = 0; invdup_location <= RIGHTSIDE; invdup_location++)
+		{
+			vh_initializeReadMapping_InvDup( params->this_sonic, chr_index, invdup_location);
+			fprintf( stderr, ".");
+			fflush( stderr);
+			vh_createInvDupClusters( params->this_sonic->chromosome_lengths[chr_index], invdup_location);
+			fprintf( stderr, ".");
+			fflush( stderr);
+			vh_finalizeReadMapping_InvDup( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+			fprintf( stderr, ".");
+			fflush( stderr);
+		}*/
+
 		/* Mei */
-		initializeReadMapping_MEI (in_bams, params, ref->chrom_names[i], ref->chrom_lengths[i]);
+		fprintf( stderr, "\nPreparing MEI clusters");
+		initializeReadMapping_MEI( in_bams, params, chr_index);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		MEICluster_Region(params, ref->chrom_names[i], ref->chrom_lengths[i]);
+		MEICluster_Region( params, chr_index);
 		fprintf(stderr, ".");
 		fflush(stderr);
-		vh_finalizeReadMapping_Mei(ref->chrom_lengths[i]);
+		vh_finalizeReadMapping_Mei( params->this_sonic->chromosome_lengths[chr_index]);
 		fprintf(stderr, ".");
 		fflush(stderr);
 	}
@@ -293,25 +290,10 @@ void vh_clustering (bam_info** in_bams, ref_genome* ref, parameters *params, dou
 	if( debug_mode)
 		fclose (fileOutput);
 
-	/* Free g_libInfo and hash */
-	cursor = g_libInfo;
-	t = cursor;
-	while (t != NULL)
-	{
-		cursor = cursor->next;
-		for (i = 0; i < NHASH; i++)
-			if (t->hash != NULL)
-				if (t->hash[i] != NULL)
-					free(t->hash[i]);
-		if (t->hash != NULL)
-			free(t->hash);
-		if (t != NULL)
-			free(t);
-		t = cursor;
-	}
+	free_libraries();
 }
 
-int run_vh( ref_genome* ref, parameters *params, bam_info ** in_bams)
+int run_vh( parameters *params, bam_info ** in_bams)
 {
 	int i, j;
 	double preProsPrune = 0.001;
@@ -339,21 +321,18 @@ int run_vh( ref_genome* ref, parameters *params, bam_info ** in_bams)
 			set_str( &( in_bams[i]->libraries[j]->divet), divetfile);
 		}
 	}
-	print_vcf_header(fpVcf, in_bams, params);
+	print_vcf_header( fpVcf, in_bams, params);
 
 	vh_logInfo( "Calculating maximal clusters.");
 	if ( !params->skip_vhcluster) // this parameter is only intended for debugging purposes. End users shouldn't use this
-		vh_clustering( in_bams, ref, params, preProsPrune, outputfile, outputread, overMapLimit);
+		vh_clustering( in_bams, params, preProsPrune, outputfile, outputread, overMapLimit);
 
 	vh_logInfo( "Applying SET-COVER approximation to find putative structural variation.");
-	vh_setcover( in_bams, params, ref, fpVcf);
+	vh_setcover( in_bams, params, fpVcf);
 
-	if( debug_mode)
-		fprintf( stderr, "\nTARDIS is complete. Found %d SVs and %d LowQual SVs. Results are in the %s file.", sv_count, sv_lowqual_count, svfile);
-	else
-		fprintf( stderr, "\nTARDIS is complete. Found %d SVs. Results are in the %s file.", sv_count, svfile);
+	print_sv_stats();
 
-
+	fprintf( stderr, "\nTARDIS is complete. Found %d SVs. Results are in the %s file.", sv_count, svfile);
 
 	return RETURN_SUCCESS;
 }

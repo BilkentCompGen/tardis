@@ -6,12 +6,12 @@
 
 //#define NAME_STR_LEN 100
 
-void vh_addToGenomeIndex_Inversion (char *chromosome_name, int chroSize)
+void vh_addToGenomeIndex_Inversion ( sonic *this_sonic, int chr_index)
 {
 	LibraryInfo *libInfo;
 	DivetRow *divetReadMappingPtr;
 	MappingOnGenome *newEl;
-	int leftWindowStart;
+	int i, leftWindowStart;
 
 	libInfo = g_libInfo;
 	while (libInfo != NULL)
@@ -19,23 +19,27 @@ void vh_addToGenomeIndex_Inversion (char *chromosome_name, int chroSize)
 		divetReadMappingPtr = libInfo->head;
 		while (divetReadMappingPtr != NULL)
 		{
-			if (strcmp (divetReadMappingPtr->chromosome_name, chromosome_name) == 0 && divetReadMappingPtr->svType == INVERSION
+			if (strcmp (divetReadMappingPtr->chromosome_name, this_sonic->chromosome_names[chr_index]) == 0
 					&& (divetReadMappingPtr->locMapRightStart - divetReadMappingPtr->locMapLeftEnd < maxInversionLen)
-					&& divetReadMappingPtr->locMapRightEnd < chroSize && divetReadMappingPtr->locMapLeftStart > 0)
+					&& divetReadMappingPtr->locMapRightEnd < this_sonic->chromosome_lengths[chr_index] &&
+					divetReadMappingPtr->locMapLeftStart > 0)
 			{
-				newEl = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
-				newEl->readMappingPtr = divetReadMappingPtr;
+				if(divetReadMappingPtr->svType == INVERSION)
+				{
+					newEl = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
+					newEl->readMappingPtr = divetReadMappingPtr;
 
-				if (divetReadMappingPtr->orientationLeft == FORWARD && divetReadMappingPtr->orientationRight == FORWARD)
-				{
-					newEl->next = g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd];
-					g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd] = newEl;
-				}
-				else if (divetReadMappingPtr->orientationLeft == REVERSE && divetReadMappingPtr->orientationRight == REVERSE)
-				{
-					leftWindowStart = vh_max (divetReadMappingPtr->locMapLeftStart - libInfo->maxDelta, 0);
-					newEl->next = g_genomeIndexStart[leftWindowStart];
-					g_genomeIndexStart[leftWindowStart] = newEl;
+					if (divetReadMappingPtr->orientationLeft == FORWARD && divetReadMappingPtr->orientationRight == FORWARD)
+					{
+						newEl->next = g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd];
+						g_genomeIndexStart[divetReadMappingPtr->locMapLeftEnd] = newEl;
+					}
+					else if (divetReadMappingPtr->orientationLeft == REVERSE && divetReadMappingPtr->orientationRight == REVERSE)
+					{
+						leftWindowStart = vh_max (divetReadMappingPtr->locMapLeftStart - libInfo->maxDelta, 0);
+						newEl->next = g_genomeIndexStart[leftWindowStart];
+						g_genomeIndexStart[leftWindowStart] = newEl;
+					}
 				}
 			}
 			divetReadMappingPtr = divetReadMappingPtr->next;
@@ -44,19 +48,18 @@ void vh_addToGenomeIndex_Inversion (char *chromosome_name, int chroSize)
 	}
 }
 
-void vh_initializeReadMapping_Inversion (char *chromosome_name, int chroSize, sonic *this_sonic)
+void vh_initializeReadMapping_Inversion (sonic *this_sonic, int chr_index)
 {
-	//Gap info is global
 	LibraryInfo *libInfoPtr = g_libInfo;
 	int genomeIndexId;
 	int i;
 
 	//Initing the Genome Array
-	g_genomeIndexStart = (MappingOnGenome **) getMem (chroSize * sizeof (MappingOnGenome *));
+	g_genomeIndexStart = (MappingOnGenome **) getMem (this_sonic->chromosome_lengths[chr_index] * sizeof (MappingOnGenome *));
 
 	if (g_genomeIndexStart == NULL)
 		vh_logWarning ("Memory Problem");
-	for (genomeIndexId = 0; genomeIndexId < chroSize; genomeIndexId++)
+	for (genomeIndexId = 0; genomeIndexId < this_sonic->chromosome_lengths[chr_index]; genomeIndexId++)
 	{
 		g_genomeIndexStart[genomeIndexId] = NULL;
 	}
@@ -69,9 +72,9 @@ void vh_initializeReadMapping_Inversion (char *chromosome_name, int chroSize, so
 		g_tempListRightBrkPointIntr[i].readMappingPtr = NULL;
 	}
 	g_listRightBrkPointIntrCount = 0;
-	vh_addToGenomeIndex_Inversion (chromosome_name, chroSize);
+	vh_addToGenomeIndex_Inversion (this_sonic, chr_index);
 
-	/////Malocing the intersectingInterval (intersectinterval) heap
+
 	g_intersectInterval = (Heap *) getMem (sizeof (Heap));
 	g_intersectInterval->heapSize = 0;
 
@@ -182,6 +185,7 @@ int vh_createBreakPointIntervals_Inversion (int brkPointLeft)
 				}
 			}
 			else
+			{
 				if (g_listRightBrkPointIntr[listRightBrkPointIntrId].readMappingPtr->orientationLeft == REVERSE
 						&& g_listRightBrkPointIntr[listRightBrkPointIntrId].readMappingPtr->orientationRight == REVERSE)
 				{
@@ -200,6 +204,7 @@ int vh_createBreakPointIntervals_Inversion (int brkPointLeft)
 						tempListRightBrkPointIntrId++;
 					}
 				}
+			}
 		}
 	}
 

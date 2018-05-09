@@ -14,7 +14,6 @@
 #include "../common.h"
 #include "../variants.h"
 
-#define SOFTCLIP_WRONGMAP_WINDOW 20
 #define maxChroSize 1000000000
 #define MaxClusterCount 1000000
 #define inf 10000000 // a constant to represent infinity
@@ -55,7 +54,6 @@ typedef struct clusters_final
 	int mapping_quality_right;
 	float correct_mapping_qual;
 	bool split_read;
-	bool ten_x_barcode;
 
 	struct clusters_final *next;
 } clusters_final;
@@ -106,7 +104,6 @@ typedef struct readMappingEl{
 	int mapq2;
 	float probEditDist;
 	float correctMappingQual;
-	unsigned long ten_x_barcode;
 	struct readMappingEl *next; //ptr to the next readMappingEl in this cluster
 }readMappingEl;
 
@@ -130,18 +127,9 @@ typedef struct clusterEl{
 	struct readMappingEl *next; //a array of number of individuals for each list of read mappings (i.e. for each individual we have a different list of read mappings and they should be sorted).
 	struct readMappingEl *readMappingSelected; // The link list of all the read mappings which have been selected by set cover for this SV.
 
-	float *copyNumber; /* the copy number (CN) for the region of interest */
-	double *Del_Likelihood;
-	double *Dup_Likelihood;
-	double CNV_probability[totalNumInd][10];// Probability of CNV calculated for 0 to 9
-	long *readDepth;
-
-    double weight_without_homogeniety_score;
-	double homogeneity_score;
+	double *CNV_Score;
 	bool MEI_Del;
 	bool LowQual;
-
-    double weight_without_homogeniety_score_at_read_covering;
 }clusterEl;
 
 clusterEl *listClusterEl; // the array of all the cluster reads
@@ -156,15 +144,8 @@ typedef struct clusterElRead{
 }clusterElRead;
 
 
-//Used to calculate barcode_homogeneity_score. It makes tha hash table elements
-typedef struct barcode_list_element{
-	unsigned long ten_x_barcode;
-	unsigned long count;
-	struct barcode_list_element* next;
-}barcode_list_element;
-
-float calWeight( parameters *params, int clusterId, int *countBestSetPicked);
-void vh_setcover( bam_info **in_bams, parameters *params, ref_genome* ref, FILE *fpVcf);
+float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *countBestSetPicked);
+void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf);
 int freeLinkList( readMappingEl *ptr);
 
 #endif

@@ -20,7 +20,7 @@ lociInRef **hash_table_SR;
 char *ref_seq_per_chr;
 
 /* Read the reference genome */
-void readReferenceSeq( ref_genome *ref, parameters *params, int chr_index)
+void readReferenceSeq( parameters *params, int chr_index)
 {
 	int i, min, max, loc_length;
 	char *ref_seq;
@@ -28,20 +28,20 @@ void readReferenceSeq( ref_genome *ref, parameters *params, int chr_index)
 	faidx_t* ref_fai;
 
 	min = 0, max = 999;
-	ref_fai = fai_load( ref->ref_name);
-	ref_seq_per_chr = ( char *) calloc( (ref->chrom_lengths[chr_index] + 1), sizeof( char));
+	ref_fai = fai_load( params->ref_genome);
+	ref_seq_per_chr = ( char *) calloc( (params->this_sonic->chromosome_lengths[chr_index] + 1), sizeof( char));
 
-	while ( max < ref->chrom_lengths[chr_index])
+	while ( max < params->this_sonic->chromosome_lengths[chr_index])
 	{
-		ref_seq = faidx_fetch_seq( ref_fai, ref->chrom_names[chr_index], min, max, &loc_length);
+		ref_seq = faidx_fetch_seq( ref_fai, params->this_sonic->chromosome_names[chr_index], min, max, &loc_length);
 
 		for( i = 0; i < loc_length; i++)
 		{
-			if( bp_cnt < ref->chrom_lengths[chr_index])
+			if( bp_cnt < params->this_sonic->chromosome_lengths[chr_index])
 				ref_seq_per_chr[bp_cnt] = toupper( ref_seq[i]);
 			bp_cnt++;
 		}
-		if( bp_cnt >= ref->chrom_lengths[chr_index])
+		if( bp_cnt >= params->this_sonic->chromosome_lengths[chr_index])
 			break;
 
 		min += loc_length;
@@ -51,10 +51,10 @@ void readReferenceSeq( ref_genome *ref, parameters *params, int chr_index)
 	free( ref_seq);
 
 	ref_seq_per_chr[bp_cnt] = '\0';
-	create_HashIndex( ref, chr_index);
+	create_HashIndex( params, chr_index);
 }
 
-int hash_function_ref( ref_genome *ref, char *str)
+int hash_function_ref( char *str)
 {
 	/* this strictly assumes HASHKMERLEN < 16 */
 
@@ -96,7 +96,7 @@ int is_kmer_valid (char *str){
 	return 1;
 }
 
-void create_HashIndex( ref_genome* ref, int chr_index)
+void create_HashIndex( parameters* params, int chr_index)
 {
 	int i,k, ind;
 	char* str;
@@ -110,7 +110,7 @@ void create_HashIndex( ref_genome* ref, int chr_index)
 	for( i = 0; i < SR_HASH_SIZE; i++)
 		hash_table_SR[i] = NULL;
 
-	for( i = 0; i < ref->chrom_lengths[chr_index] - HASHKMERLEN; i++)
+	for( i = 0; i < params->this_sonic->chromosome_lengths[chr_index] - HASHKMERLEN; i++)
 	{
 		if( ref_seq_per_chr[i] == '\0')
 			break;
@@ -119,7 +119,7 @@ void create_HashIndex( ref_genome* ref, int chr_index)
 
 		if( is_kmer_valid(str))
 		{
-			ind = hash_function_ref( ref, str);
+			ind = hash_function_ref( str);
 			if( ind < 0)
 				continue;
 
@@ -159,20 +159,20 @@ void free_HashIndex()
 	free( ref_seq_per_chr);
 }
 
-posMapSoftClip *almostPerfect_match_seq_ref( ref_genome* ref, int chr_index, char *str, int pos)
+posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 {
 	int i, index, posMapSize, posMap[10000], hammingDisMap[10000];
 	char orient[10000];// orient of the mapping
 	int dist, reverseMatch;
 	lociInRef *ptr;
-	char seed[HASHKMERLEN+1];
+	char seed[HASHKMERLEN + 1];
 	char *strRev;
 	posMapSoftClip *tmpSoftClipMap, *returnPtr;
 	returnPtr = NULL;
 
 	strncpy( seed, str, HASHKMERLEN);
 	seed[HASHKMERLEN] = '\0';
-	index = hash_function_ref( ref, seed);
+	index = hash_function_ref( seed);
 	ptr = hash_table_SR[index];
 
 	posMapSize = 0;
@@ -214,7 +214,7 @@ posMapSoftClip *almostPerfect_match_seq_ref( ref_genome* ref, int chr_index, cha
 		strRev[strlen( str)] = '\0';
 		strncpy( seed, strRev, HASHKMERLEN);
 		seed[HASHKMERLEN] = '\0';
-		index = hash_function_ref( ref, seed);
+		index = hash_function_ref( seed);
 		ptr = hash_table_SR[index];
 
 		reverseMatch = 0;
@@ -260,13 +260,13 @@ posMapSoftClip *almostPerfect_match_seq_ref( ref_genome* ref, int chr_index, cha
 }
 
 
-void countNumSoftClipInCluster( parameters *params, ref_genome* ref, bam_info* in_bam, int chr_index)
+void countNumSoftClipInCluster( parameters *params, bam_info* in_bam, int chr_index)
 {
 	int i, j, countNumSR, posStartSF;
-	int *countSoftClip = ( int *)getMem( ( ref->chrom_lengths[chr_index] + 1000) * sizeof( int));
+	int *countSoftClip = ( int *)getMem( ( params->this_sonic->chromosome_lengths[chr_index] + 1000) * sizeof( int));
 	softClip *ptrSoftClip;
 
-	for( i = 0; i < ref->chrom_lengths[chr_index] + 1000; i++)
+	for( i = 0; i < params->this_sonic->chromosome_lengths[chr_index] + 1000; i++)
 		countSoftClip[i] = 0;
 
 	for( i = 0; i < in_bam->num_libraries; i++)
@@ -294,13 +294,13 @@ void countNumSoftClipInCluster( parameters *params, ref_genome* ref, bam_info* i
 			if( ptrSoftClip->op[0] == BAM_CSOFT_CLIP)
 			{
 				posStartSF = ptrSoftClip->pos + ptrSoftClip->opl[0];
-				for( j = max( 0, posStartSF - MIN_SOFTCLIP_LEN); j < min( ref->chrom_lengths[chr_index], posStartSF + MIN_SOFTCLIP_LEN); j++)
+				for( j = max( 0, posStartSF - MIN_SOFTCLIP_LEN); j < min( params->this_sonic->chromosome_lengths[chr_index], posStartSF + MIN_SOFTCLIP_LEN); j++)
 					countNumSR = countNumSR + countSoftClip[j];
 			}
 			else if( ptrSoftClip->op[ptrSoftClip->opCount - 1] == BAM_CSOFT_CLIP)
 			{
 				posStartSF = ptrSoftClip->pos - ptrSoftClip->opl[ptrSoftClip->opCount-1] + in_bam->libraries[i]->read_length;
-				for( j = max( 0, posStartSF - MIN_SOFTCLIP_LEN); j < min(ref->chrom_lengths[chr_index], posStartSF + MIN_SOFTCLIP_LEN); j++)
+				for( j = max( 0, posStartSF - MIN_SOFTCLIP_LEN); j < min( params->this_sonic->chromosome_lengths[chr_index], posStartSF + MIN_SOFTCLIP_LEN); j++)
 					countNumSR = countNumSR + countSoftClip[j];
 			}
 
@@ -313,7 +313,7 @@ void countNumSoftClipInCluster( parameters *params, ref_genome* ref, bam_info* i
 }
 
 
-void mapSoftClipToRef( bam_info* in_bam,  parameters* params, ref_genome* ref, int chr_index)
+void mapSoftClipToRef( bam_info* in_bam, parameters* params, int chr_index)
 {
 	int i;
 	char *str;
@@ -336,10 +336,12 @@ void mapSoftClipToRef( bam_info* in_bam,  parameters* params, ref_genome* ref, i
 				}
 				else if( ptrSoftClip->op[ptrSoftClip->opCount - 1] == BAM_CSOFT_CLIP)
 				{
-					strncpy( str, &( ptrSoftClip->softClipString[in_bam->libraries[i]->read_length - ptrSoftClip->opl[ptrSoftClip->opCount - 1]]), in_bam->libraries[i]->read_length - ptrSoftClip->opl[ptrSoftClip->opCount - 1]);
+					int tmp = in_bam->libraries[i]->read_length - ptrSoftClip->opl[ptrSoftClip->opCount - 1];
+					//fprintf(stderr,"%d - %d\n",in_bam->libraries[i]->read_length, ptrSoftClip->opl[ptrSoftClip->opCount - 1]);
+					strncpy( str, &( ptrSoftClip->softClipString[tmp]), tmp);
 					str[in_bam->libraries[i]->read_length - ptrSoftClip->opl[ptrSoftClip->opCount - 1]] = '\0';
 				}
-				ptrSoftClip->ptrPosMapSoftClip = almostPerfect_match_seq_ref( ref, chr_index, str, ptrSoftClip->pos);
+				ptrSoftClip->ptrPosMapSoftClip = almostPerfect_match_seq_ref( chr_index, str, ptrSoftClip->pos);
 			}
 			ptrSoftClip = ptrSoftClip->next;
 		}
@@ -348,7 +350,7 @@ void mapSoftClipToRef( bam_info* in_bam,  parameters* params, ref_genome* ref, i
 	}
 }
 
-void addSoftClip( ref_genome* ref, library_properties * library, bam_alignment_region* bam_align, bam1_t* bam_alignment, int chrID)
+void addSoftClip( library_properties * library, bam_alignment_region* bam_align, bam1_t* bam_alignment, char* chromosome_nameD)
 {
 	int i;
 	float avgPhredQual = 0;
@@ -369,16 +371,15 @@ void addSoftClip( ref_genome* ref, library_properties * library, bam_alignment_r
 
 	/* Get the name of the chromosome */
 	newEl->chromosome_name = NULL;
-	set_str( &(newEl->chromosome_name), ref->chrom_names[chrID]);
+	set_str( &(newEl->chromosome_name), chromosome_nameD);
 
 	newEl->pos = bam_align->pos_left;
 	newEl->qual = bam_alignment_core.qual;
 	newEl->softClipString = ( char *)getMem( ( bam_alignment_core.l_qseq + 1) * sizeof( char));
 
-	if( ( bam_align->flag & BAM_FREVERSE) != 0)
-		newEl->orient = REVERSE;
-	else
-		newEl->orient = FORWARD;
+	/* when the read is in reverse strand, bwa does not map it in reverse order
+	 * (important for split reads, we don't use paired-ends) */
+	newEl->orient = FORWARD;
 
 	uint8_t *a_qual = bam_get_qual( bam_alignment);
 

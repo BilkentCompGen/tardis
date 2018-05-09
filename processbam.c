@@ -11,7 +11,7 @@
 #include "processbam.h"
 #include "processfq.h"
 
-void load_bam( bam_info* in_bam, char* path)
+void load_bam( bam_info* in_bam, char* path, int alternative)
 {
 	/* Variables */
 	htsFile* bam_file;
@@ -70,6 +70,14 @@ void load_bam( bam_info* in_bam, char* path)
 		( in_bam->libraries)[i]->mappings_discordant = ( discordantMapping **) getMem( (NHASH + 1) * sizeof( discordantMapping *));
 		for( j = 0; j < NHASH; j++)
 			( in_bam->libraries)[i]->mappings_discordant[j] = NULL;
+
+		if( alternative != 0)
+		{
+			( in_bam->libraries)[i]->mappings_alternative = ( alternativeMapping **) getMem( (NHASH + 1) * sizeof( alternativeMapping *));
+			for( j = 0; j < NHASH; j++)
+				( in_bam->libraries)[i]->mappings_alternative[j] = NULL;
+		}
+
 		( in_bam->libraries)[i]->listMEI_Mapping = NULL;
 		( in_bam->libraries)[i]->listSoftClip = NULL;
 	}
@@ -379,56 +387,8 @@ void set_library_min_max( struct library_properties* in_lib)
 }
 
 
-char* convertUCSCtoGRC( char* inputchr)
+int is_concordant_bamonly( int pos_left, int pos_right, uint16_t flag, int32_t isize, int min, int max)
 {
-	int i;
-	char* temp = NULL;
-	char* output = NULL;
-
-	output = ( char*) getMem( 10 * sizeof(char));
-
-	/* If the chromosome name is already in GRC format */
-	if( strstr(inputchr, "chr") == NULL)
-		return inputchr;
-
-	/* For chromosome MT */
-	if( strcmp(inputchr, "chrM" ) == 0)
-		return "MT";
-
-	temp = strstr(inputchr, "gl");
-	if(temp == NULL)
-	{
-		temp = strstr(inputchr, "chr");
-		temp+=strlen("chr");
-		set_str( &output, temp);
-	}
-	else
-	{
-		i=0;
-		while(temp[i] != '_')
-		{
-			output[i] = temp[i];
-			i++;
-		}
-		output[i] = '\0';
-	}
-
-	/* Convert to uppercase */
-	i=0;
-	while( output[i] != '\0')
-	{
-		output[i] = toupper(output[i]);
-		i++;
-	}
-
-	return output;
-}
-
-
-int is_concordant_bamonly( bam_alignment_region* bam_align, int min, int max)
-{
-	int flag = bam_align->flag;
-
 	if( ( flag & BAM_FPAIRED) == 0)
 	{
 		/* Read is single-end. Skip this by calling it concordant */
@@ -464,14 +424,14 @@ int is_concordant_bamonly( bam_alignment_region* bam_align, int min, int max)
 		/* ++ orientation = inversion */
 		return RPINV;
 	}
-
-	if( bam_align->chrID_left != bam_align->chrID_right)
+/*
+	if( chrID_left != chrID_right)
 	{
-		/* On different chromosomes */
+		/* On different chromosomes
 		return RPINTERCHR;
 	}
-
-	if( bam_align->pos_left <= bam_align->pos_right) // c.a.
+*/
+	if( pos_left <= pos_right) // c.a.
 	{
 		/* Read is placed BEFORE its mate */
 		if( ( flag & BAM_FREVERSE) != 0 && ( flag & BAM_FMREVERSE) == 0)
@@ -491,12 +451,12 @@ int is_concordant_bamonly( bam_alignment_region* bam_align, int min, int max)
 	}
 
 	/* Passed all of the above. proper pair, both mapped, in +- orientation. Now check the isize */
-	if( abs( bam_align->isize) < min) // c.a.
+	if( abs( isize) < min) // c.a.
 	{
 		/* Deletion or Insertion */
 		return RPINS;
 	}
-	else if( abs( bam_align->isize) > max)
+	else if( abs( isize) > max)
 	{
 		return RPDEL;
 	}
@@ -504,5 +464,4 @@ int is_concordant_bamonly( bam_alignment_region* bam_align, int min, int max)
 	/* All passed. Read is concordant */
 	return RPCONC;
 }
-
 
