@@ -3,6 +3,8 @@ tardis
 
 Toolkit for Automated and Rapid DIscovery of Structural variants
 
+Soylev, A., Kockan, C., Hormozdiari, F., & Alkan, C. (2017). Toolkit for automated and rapid discovery of structural variants. Methods, 129, 3-7. https://doi.org/10.1016/j.ymeth.2017.05.030
+
 Requirements
 ============
 
@@ -74,6 +76,8 @@ All parameters
 	--sonic [sonic file]       : SONIC file that contains assembly annotations.
 	--mei   ["Alu:L1:SVA"]     : List of mobile element names.
 	--no-soft-clip             : Skip soft clip remapping.
+	--first-chr [chr_index]	   : Start running from a specific chromosome [index in ref]
+	--last-chr  [chr_index]	   : Run up to a specific chromosome [index in ref]
 
 	Additional parameters for sensitive mode:
 
