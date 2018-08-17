@@ -13,6 +13,11 @@ Requirements
  * htslib (included as submodule; http://htslib.org/)
  * sonic  (included as submodule; https://github.com/calkan/sonic)
 
+htslib also requires:
+
+ * libbz2
+ * liblzma
+
 Fetching TARDIS
 ===============
 
