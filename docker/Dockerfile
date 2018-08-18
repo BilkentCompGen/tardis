@@ -11,7 +11,7 @@ WORKDIR /tardis
 RUN git clone --recursive https://github.com/BilkentCompGen/tardis.git /tardis
 RUN make libs && make
 
-ENV PATH="/tardis/bin:${PATH}"
+ENV PATH="/tardis:${PATH}"
 VOLUME /input
 VOLUME /output
 ENTRYPOINT ["/tardis/tardis"]
