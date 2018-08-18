@@ -6,7 +6,7 @@ RUN apt-get install git make gcc zlib1g-dev libbz2-dev liblzma-dev -y
 RUN mkdir /tardis
 RUN mkdir /input
 RUN mkdir /output
-WORKDIR /output
+WORKDIR /tardis
 
 RUN git clone --recursive https://github.com/BilkentCompGen/tardis.git /tardis
 RUN make libs && make
