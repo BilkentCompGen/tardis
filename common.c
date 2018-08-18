@@ -29,6 +29,7 @@ void init_params( parameters** params)
 	( *params)->bam_files = NULL;
 	( *params)->bam_list_path = NULL;
 	( *params)->outprefix = NULL;
+	( *params)->outdir = NULL;
 	( *params)->bam_file_list = ( char**) getMem( sizeof( char*) * MAX_BAMS);
 	( *params)->gaps = NULL;
 	( *params)->mei = NULL;
@@ -496,3 +497,24 @@ int32_t calculateInsertSize( int32_t pos_left, int32_t pos_right,uint16_t flag, 
 	}
 	return isize;
 }
+
+void get_working_directory(parameters *params){
+  char *directory;
+
+  int i;
+  
+  directory = strrchr(params->outprefix, '/');
+
+  if (directory == NULL)
+    set_str(&(params->outdir), "./");
+
+  i = 0;
+  while (params->outprefix+i != directory)
+    i++;
+
+  params->outdir = (char *) getMem((i+2) * sizeof(char));
+  memcpy(params->outdir, params->outprefix, i*sizeof(char));
+  params->outdir[i]='/';
+  params->outdir[i+1] = 0;
+}
+ 

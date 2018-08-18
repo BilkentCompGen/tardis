@@ -92,6 +92,7 @@ typedef struct _params
 	char* gaps; /* path to assembly gaps file - bed */
 	char* mei;  /* regular expression-like MEI list */
 	char* outprefix; /* prefix for the output files */
+	char* outdir; /* output directory */
 	int force_read_length; /* force read length to a certain value, discard those that are shorter. Hidden feature due to GIAB */
 	char run_vh; /* boolean stand-in to run VariationHunter */
 	char run_rd; /* boolean stand-in to run Read Depth */
@@ -161,5 +162,7 @@ double getMemUsage();
 
 
 unsigned long encode_ten_x_barcode(char* source);
+
+void get_working_directory(parameters *);
 
 #endif

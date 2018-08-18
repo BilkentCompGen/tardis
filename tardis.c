@@ -26,15 +26,13 @@ int main( int argc, char** argv)
 	int i;
 	time_t rawtime;
 	struct tm * timeinfo;
-
+	char *log_file_path;
+	
 	time ( &rawtime);
 	timeinfo = localtime( &rawtime);
 
 	print_quote();
 
-	/* Keeping simple logs in tardis.log file */
-	logFile = safe_fopen ("tardis.log", "w");
-	fprintf( logFile, "#CreationDate=%d.%d.%d\n\n", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday);
 
 	/* Set program parameters */
 	init_params( &params);
@@ -42,6 +40,13 @@ int main( int argc, char** argv)
 	/* Parse command line arguments */	
 	return_value = parse_command_line( argc, argv, params);
 
+	/* Keeping simple logs in tardis.log file */
+	log_file_path = (char *) getMem(sizeof(char) * (11+strlen(params->outdir)));
+	sprintf(log_file_path, "%s%s", params->outdir, "tardis.log");
+	logFile = safe_fopen (log_file_path, "w");
+	fprintf( logFile, "#CreationDate=%d.%d.%d\n\n", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday);
+
+	
 	if( return_value == 0)
 		exit(EXIT_SUCCESS);
 	else if( return_value != 1)

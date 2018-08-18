@@ -359,6 +359,10 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		set_str( &(params->sonic_info), params->ref_genome);
 
 
+	get_working_directory(params);
+
+	printf("wd: %s\n", params->outdir);
+	
 	return RETURN_SUCCESS;
 
 }
