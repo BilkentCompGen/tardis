@@ -127,23 +127,3 @@ Converting output VCF file to BED
 
 Alternatively, use VCFlib: https://github.com/vcflib/vcflib
 
-
-
-
-=======
-## Running TARDIS via Docker
-
-To build a Docker image:
-
-	cd docker
-	docker build . -t tardis:latest
-
-Your image named "tardis" should be ready. You can run tardis using this image by
-
-	docker run --user=$UID -v /path/to/inputs:/input -v /path/to/outputdir:/output tardis [args]
-
-- ```[args]``` are usual arguments you would pass to tardis executable. Be careful about mapping. You need to specify folders respective to container directory structure.
-- You need to map host machine input and output directory to responding volume directories inside the container. These options are specified by '-v' argument.
-- Docker works with root user by default. "--user" option saves your outputs.
-
-
