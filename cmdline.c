@@ -331,7 +331,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 
 	get_working_directory(params);
 
-	printf("wd: %s\n", params->outdir);
+	/* printf("wd: %s\n", params->outdir); */
 	
 	return RETURN_SUCCESS;
 
