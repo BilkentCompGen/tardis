@@ -36,7 +36,6 @@ int main( int argc, char** argv)
 
 	/* Set program parameters */
 	init_params( &params);
-	fprintf(stderr,"AAAAAAAAAAAAAAAAA");
 	/* Parse command line arguments */	
 	return_value = parse_command_line( argc, argv, params);
 
