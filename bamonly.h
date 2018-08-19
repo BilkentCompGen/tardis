@@ -20,6 +20,9 @@
 #define MAX_READNAME_LEN 200
 #define MIN_MEI_DISTANCE 1000000
 #define NOTMEI -1
+#define NOTNUMT -1
+#define NUMTF 0
+#define NUMTR 1
 
 extern long sr_cnt_bam;
 extern long alt_cnt_bam;

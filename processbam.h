@@ -53,10 +53,11 @@ typedef struct bam_alignment_region
 	uint8_t qual;
 	uint8_t qual2;
 	int32_t isize;
+	unsigned long ten_x_barcode;
 }bam_alignment_region;
 
 /* Function Prototypes */
-void load_bam( bam_info* in_bam, char* path, int alternative);
+void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt);
 void create_fastq( bam_info* in_bam, char* bam_path, parameters *params);
 void print_bam( bam_info* in_bam);
 void print_libs( bam_info* in_bam);

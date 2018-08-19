@@ -54,6 +54,7 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 						tmpMEI_Reads->MEI_Type = discordantReadPtr->MEI_Type;
 						tmpMEI_Reads->readTypeSupport = 0; // The support is type paired-end read mapping
 						tmpMEI_Reads->libId = libId;
+						tmpMEI_Reads->ten_x_barcode = discordantReadPtr->ten_x_barcode;
 
 						tmpMEI_Reads->libName = NULL;
 						set_str( &(tmpMEI_Reads->libName), in_bams[numSample]->libraries[count]->libname);
@@ -76,7 +77,7 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 					}
 				}
 				discordantReadPtr = discordantReadPtr->next;
-			}
+			}/*
 			while( softClipPtr != NULL)
 			{
 				is_satellite = sonic_is_satellite (params->this_sonic, softClipPtr->chromosome_name, softClipPtr->pos, softClipPtr->pos+1);
@@ -127,7 +128,7 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 					}
 				}
 				softClipPtr = softClipPtr->next;
-			}
+			}*/
 			libId++;
 		}
 	}
@@ -172,6 +173,7 @@ int addToGenomeIndex_MEI_sensitive( parameters *params, char *chromosome_name, i
 				set_str( &(tmpMEI_Reads->MEI_Class), divetReadMappingPtr->meiType);
 
 				tmpMEI_Reads->libId = libId;
+				tmpMEI_Reads->ten_x_barcode = divetReadMappingPtr->ten_x_barcode;
 
 				tmpMEI_Reads->MEI_Type = divetReadMappingPtr->mei_code;
 
@@ -254,7 +256,7 @@ void add_S_Heap( int pos)
 		{
 			newEl = ( HeapElMEI *) getMem( sizeof( HeapElMEI));
 			newEl->mei_ReadsPtr = mei_ReadsPtr;
-			newEl->priorityValue = pos+2*lenSplitReadBrakWindow;
+			newEl->priorityValue = pos + ( 2 * lenSplitReadBrakWindow);
 			push_heap_mei( &H_S, newEl);
 			free( newEl);
 		}
@@ -310,8 +312,9 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 	int written; /* Work around. Arda should fix this. Some clusters come out empty */
 	clusters_final *cluster_new, *tmp;
 
-	if( H_F.heapSize > 0  && H_R.heapSize > 0)
+	if( H_F.heapSize > 0 && H_R.heapSize > 0)
 	{
+		/* Iterate through all MEI types including the reverse orientations of each*/
 		for( MEIType = 0; MEIType < (params->number_of_different_mei_types * 2); MEIType++)
 		{
 			clusters_all[cluster_count] = NULL;
@@ -319,27 +322,25 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 			R_count = 0;
 			F_count = 0;
 
-			/* match reads with the same type of MEI (Alu, etc) and the same orientation of mapping
-			 *  so if it is H_R assuming the read is in R orientation then mapping
-			 * inside a Alu with R orientation*/
-
-			/* Horrible. Impossible to understand what is going on here */
+			/* If the MEI is in forward direction, MEIType2 is in Reverse */
 			if( ( MEIType % 2) == 0)
 			{
 				MEIType2 = MEIType + 1;
 				orientMEI = MEIFORWARD;
 			}
-			else
+			else /* If the MEI is in reverse direction, MEIType2 is in Forward */
 			{
 				MEIType2 = MEIType - 1;
 				orientMEI = MEIREVERSE;
 			}
 
+			/* Count the number of MEIs in H_F that matches the MEIType */
 			for( count = 0; count < H_F.heapSize; count++)
 			{
 				if( H_F.heapArray[count].mei_ReadsPtr->MEI_Type == MEIType)
 					F_count++;
 			}
+			/* Count the number of MEIs in H_R that matches the MEIType2 */
 			for( count = 0; count < H_R.heapSize; count++)
 			{
 				if( H_R.heapArray[count].mei_ReadsPtr->MEI_Type == MEIType2)
@@ -397,6 +398,7 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						cluster_new->orientation_right = FORWARD;
 						cluster_new->mapping_quality_left = H_F.heapArray[count].mei_ReadsPtr->mQual;
 						cluster_new->mapping_quality_right = H_F.heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->ten_x_barcode = H_F.heapArray[count].mei_ReadsPtr->ten_x_barcode;
 
 						cluster_new->mei_type = NULL;
 						set_str( &cluster_new->mei_type, H_F.heapArray[count].mei_ReadsPtr->MEI_Class);
@@ -469,6 +471,7 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						cluster_new->orientation_right = REVERSE;
 						cluster_new->mapping_quality_left = H_R.heapArray[count].mei_ReadsPtr->mQual;
 						cluster_new->mapping_quality_right = H_R.heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->ten_x_barcode = H_R.heapArray[count].mei_ReadsPtr->ten_x_barcode;
 
 						cluster_new->mei_type = NULL;
 						set_str( &cluster_new->mei_type, H_R.heapArray[count].mei_ReadsPtr->MEI_Class);
@@ -493,11 +496,23 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						written = 1;
 					}
 				}
+
 				for( count = 0; count < H_S.heapSize; count++)
 				{
-					if( H_S.heapArray[count].mei_ReadsPtr->MEI_Type == MEIType2)
+					if( H_S.heapArray[count].mei_ReadsPtr->MEI_Type == MEIType2 &&
+							H_S.heapArray[count].mei_ReadsPtr->readName != NULL)
 					{
 						if( debug_mode)
+						{
+							fprintf(stderr,"%d MEITYPE%d MEITYPE2%d -", count, MEIType, MEIType2);
+							fprintf( stderr, "%s ", H_S.heapArray[count].mei_ReadsPtr->readName);
+							fprintf( stderr, "%s ", chromosome_name);
+							fprintf( stderr, "%d ", H_S.heapArray[count].mei_ReadsPtr->pos);
+							fprintf( stderr, "%s ", H_S.heapArray[count].mei_ReadsPtr->MEI_Subclass);
+							fprintf( stderr, "%s ", H_S.heapArray[count].mei_ReadsPtr->indName);
+							fprintf( stderr, "%d ", H_S.heapArray[count].mei_ReadsPtr->mQual);
+							fprintf( stderr, "\n");
+
 							fprintf( fileOutput, "%s %s %i %s %i %c %i %i SplitRead %s S S %i %i ",
 									H_S.heapArray[count].mei_ReadsPtr->readName,
 									chromosome_name,
@@ -510,7 +525,7 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 									H_S.heapArray[count].mei_ReadsPtr->indName,
 									H_S.heapArray[count].mei_ReadsPtr->mQual,
 									H_S.heapArray[count].mei_ReadsPtr->mQual);
-
+						}
 						/* Fill the clusters struct */
 						cluster_new = ( clusters_final *) getMem( sizeof( clusters_final));
 
@@ -538,6 +553,7 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						cluster_new->orientation_right = 'S';
 						cluster_new->mapping_quality_left = H_S.heapArray[count].mei_ReadsPtr->mQual;
 						cluster_new->mapping_quality_right = H_S.heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->ten_x_barcode = H_S.heapArray[count].mei_ReadsPtr->ten_x_barcode;
 
 						cluster_new->mei_type = NULL;
 						set_str( &cluster_new->mei_type, H_S.heapArray[count].mei_ReadsPtr->MEI_Class);

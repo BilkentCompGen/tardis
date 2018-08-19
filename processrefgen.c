@@ -177,6 +177,9 @@ int run_rd( bam_info** in_bam, parameters* params)
 	bam1_t*	bam_alignment;
 	bam1_core_t bam_alignment_core;
 
+	if( ten_x_flag)
+		fprintf( stderr,"10x flag: %d\n", ten_x_flag);
+
 	for ( bam_index = 0; bam_index < params->num_bams; bam_index++)
 	{
 		/* Initialize the read depth(rd) array of each library for each bam file */

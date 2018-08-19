@@ -11,7 +11,9 @@
 #include "processbam.h"
 #include "processfq.h"
 
-void load_bam( bam_info* in_bam, char* path, int alternative)
+bool isRGAvailable = true;
+
+void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt)
 {
 	/* Variables */
 	htsFile* bam_file;
@@ -25,11 +27,7 @@ void load_bam( bam_info* in_bam, char* path, int alternative)
 	int* fragment_size_total;
 	float* variance;
 	char* library_name = NULL;
-	int library_index;
-	int diff;
-	int return_value;
-	int i;
-	int j;
+	int i, j, library_index, diff, return_value;
 
 	fprintf( stderr, "Processing BAM file %s.\n", path);
 
@@ -54,8 +52,14 @@ void load_bam( bam_info* in_bam, char* path, int alternative)
 	}
 	else
 	{
+		fprintf( stderr, "[BAM FILE ERROR] No libraries (RG) found in the BAM file. Setting default library as Lib1.\n");
+		in_bam->num_libraries = 1;
+		isRGAvailable = false;
+		sprintf(in_bam->sample_name, "Sample%d", bam_cnt);
+		/*
 		fprintf( stderr, "[BAM FILE ERROR] No libraries found in the BAM file. Do you have read groups set in the file? Use picard-tools (AddOrRemoveReadGroups) to fix your BAM file.\nExiting.\n");
 		exit (EXIT_READGROUP);
+		 */
 	}
 
 	/* Initialize the structures for library properties */
@@ -79,12 +83,16 @@ void load_bam( bam_info* in_bam, char* path, int alternative)
 		}
 
 		( in_bam->libraries)[i]->listMEI_Mapping = NULL;
+		( in_bam->libraries)[i]->listNUMT_Mapping = NULL;
 		( in_bam->libraries)[i]->listSoftClip = NULL;
 	}
 
-	/* Extract the ids/names for the libraries. A single Sample with multiple 
+	/* Extract the ids/names for the libraries. A single Sample with multiple
 	 possible libraries are assumed for each BAM file */
-	get_library_names( in_bam, bam_header->text);
+	if( isRGAvailable == true)
+		get_library_names( in_bam, bam_header->text);
+	else
+		in_bam->libraries[0]->libname = "Lib1";
 
 	/* For SAMPLEFRAG number of alignments, store the template length field.
 	 Performed for each different library */
@@ -94,7 +102,7 @@ void load_bam( bam_info* in_bam, char* path, int alternative)
 		fragment_size[i] = ( int*) getMem( SAMPLEFRAG * sizeof( int));
 	}
 
-	/* Initial read */	
+	/* Initial read */
 	bam_alignment = bam_init1();
 	return_value = bam_read1( ( bam_file->fp).bgzf, bam_alignment);
 
@@ -107,22 +115,32 @@ void load_bam( bam_info* in_bam, char* path, int alternative)
 
 	fprintf( stderr, "Sampling reads from libraries to infer fragment sizes.\n");
 
+
+
 	while( return_value != -1 && !sufficient_fragments_sampled( fragments_sampled, in_bam->num_libraries))
 	{
 		bam_alignment_core = bam_alignment->core;
 
 		if( bam_alignment_core.isize > 0 && !bam_is_rev( bam_alignment) && bam_is_mrev( bam_alignment))
 		{
-			set_str( &library_name, bam_aux_get( bam_alignment, "RG"));
+			if( isRGAvailable == true)
+			{
+				set_str( &library_name, bam_aux_get( bam_alignment, "RG"));
 
-			/* get rid of the leading 'Z' in front of the library_name */
-			library_index = find_library_index( in_bam, library_name+1);
+				/* get rid of the leading 'Z' in front of the library_name */
+				library_index = find_library_index( in_bam, library_name + 1);
+			}
+			else
+				library_index = 0;
 
 			/* Sample SAMPLEFRAG number of alignments for each library at most */
 			if( library_index != -1 && fragments_sampled[library_index] < SAMPLEFRAG)
 			{
 				fragment_size[library_index][fragments_sampled[library_index]] = bam_alignment_core.isize;
 				fragments_sampled[library_index] = fragments_sampled[library_index] + 1;
+
+				//if(bam_alignment_core.isize<1000)
+				//frags[bam_alignment_core.isize]++;
 			}
 		}
 
@@ -157,7 +175,13 @@ void load_bam( bam_info* in_bam, char* path, int alternative)
 		second_test_pass[i] = 0;
 		fragment_size_total[i] = 0;
 	}
-
+/*
+	int frags[1000];
+	for( i = 0; i < 1000; i++)
+	{
+		frags[i] = 0;
+	}
+*/
 	for( i = 0; i < in_bam->num_libraries; i++)
 	{
 		for( j = 0; j < SAMPLEFRAG; j++)
@@ -167,10 +191,19 @@ void load_bam( bam_info* in_bam, char* path, int alternative)
 				fragment_size_total[i] = fragment_size_total[i] + fragment_size[i][j];
 				second_pass_fragments[i][j] = fragment_size[i][j];
 				second_test_pass[i] = second_test_pass[i] + 1;
+
+				//frags[fragment_size[i][j]]++;
 			}
 		}
+
+	}
+/*
+	for( i = 0; i < 1000; i++)
+	{
+		fprintf(stderr,"%d\t%d\n", i, frags[i]);
 	}
 
+*/
 	for( i = 0; i < in_bam->num_libraries; i++)
 	{
 		/* Compute the averages */
@@ -220,7 +253,7 @@ void load_bam( bam_info* in_bam, char* path, int alternative)
 		free( second_pass_fragments[i]);
 	}
 	free( fragment_size);
-	free( second_pass_fragments);	
+	free( second_pass_fragments);
 	free( fragments_sampled);
 	free( second_test_pass);
 	free( fragment_size_total);
@@ -424,13 +457,13 @@ int is_concordant_bamonly( int pos_left, int pos_right, uint16_t flag, int32_t i
 		/* ++ orientation = inversion */
 		return RPINV;
 	}
-/*
+	/*
 	if( chrID_left != chrID_right)
 	{
 		/* On different chromosomes
 		return RPINTERCHR;
 	}
-*/
+	 */
 	if( pos_left <= pos_right) // c.a.
 	{
 		/* Read is placed BEFORE its mate */

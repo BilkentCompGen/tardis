@@ -5,6 +5,7 @@
 
 #include "vh_common.h"
 #include "vh_createMaxClusterMEI.h"
+#include "vh_createMaxClusterNUMT.h"
 
 
 typedef struct PEAlistEl {
@@ -38,6 +39,17 @@ typedef struct HeapMEI{
 	int heapSize;
 } HeapMEI;
 
+typedef struct HeapElNUMT{
+	int priorityValue;
+	numt_Reads *numt_ReadsPtr;
+}HeapElNUMT;
+
+
+typedef struct HeapNUMT{
+	HeapElNUMT heapArray[MAX_CLUSTER_SIZE];
+	int heapSize;
+} HeapNUMT;
+
 
 extern Heap *g_intersectInterval;
 
@@ -49,10 +61,14 @@ void vh_heap_remove_top( struct Heap *heapName);
 void vh_addToHeap( struct DivetRow *readMappingPtr, int priorityValue, struct Heap *heapName);
 void vh_writeHeap( struct Heap *heapName);
 void heapBubleDownMEI( HeapMEI *heapName);
+void heapBubleDownNUMT(HeapNUMT *heapName);
 void heap_remove_topMEI( HeapMEI *heapName);
+void heap_remove_topNUMT( HeapNUMT *heapName);
 void push_heap_mei( HeapMEI *heapName, HeapElMEI *newEl);
+void push_heap_numt(HeapNUMT *heapName, HeapElNUMT *newEl);
 void freeHeapMEI( HeapMEI *heapName);
 int minValue_heapMEI(HeapMEI *heapName);
+int minValue_heapNUMT(HeapNUMT *heapName);
 int remove_Heap(Heap * heapName, int position);
 
 #endif

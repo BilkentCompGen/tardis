@@ -41,6 +41,7 @@ typedef struct library_properties
 	struct discordantMapping **mappings_discordant;
 	struct alternativeMapping **mappings_alternative;
 	struct discordantMappingMEI *listMEI_Mapping;
+	struct discordantMappingNUMT *listNUMT_Mapping;
 } library_properties;
 
 

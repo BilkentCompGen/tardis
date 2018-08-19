@@ -13,6 +13,7 @@
 #include "vh/vh_maximalCluster.h"
 #include "vh/vh_setcover.h"
 #include "vh_createMaxClusterMEI.h"
+#include "vh_createMaxClusterNUMT.h"
 #include "splitread.h"
 #include "free.h"
 #include "mappings.h"
@@ -21,9 +22,12 @@ long del_cnt_bam = 0;
 long ins_cnt_bam = 0;
 long inv_cnt_bam = 0;
 long mei_cnt_bam = 0;
+long numt_cnt_bam = 0;
 long tandup_cnt_bam = 0;
 long sr_cnt_bam = 0;
 long alt_cnt_bam = 0;
+
+long cnt_concordant = 0, cnt_discordant = 0, cnt_unmapped = 0, cnt_total_reads;
 
 long total_read_count = 0;
 
@@ -38,6 +42,7 @@ void findUniqueReads( bam_info** in_bam, parameters *params, char *outputread)
 
 	softClip *softClipPtr;
 	discordantMappingMEI *discordantReadPtrMEI;
+	discordantMappingNUMT *discordantReadPtrNUMT;
 	discordantMapping *discordantReadPtr;
 	alternativeMapping *discordantReadPtrAlt;
 
@@ -91,6 +96,15 @@ void findUniqueReads( bam_info** in_bam, parameters *params, char *outputread)
 				set_str( &(allReadNameList[read_name_count]), discordantReadPtrMEI->readName);
 				read_name_count++;
 				discordantReadPtrMEI = discordantReadPtrMEI->next;
+			}
+
+			discordantReadPtrNUMT = in_bam[i]->libraries[j]->listNUMT_Mapping;
+			while( discordantReadPtrNUMT != NULL)
+			{
+				allReadNameList[read_name_count] = NULL;
+				set_str( &(allReadNameList[read_name_count]), discordantReadPtrNUMT->readName);
+				read_name_count++;
+				discordantReadPtrNUMT = discordantReadPtrNUMT->next;
 			}
 
 			if( !params->no_soft_clip)
@@ -160,6 +174,10 @@ void discordant_mapping( library_properties *library, parameters* params, bam_al
 
 	discordantMapping *newEl;
 	newEl = ( discordantMapping *) getMem( sizeof( discordantMapping));
+
+	/* Need to be put into into divet row */
+	if ( params->ten_x)
+		newEl->ten_x_barcode = bam_align->ten_x_barcode;
 
 	/* This is the first read */
 	if( bam_align->pos_left < bam_align->pos_right)
@@ -295,6 +313,10 @@ void discordant_mapping_MEI( library_properties *library, parameters* params,
 	discordantMappingMEI *newEl;
 	newEl = ( discordantMappingMEI *) getMem( sizeof( discordantMappingMEI));
 
+	/* Need to be put into into divet row */
+	if ( params->ten_x)
+		newEl->ten_x_barcode = bam_align->ten_x_barcode;
+
 	newEl->readName = NULL;
 	set_str( &(newEl->readName), bam_align->read_name);
 
@@ -338,6 +360,74 @@ void discordant_mapping_MEI( library_properties *library, parameters* params,
 }
 
 
+void discordant_mapping_NUMT( library_properties *library, parameters* params,
+		bam_alignment_region* bam_align, int numt_type, int chrID)
+{
+	int len;
+	int countOp;
+
+	discordantMappingNUMT *newEl;
+	newEl = ( discordantMappingNUMT *) getMem( sizeof( discordantMappingNUMT));
+
+	/* Need to be put into into divet row */
+	if ( params->ten_x)
+		newEl->ten_x_barcode = bam_align->ten_x_barcode;
+
+	newEl->readName = NULL;
+	set_str( &(newEl->readName), bam_align->read_name);
+
+	/* Get the name of the chromosome */
+	len = strlen( params->this_sonic->chromosome_names[chrID]);
+	newEl->chromosome_name = NULL;
+	set_str( &(newEl->chromosome_name), params->this_sonic->chromosome_names[chrID]);
+
+	newEl->pos = bam_align->pos_left;
+	newEl->qual = bam_align->qual;
+
+	numt_cnt_bam++;
+	newEl->NUMT_Type = numt_type;
+
+	if( ( bam_align->flag & BAM_FREVERSE) != 0)
+		newEl->orientation = REVERSE;
+	else
+		newEl->orientation = FORWARD;
+
+	newEl->pos_End = newEl->pos + library->read_length;
+	/*newEl->pos_End = newEl->pos;
+	for( countOp = 0; countOp < bam_align->n_cigar; countOp++)
+	{
+		if( bam_cigar_opchr( bam_align->cigar[countOp]) == 'S')
+			newEl->pos_End = newEl->pos_End + bam_cigar_oplen( bam_align->cigar[countOp]);
+	}
+	 */
+
+	if( bam_cigar_opchr( bam_align->cigar[bam_align->n_cigar - 1]) == 'S')
+		newEl->pos_End = newEl->pos_End - bam_cigar_oplen( bam_align->cigar[bam_align->n_cigar - 1]);
+
+	if( bam_cigar_opchr( bam_align->cigar[0]) == 'S')
+		newEl->pos = newEl->pos + bam_cigar_oplen( bam_align->cigar[0]);
+
+	newEl->next = library->listNUMT_Mapping;
+	library->listNUMT_Mapping = newEl;
+}
+
+
+int find_numt_bam( bam_alignment_region* bam_align, char *chromosome_name_left, char *chromosome_name_right)
+{
+	/* If the read maps to a chromosome and the right pair maps to MT */
+	if( ( strstr( chromosome_name_left, "MT") == NULL || strstr( chromosome_name_left, "chrM") == NULL) &&
+			( strstr( chromosome_name_right, "MT") != NULL || strstr( chromosome_name_right, "chrM") != NULL))
+	{
+		if( ( bam_align->flag & BAM_FMREVERSE) != 0)
+			return NUMTR;
+		else
+			return NUMTF;
+	}
+	else
+		return NOTNUMT;
+}
+
+
 int find_mei_bam( parameters *params, char *chromosome_name, char** mei_subclass, char** mei_class, int start, int end, int flag)
 {
 	int ind, len;
@@ -368,9 +458,8 @@ int find_mei_bam( parameters *params, char *chromosome_name, char** mei_subclass
 
 int read_mapping( library_properties *library, parameters* params, bam1_t* bam_alignment, int32_t *bamToRefIndex, bam_alignment_region* bam_align)
 {
-	int svType, meiType = NOTMEI, left_end_id, right_end_id, i, insLen;
+	int svType, meiType = NOTMEI, numtType = NOTNUMT, left_end_id, right_end_id, i, insLen;
 	char* mei_subclass, *mei_class;
-
 
 	/* Make sure the chromosome name is within the correct range */
 	if( bam_align->chrID_left >= 0 && bam_align->chrID_left < params->this_sonic->number_of_chromosomes &&
@@ -399,13 +488,28 @@ int read_mapping( library_properties *library, parameters* params, bam1_t* bam_a
 		svType = is_concordant_bamonly( bam_align->pos_left, bam_align->pos_right, bam_align->flag,
 				bam_align->isize, library->conc_min, library->conc_max);
 
+		/* For statistics */
+		cnt_total_reads++;
+
+		if( svType == RPCONC)
+			cnt_concordant++;
+		else if( svType == RPUNMAPPED)
+			cnt_unmapped++;
+		else
+			cnt_discordant++;
+
 		if( svType != RPCONC && svType != RPUNMAPPED)
 		{
 			meiType = find_mei_bam( params, params->this_sonic->chromosome_names[right_end_id], &mei_subclass, &mei_class, bam_align->pos_right,
 					bam_align->pos_right + library->read_length, bam_align->flag);
 
+			numtType = find_numt_bam( bam_align, params->this_sonic->chromosome_names[left_end_id], params->this_sonic->chromosome_names[right_end_id]);
+
+			/* NUMT */
+			if( numtType != NOTNUMT)
+				discordant_mapping_NUMT( library, params, bam_align, numtType, left_end_id);
 			/* MEI */
-			if( meiType != NOTMEI && ( left_end_id != right_end_id ||
+			else if( meiType != NOTMEI && ( left_end_id != right_end_id ||
 					abs( bam_align->pos_left - bam_align->pos_right) > MIN_MEI_DISTANCE))
 				discordant_mapping_MEI( library, params, bam_align, mei_subclass, mei_class, meiType, left_end_id);
 			/* Deletion, Insertion or Tandem Duplication */
@@ -448,9 +552,14 @@ void read_bam( bam_info* in_bam, parameters* params)
 	{
 		bam_alignment_core = bam_alignment->core;
 
-		/* Get library index */
-		set_str( &library_name, bam_aux_get( bam_alignment, "RG"));
-		lib_index = find_library_index( in_bam, library_name + 1);
+		if( in_bam->num_libraries > 1)
+		{
+			/* Get library index */
+			set_str( &library_name, bam_aux_get( bam_alignment, "RG"));
+			lib_index = find_library_index( in_bam, library_name + 1);
+		}
+		else
+			lib_index = 0;
 
 		return_type = primary_mapping( in_bam, params, lib_index, bam_alignment, bamToRefIndex);
 		if( return_type == -1)
@@ -471,8 +580,8 @@ void read_bam( bam_info* in_bam, parameters* params)
 		}
 	}
 	bam_destroy1( bam_alignment);
-	fprintf( stderr, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li Split Read and %li XA regions found in BAM.\n",
-			del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam, alt_cnt_bam);
+	fprintf( stderr, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li NUMT, %li Split Read and %li XA regions found in BAM.\n",
+			del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, numt_cnt_bam, sr_cnt_bam, alt_cnt_bam);
 	fprintf( logFile, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li Split Read and %li XA regions found in BAM.\n",
 			del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam, alt_cnt_bam);
 }
@@ -582,8 +691,8 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			hts_idx_destroy( in_bams[bam_index]->bam_file_index);
 
 			/* Increase the total read count for this chromosome and make the number of SVs 0 for this bam */
-			total_read_count += del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + sr_cnt_bam + alt_cnt_bam;
-			del_cnt_bam = 0, ins_cnt_bam = 0, inv_cnt_bam = 0, mei_cnt_bam = 0, tandup_cnt_bam = 0, sr_cnt_bam = 0, alt_cnt_bam = 0;
+			total_read_count += del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + numt_cnt_bam + sr_cnt_bam + alt_cnt_bam;
+			del_cnt_bam = 0, ins_cnt_bam = 0, inv_cnt_bam = 0, mei_cnt_bam = 0, numt_cnt_bam = 0, tandup_cnt_bam = 0, sr_cnt_bam = 0, alt_cnt_bam = 0;
 		}
 		if( not_in_bam == 1)
 			continue;
@@ -599,6 +708,10 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 		/* Open the .clusters file if running in debug mode */
 		if( debug_mode)
 			fileOutput = safe_fopen( outputfile, "w");
+
+		/* Make all clusters NULL */
+		for( i = 0; i < MaxClusterCount; i++)
+			clusters_all[i] = NULL;
 
 		/* Deletion */
 		fprintf( stderr, "\nPreparing Deletion clusters");
@@ -660,6 +773,22 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 		fprintf( stderr, "..");
 		fflush( stderr);
 
+		/* NumT */
+		if( ( strcmp( params->this_sonic->chromosome_names[chr_index], "MT") != 0)
+				|| ( strcmp( params->this_sonic->chromosome_names[chr_index], "chrM") != 0))
+		{
+			fprintf( stderr, "\nPreparing NUMT clusters");
+			initializeReadMapping_NUMT( in_bams, params, chr_index);
+			fprintf( stderr, "..");
+			fflush( stderr);
+			NUMTCluster_Region( params, chr_index);
+			fprintf( stderr, "..");
+			fflush( stderr);
+			vh_finalizeReadMapping_NUMT( params->this_sonic->chromosome_lengths[chr_index]);
+			fprintf( stderr, "..");
+			fflush( stderr);
+		}
+
 		/* Interspersed Direct Duplication */
 		fprintf( stderr, "\nPreparing Interspersed Duplication clusters");
 		for( interdup_location = 0; interdup_location <= RIGHTSIDE; interdup_location++)
@@ -689,7 +818,6 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			fprintf( stderr, ".");
 			fflush( stderr);
 		}
-
 		fprintf( stderr, "\n");
 
 		findUniqueReads( in_bams, params, outputread);
@@ -715,8 +843,12 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 	fflush( stderr);
 	fprintf( stderr, "\n");
 
-
 	fprintf( stderr, "TARDIS is complete. Found %d SVs", total_sv);
+
+	fprintf( logFile, "\n\nTotal read count = %li; %li Concordant, %li Unmapped, %li Discordant\n",
+				cnt_total_reads, cnt_concordant, cnt_unmapped, cnt_discordant);
+	fprintf( stderr, "\n\nTotal read count = %li; %li Concordant, %li Unmapped, %li Discordant\n",
+				cnt_total_reads, cnt_concordant, cnt_unmapped, cnt_discordant);
 
 	print_sv_stats();
 }
@@ -728,12 +860,12 @@ int bamonly_run( parameters *params, bam_info ** in_bams)
 
 	/* Initialize and read bam file */
 	fprintf( stderr, "Processing bam file for read pair and read depth filtering\n"
-			"(RD Threshold: %d; Mapping Quality Threshold: %d; RP Support Threshold: %d)\n\n"
-			, params->rd_threshold, params->mq_threshold, params->rp_threshold);
+			"(Mapping Quality Threshold: %d; RP Support Threshold: %d)\n\n"
+			, params->mq_threshold, params->rp_threshold);
 
 	fprintf( logFile,"\n--> Processing bam file for read pair and read depth filtering\n"
-			"(RD Threshold: %d; Mapping Quality Threshold: %d; RP Support Threshold: %d)\n\n"
-			, params->rd_threshold, params->mq_threshold, params->rp_threshold);
+			"(Mapping Quality Threshold: %d; RP Support Threshold: %d)\n\n"
+			, params->mq_threshold, params->rp_threshold);
 
 	bamonly_vh_clustering( in_bams, params);
 

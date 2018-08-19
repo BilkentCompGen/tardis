@@ -58,6 +58,8 @@ typedef struct DivetRow
 	char* meiType;
 	int mei_code; //Only for mobile elements 0 : Alu +; 1: Alu -; 2: L1 +; 3; L1 -; 4: SVA +; 5; SVA -
 	char* mei_subclass;
+	unsigned long ten_x_barcode; // Only for 10x genomics data
+	int in_cluster_count;
 
 	struct LibraryInfo *libInfo;
 
@@ -78,6 +80,7 @@ struct DivetRow *createDivetRow (struct ReadName *hash[],
 		char *editDistance,
 		char *avgQual,
 		char *phredScore,
+		unsigned long ten_x_barcode,
 		struct LibraryInfo *libInfo,
 		int id);
 
@@ -99,6 +102,7 @@ typedef struct discordantMapping // RR, FF, RF or FR (Ins>\delta)
 	uint32_t* cigar;
 	uint32_t n_cigar;
 	uint16_t flag;
+	unsigned long ten_x_barcode; // Only for 10x genomics data
 
 	struct discordantMapping *next;
 }discordantMapping;
@@ -117,10 +121,25 @@ typedef struct alternativeMapping // RR, FF, RF or FR (Ins>\delta)
 	int editDistance;
 	int mapp;
 	uint16_t flag;
+	unsigned long ten_x_barcode; // Only for 10x genomics data
 
 	struct alternativeMapping *next;
 }alternativeMapping;
 
+
+typedef struct discordantMappingNUMT
+{
+	char *chromosome_name;
+	char *readName;
+	int pos;
+	int pos_End;
+	int qual;
+	char orientation; /*orientation of the pair (the one not inside the MT) */
+	char NUMT_Type; /* numt in forward direction is 0, reverse direction is 1 */
+	unsigned long ten_x_barcode; // Only for 10x genomics data
+	struct discordantMappingNUMT *next;
+}discordantMappingNUMT
+;
 
 typedef struct discordantMappingMEI
 {
@@ -133,6 +152,7 @@ typedef struct discordantMappingMEI
 	int MEI_Type; // 0: Alu +, 1: Alu -, 2: L1 +, 3: L1 -, 4: SVA +, 5: SVA -,
 	char *MEI_class;
 	char* MEI_subclass;
+	unsigned long ten_x_barcode; // Only for 10x genomics data
 	struct discordantMappingMEI *next;
 }discordantMappingMEI;
 

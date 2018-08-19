@@ -13,7 +13,10 @@
 // Track memory usage
 long long memUsage = 0;
 int running_mode = QUICK;
+int ten_x_flag = 0;
+int output_hs_flag = 0;
 int debug_mode = 0;
+int cluster_of_reads;
 
 void init_params( parameters** params)
 {
@@ -34,15 +37,11 @@ void init_params( parameters** params)
 	( *params)->gaps = NULL;
 	( *params)->mei = NULL;
 	( *params)->force_read_length = 0;
-	( *params)->run_vh = 0; 
-	( *params)->run_rd = 0;
-	( *params)->run_ns = 0;
-	( *params)->run_sr = 0;
 	( *params)->threads = 1;
 	( *params)->num_bams = 0;
-	( *params)->skip_fastq = 0;
-	( *params)->skip_sort = 0;
-	( *params)->skip_remap = 0;
+	( *params)->skip_mrfast = 0;
+	( *params)->ten_x = 0;
+	( *params)->output_hs = 0;
 	( *params)->first_chr = 0;
 	( *params)->last_chr = -1;
 	( *params)->make_sonic = 0;
@@ -74,6 +73,7 @@ void print_params( parameters* params)
 	fprintf( logFile, "%-30s%s\n","Reference genome:", params->ref_genome);
 	fprintf( logFile, "%-30s%s\n","SONIC file:", params->sonic_file);
 	fprintf( logFile, "%-30s%s\n","Mobile Elements:", params->mei);
+	fprintf( logFile, "%-30s%d\n","10x Tag:", params->ten_x);
 	fprintf( logFile, "%-30s%d\n","First chrom:", params->first_chr);
 	fprintf( logFile, "%-30s%d\n","Last chrom:", params->last_chr);
 }
@@ -410,19 +410,6 @@ int find_chr_index_bam( char* chromosome_name, bam_hdr_t* bam_header)
 	{
 		if( strcmp( chromosome_name, bam_header->target_name[i]) == 0)
 			return i;
-
-		/* Check if the chromosome name contains chr at the beginning
-		len = strlen( chromosome_name) + 4;
-		tmp = ( char*) getMem( sizeof( char) * len);
-		strcpy( tmp, "chr");
-		strcat( tmp, chromosome_name);
-
-		if( strcmp( tmp, bam_header->target_name[i]) == 0)
-		{
-			free( tmp);
-			return i;
-		}
-		free( tmp);*/
 	}
 	return -1;
 }
@@ -469,7 +456,7 @@ unsigned long encode_ten_x_barcode(char* source){
 }
 
 
-int32_t calculateInsertSize( int32_t pos_left, int32_t pos_right,uint16_t flag, int read_length)
+int32_t calculateInsertSize( int32_t pos_left, int32_t pos_right, uint16_t flag, int read_length)
 {
 	int32_t isize = 0;
 

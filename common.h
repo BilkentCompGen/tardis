@@ -14,6 +14,9 @@
 #define DELETION 'D'
 #define TANDEMDUP 'E'
 
+#define NUMTFORWARD 'N'
+#define NUMTREVERSE 'O'
+
 #define INVDUP 'W'
 #define INVDUPLEFT 'S'
 #define INVDUPRIGHT 'T'
@@ -70,12 +73,16 @@
 #define RPTDUP 5
 #define RPMEI 6
 #define RPINTERCHR 7;
+#define RPNUMT 8;
 
 /* Running mode of tardis */
 #define QUICK 0
 #define SENSITIVE 1
 extern int running_mode;
+extern int ten_x_flag;
+extern int output_hs_flag;
 extern int debug_mode; /* boolean stand-in to work in debug mode - .name and .clusters are created */
+extern int cluster_of_reads;
 
 // Track memory usage
 extern long long memUsage;
@@ -94,31 +101,24 @@ typedef struct _params
 	char* outprefix; /* prefix for the output files */
 	char* outdir; /* output directory */
 	int force_read_length; /* force read length to a certain value, discard those that are shorter. Hidden feature due to GIAB */
-	char run_vh; /* boolean stand-in to run VariationHunter */
-	char run_rd; /* boolean stand-in to run Read Depth */
-	char run_ns; /* boolean stand-in to run NovelSeq */
-	char run_sr; /* boolean stand-in to run SPLITREAD */
 	char no_soft_clip; /* boolean stand-in to skip soft clip */
 	int alt_mapping; /* check the alternative mapping locations from the xa field in bwa */
-	char skip_fastq; /* boolean stand-in to skip FASTQ dump */
-	char skip_sort; /* boolean stand-in to skip FASTQ sort */
-	char skip_remap; /* boolean stand-in to skip FASTQ remap */
-	char skip_vhcluster; /* boolean stand-in to skip VH clustering */
-	int  threads; /* number of threads to use for parallel mrFAST, and maybe future parallelization of TARDIS */
+	char skip_mrfast; /* boolean stand-in to skip mrFast mapping (If you already have the divet file created) */
+	int threads; /* number of threads to use for parallel mrFAST, and maybe future parallelization of TARDIS */
 	int num_bams; /* number of input BAM files */
 	int quick; /* boolean stand-in to work in bam-only mode (no divet) */
 	int sensitive; /* boolean stand-in to work in sensitive mode (divet) */
-	//int ten_x; /*boolean for whether we're using 10x data*/
-	//int output_hs; /*boolean for whether to record the homogeneity score (HS) in VCF regardless whether HS is used in set cover or not*/
+	int ten_x; /*boolean for whether we're using 10x data*/
+	int output_hs; /*boolean for whether to record the homogeneity score (HS) in VCF regardless whether HS is used in set cover or not*/
 	int make_sonic; /*make SONIC file and exit*/
 	int load_sonic; /*load SONIC file*/
 	char *sonic_info; /* SONIC reference information string for building */
 	int first_chr; /*the first chromosome as indexed in sonic. 0 by default*/
 	int last_chr; /*the last chromosome as indexed in sonic. chrom_count by default*/
-	int rd_threshold; /* Threshold is used in RD filtering, calWeight() in vh_setcover.c */
 	int mq_threshold; /* Minimum mapping quality */
 	int rp_threshold; /* Minimum read pair support */
 	int number_of_different_mei_types; /* Number of distinct MEI types e.g. ALU:L1:SVA has three different types */
+	int cluster_of_read; /* Number of clusters that a read can be involved. 10 by default */
 	char *sonic_file; /* SONIC file name */
 	sonic *this_sonic; /* SONIC */
 } parameters;

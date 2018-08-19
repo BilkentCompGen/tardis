@@ -36,7 +36,7 @@ void free_clusters()
 	int i;
 	clusters_final* tmp_cluster, *tmp_cluster_next;
 
-	for( i = 0; i < cluster_count; i++)
+	for( i = 0; i < MaxClusterCount; i++)
 	{
 		tmp_cluster = clusters_all[i];
 		while( tmp_cluster != NULL)
@@ -65,11 +65,27 @@ int free_readMappingEl( readMappingEl *ptr)
 	else
 	{
 		free_readMappingEl( ptr->next);
-		free( ptr->chromosome_name);
+		if(ptr->chromosome_name != NULL)
+			free( ptr->chromosome_name);
 		free( ptr);
 	}
 	return 1;
 }
+/*
+int free_readMappingEl( readMappingEl *ptr)
+{
+	readMappingEl *ptr_next;
+
+	while( ptr != NULL)
+	{
+		ptr_next = ptr->next;
+		if(ptr->chromosome_name != NULL)
+			free( ptr->chromosome_name);
+		free( ptr);
+		ptr = ptr_next;
+	}
+	return 1;
+}*/
 
 int free_clusterIdEl( clusterIdEl *ptr)
 {
@@ -136,6 +152,7 @@ readMappingEl *addToListOfReads(readMappingEl *linkList, readMappingEl element)
 	newEl->mapq2 = element.mapq2;
 	newEl->correctMappingQual = element.correctMappingQual;
 	newEl->next = linkList;
+	newEl->ten_x_barcode = element.ten_x_barcode;
 
 	return newEl;
 }
@@ -160,6 +177,7 @@ readMappingEl *addToListOfReads2(readMappingEl *linkList, clusters_final *elemen
 	newEl->mapq2 = element->mapping_quality_right;
 	//newEl->correctMappingQual = element.correctMappingQual;
 	newEl->next = linkList;
+	newEl->ten_x_barcode = element->ten_x_barcode;
 
 	return newEl;
 }
@@ -226,7 +244,18 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 	else if (SV_type == MEIREVERSE) {
 		breakpoint = listClusterEl[clusterId].posEndSV_Outer;
 	}
+	else if (SV_type == NUMTFORWARD) {
+		breakpoint = listClusterEl[clusterId].posStartSV_Outer;
+	}
+	else if (SV_type == NUMTREVERSE) {
+		breakpoint = listClusterEl[clusterId].posEndSV_Outer;
+	}
 	else if(SV_type == INSERTION) {
+		breakpoint = listClusterEl[clusterId].posStartSV_Outer;
+	}
+	if (SV_type == DELETION) {
+		start = listClusterEl[clusterId].posStartSV;
+		end = listClusterEl[clusterId].posEndSV;
 		breakpoint = listClusterEl[clusterId].posStartSV_Outer;
 	}
 
@@ -326,16 +355,23 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= TANDEMDUP lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
 		else if (SV_type == MEIFORWARD || SV_type == MEIREVERSE) {
-			lhomo =  lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
-			lhete =  lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
-			lnone =  lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			lhomo = lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
+			lhete = lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone = lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= MEI lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
+		else if (SV_type == NUMTFORWARD || SV_type == NUMTREVERSE) {
+			lhomo = lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
+			lhete = lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone = lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			score[count] = max(lhomo, lhete) / lnone;
+			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= NUMT lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
+		}
 		else if (SV_type == INSERTION) {
-			lhomo =  lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
-			lhete =  lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
-			lnone =  lpoisson(observedDiscordantRead, 0.0, READPAIR);
+			lhomo = lpoisson(observedDiscordantRead, expectedDiscordantRead, READPAIR);
+			lhete = lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
+			lnone = lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= Insertion lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
@@ -435,6 +471,133 @@ unsigned long hashing_function(unsigned char *str)
 	return hash;
 }
 
+/*Iterate over the cluster. Count total number of reads in cluster.
+ *Count total number of reads per barcode using hashtable structure.
+ *Iterate over the hashtable calculating sum for all over |B_i|^2, where |B_i| is the number of reads that has barcode B_i
+ *Return 1/n^2 times the sum
+ */
+
+void init_barcode_homogeneity_hashtable()
+{
+	int hashtable_index;
+
+	//initialize the heads of the chains in the hashtable
+	for( hashtable_index = 0; hashtable_index < hashtable_size; hashtable_index++)
+	{
+		hashtable[hashtable_index] = ( barcode_list_element*) getMem( sizeof( barcode_list_element));
+		hashtable[hashtable_index]->ten_x_barcode = 0;
+		hashtable[hashtable_index]->count = 0;
+		hashtable[hashtable_index]->next = NULL;
+	}
+}
+
+void free_barcode_homogeneity_hashtable()
+{
+	int i;
+	struct barcode_list_element *temp_ptr;
+	for( i = 0; i < hashtable_size; i++)
+	{
+		while(hashtable[i]->next)
+		{
+			temp_ptr = hashtable[i]->next->next;
+			free( hashtable[i]->next);
+			hashtable[i]->next = temp_ptr;
+		}
+		free( hashtable[i]);
+	}
+}
+
+double barcode_homogeneity_score(int clusterId)
+{
+	unsigned long total_read_count = 0;
+	double sum = 0.0, score = 1.0;
+	int i, found, hashtable_index;
+
+	struct barcode_list_element *current_list_element;
+	struct barcode_list_element *temp_ptr;
+	readMappingEl *ptrReadMapping;
+
+	ptrReadMapping = listClusterEl[clusterId].next;
+	while( ptrReadMapping != NULL)
+	{
+		if( ( read_names[ptrReadMapping->readId].readCovered == 0)
+				&& ( listClusterEl[clusterId].indIdCount[ptrReadMapping->indId] > -1)
+				&& ( signed long)ptrReadMapping->ten_x_barcode != -1)
+		{
+			total_read_count++;
+			//fprintf(stderr,"%d - %lu\n", ptrReadMapping->readId, ptrReadMapping->ten_x_barcode);
+			hashtable_index = ptrReadMapping->ten_x_barcode % hashtable_size;
+			current_list_element = hashtable[hashtable_index];
+
+			found = 0;
+			while( current_list_element->next)
+			{
+				if( current_list_element->next->ten_x_barcode == ptrReadMapping->ten_x_barcode)
+				{
+					current_list_element->next->count++;
+					found = 1;
+					break;
+				}
+				current_list_element = current_list_element->next;
+			}
+
+			if( found == 0)
+			{
+				current_list_element->next = ( barcode_list_element*)getMem( sizeof( barcode_list_element));
+				current_list_element->next->ten_x_barcode = ptrReadMapping->ten_x_barcode;
+				current_list_element->next->count = 1;
+				current_list_element->next->next = NULL;
+			}
+		}
+		ptrReadMapping = ptrReadMapping->next;
+	}
+
+	for( hashtable_index = 0; hashtable_index < hashtable_size; hashtable_index++)
+	{
+		current_list_element = hashtable[hashtable_index];
+
+		while( current_list_element->next)
+		{
+			sum = sum + ( ( double)current_list_element->next->count * ( double)current_list_element->next->count);
+			current_list_element = current_list_element->next;
+		}
+	}
+
+	for( i = 0; i < hashtable_size; i++)
+	{
+		while( hashtable[i]->next)
+		{
+			temp_ptr = hashtable[i]->next->next;
+			free(hashtable[i]->next);
+			hashtable[i]->next = temp_ptr;
+		}
+	}
+
+
+	if( total_read_count == 0)
+	{
+		listClusterEl[clusterId].homogeneity_score = score;
+		return 1.0;
+	}
+
+	score = sum / ( total_read_count * total_read_count);
+
+	//fprintf(stderr, "score= %lf, sum=%.4lf - count=%li\n\n\n\n", score, sum, total_read_count);
+
+	listClusterEl[clusterId].homogeneity_score = score;
+
+	if( ten_x_flag != 1)
+		return 1.0;
+
+	if( !( score > 1 || score < 0))
+		return score;
+
+	printf("Err: score isn't between 0-1: %f\n", score);
+
+	return inf;
+}
+
+
 float avgEditDistReadSupportingCluster(readMappingEl *list)
 {
 	int countTotal = 0, editDistanceSum = 0;
@@ -472,6 +635,7 @@ void markReadsCovered( int clusterId, int *countReads)
 	int minDelLength = 1000000000, maxDelLength = 1000000000, totalReadRemove = 0, count;
 	int readsToMark[totalNumInd];
 
+	listClusterEl[clusterId].weight_without_homogeniety_score_at_read_covering = listClusterEl[clusterId].weight_without_homogeniety_score;
 	readMappingEl *ptrRead;
 	clusterIdEl *ptrClusterId;
 	ptrRead = listClusterEl[clusterId].next;
@@ -533,7 +697,7 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 	int is_start_satellite, is_end_satellite, is_mid_satellite;
 	sonic_repeat *mei_start, *mei_end, *mei_mid;
 	bool MEI_Filter = false;
-	struct strvar* var_example;
+	struct strvar* var_example = NULL;
 
 	for( i = 0; i < params->num_bams; i++)
 		in_bams[i]->contribution = false;
@@ -587,21 +751,23 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 			MEI_Filter = true;
 	}
 
-	if( listClusterEl[cluster_id].SVtype == MEIFORWARD)
+	if( listClusterEl[cluster_id].SVtype == MEIFORWARD || listClusterEl[cluster_id].SVtype == NUMTFORWARD)
 	{
 		var_example = new_strvar( listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV,
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
-				MEI_Filter, false, listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].CNV_Score,
-				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support);
+				MEI_Filter, false, listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].mei_type, listClusterEl[cluster_id].CNV_Score,
+				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support, listClusterEl[cluster_id].homogeneity_score,
+				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
-	else if( listClusterEl[cluster_id].SVtype == MEIREVERSE)
+	else if( listClusterEl[cluster_id].SVtype == MEIREVERSE || listClusterEl[cluster_id].SVtype == NUMTREVERSE)
 	{
 		var_example = new_strvar( listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV,
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
-				MEI_Filter, false, listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].CNV_Score,
-				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support);
+				MEI_Filter, false, listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].mei_type, listClusterEl[cluster_id].CNV_Score,
+				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support, listClusterEl[cluster_id].homogeneity_score,
+				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
@@ -610,11 +776,13 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 		var_example = new_strvar( listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV,
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
 				listClusterEl[cluster_id].LowQual, listClusterEl[cluster_id].MEI_Del,
-				listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].CNV_Score,
-				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support);
+				listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].mei_type, listClusterEl[cluster_id].CNV_Score,
+				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support,
+				listClusterEl[cluster_id].homogeneity_score, listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
+	free( var_example);
 }
 
 void outputPickedCluster( bam_info** in_bams, parameters* params, FILE *fpVcf)
@@ -718,6 +886,12 @@ float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *cou
 		{
 			calculateCNVScore(in_bams, params, clusterId, listClusterEl[clusterId].SVtype, true, listClusterEl[clusterId].CNV_Score);
 			bestScore = listClusterEl[clusterId].CNV_Score[0];
+			if( listClusterEl[clusterId].SVtype == DELETION)
+			{
+				listClusterEl[clusterId].MEI_Del = true;
+				listClusterEl[clusterId].mei_type = NULL;
+				set_str( &(listClusterEl[clusterId].mei_type), mei->repeat_class);
+			}
 		}
 		else
 		{
@@ -732,6 +906,13 @@ float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *cou
 	{
 		if( supOfIndSeen[count] >= minimumSupNeeded)
 			countBestSetPicked[count] = supOfIndSeen[count];
+	}
+	double tmp = 0;
+	listClusterEl[clusterId].weight_without_homogeniety_score = bestScore;
+	if( bestScore < inf && (ten_x_flag == 1 || output_hs_flag == 1))
+	{
+		tmp = barcode_homogeneity_score(clusterId);
+		bestScore = ( float) bestScore * tmp;
 	}
 
 	//fprintf(stderr, "%.4lf - %.4lf\n", tmp, listClusterEl[clusterId].weight_without_homogeniety_score);
@@ -779,7 +960,10 @@ int pickSet(bam_info **in_bams, parameters *params)
 	//int isClusterSelected[sizeListClusterEl];
 
 	//for( clusterCounter = 0; clusterCounter < sizeListClusterEl; clusterCounter++)
-		//isClusterSelected[clusterCounter] = 0;
+	//isClusterSelected[clusterCounter] = 0;
+
+	if (ten_x_flag == 1 || output_hs_flag ==1)
+		init_barcode_homogeneity_hashtable();
 
 	while( numCallsRequested > 0)
 	{
@@ -835,8 +1019,14 @@ int pickSet(bam_info **in_bams, parameters *params)
 			}
 		}
 		else
+		{
+			if (ten_x_flag == 1 || output_hs_flag == 1)
+				free_barcode_homogeneity_hashtable();
 			return 0;
+		}
 	}
+	if (ten_x_flag == 1 || output_hs_flag == 1)
+		free_barcode_homogeneity_hashtable();
 	return 1;
 }
 
@@ -861,7 +1051,10 @@ void processTheSV( bam_info **in_bams, parameters *params, int listClusterId, in
 	set_str( &(listClusterEl[listClusterId].chromosome_name), tmp_cluster->chromosome_name1);
 
 	listClusterEl[listClusterId].mobileName = NULL;
-	set_str( &(listClusterEl[listClusterId].mobileName), tmp_cluster->mei_type);
+	set_str( &(listClusterEl[listClusterId].mobileName), tmp_cluster->mei_subclass);
+
+	listClusterEl[listClusterId].mei_type = NULL;
+	set_str( &(listClusterEl[listClusterId].mei_type), tmp_cluster->mei_type);
 
 	listClusterEl[listClusterId].SVtype = tmp_cluster->SV_type;
 	listClusterEl[listClusterId].next = NULL;
@@ -877,7 +1070,7 @@ void processTheSV( bam_info **in_bams, parameters *params, int listClusterId, in
 		listClusterEl[listClusterId].sr_support[count] = 0;
 	}
 
-	if( listClusterEl[listClusterId].SVtype == MEIFORWARD)
+	if( listClusterEl[listClusterId].SVtype == MEIFORWARD || listClusterEl[listClusterId].SVtype == MEIREVERSE)
 	{
 		while( tmp_cluster != NULL)
 		{
@@ -899,7 +1092,7 @@ void processTheSV( bam_info **in_bams, parameters *params, int listClusterId, in
 			tmp_cluster = tmp_cluster->next;
 		}
 	}
-	else if( listClusterEl[listClusterId].SVtype == MEIREVERSE)
+	else if( listClusterEl[listClusterId].SVtype == NUMTFORWARD || listClusterEl[listClusterId].SVtype == NUMTREVERSE)
 	{
 		while( tmp_cluster != NULL)
 		{
@@ -1048,6 +1241,7 @@ void init(bam_info **in_bams, parameters *params)
 		listClusterEl[count].clusterId = 0;
 		listClusterEl[count].oldBestIsGood = -1;
 		listClusterEl[count].next = NULL;
+		listClusterEl[count].homogeneity_score = 1.0;
 	}
 	listClusterElId = 0;
 
@@ -1131,8 +1325,8 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 
 	cnvscoreFile = safe_fopen("output.score", "w");
 	debugSR = safe_fopen("debug.sr", "w");
-	init( in_bams, params);
 
+	init( in_bams, params);
 	fprintf( stderr, ".");
 	fflush( stderr);
 	pickSet( in_bams, params);
@@ -1156,6 +1350,7 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 		for( i = 0; i < sizeListClusterEl; i++)
 		{
 			free( listClusterEl[i].mobileName);
+			free( listClusterEl[i].mei_type);
 			free( listClusterEl[i].chromosome_name);
 			free( listClusterEl[i].indIdCount);
 			free( listClusterEl[i].CNV_Score);

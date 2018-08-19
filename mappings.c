@@ -97,6 +97,7 @@ int primLeftAltRightMappings( library_properties *library, bam1_t* bam_alignment
 			/* Left-end is the first read */
 			newEl = ( alternativeMapping*) getMem( sizeof( alternativeMapping));
 
+			newEl->ten_x_barcode = primLeft->ten_x_barcode;
 			newEl->mapp = 0;
 			int len = strlen( primLeft->readName);
 			newEl->readName = ( char*) getMem( ( len + 5) * sizeof( char));
@@ -181,6 +182,7 @@ int altLeftAltRightMappings( library_properties *library, bam1_t* bam_alignment,
 			newEl = ( alternativeMapping*) getMem( sizeof( alternativeMapping));
 
 			newEl->mapp = 0;
+			newEl->ten_x_barcode = altLeft->ten_x_barcode;
 
 			newEl->readName = NULL;
 			set_str( &(newEl->readName), altLeft->readName);
@@ -289,6 +291,10 @@ int altLeftPrimRightMappings( bam_info* in_bam, parameters* params, int lib_inde
 	newEl = ( alternativeMapping *) getMem( sizeof( alternativeMapping));
 
 	bam1_core_t bam_alignment_core = bam_alignment->core;
+
+	/* Need to be put into into divet row */
+	if ( params->ten_x)
+		newEl->ten_x_barcode = encode_ten_x_barcode( bam_aux_get( bam_alignment, "BX"));
 
 	len = strlen( bam_get_qname( bam_alignment));
 	newEl->readName = ( char*) getMem( ( len + 5) * sizeof( char));
@@ -440,6 +446,14 @@ int primary_mapping( bam_info* in_bam, parameters* params, int lib_index, bam1_t
 	bam_align->qual = bam_alignment_core.qual;
 	bam_align->isize = bam_alignment_core.isize;
 
+	if ( params->ten_x)
+	{
+		bam_align->ten_x_barcode = encode_ten_x_barcode( bam_aux_get( bam_alignment, "BX"));
+		if (bam_align->ten_x_barcode != (unsigned long)-1){
+			bam_align->ten_x_barcode = bam_align->ten_x_barcode | ((unsigned long)lib_index << (sizeof(unsigned long)-1)*8); //use the last byte of the ten x barcode to make sure no two libraries share a barcode
+		}
+		//fprintf(stderr,"%lu - %lu\n", bam_align->ten_x_barcode, tenx);
+	}
 
 	tmp = bam_aux_get( bam_alignment, "NM");
 	bam_align->edit_distance = 0;

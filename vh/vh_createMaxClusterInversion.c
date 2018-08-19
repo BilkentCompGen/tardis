@@ -20,6 +20,7 @@ void vh_addToGenomeIndex_Inversion ( sonic *this_sonic, int chr_index)
 		while (divetReadMappingPtr != NULL)
 		{
 			if (strcmp (divetReadMappingPtr->chromosome_name, this_sonic->chromosome_names[chr_index]) == 0
+					&& !sonic_is_gap( this_sonic, this_sonic->chromosome_names[chr_index], divetReadMappingPtr->locMapLeftEnd, divetReadMappingPtr->locMapRightStart)
 					&& (divetReadMappingPtr->locMapRightStart - divetReadMappingPtr->locMapLeftEnd < maxInversionLen)
 					&& divetReadMappingPtr->locMapRightEnd < this_sonic->chromosome_lengths[chr_index] &&
 					divetReadMappingPtr->locMapLeftStart > 0)

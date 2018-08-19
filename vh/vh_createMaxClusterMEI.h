@@ -27,6 +27,7 @@ typedef struct mei_Reads{
 	char *indName;
 	int libId;
 	int readTypeSupport;// 0: ReadPair, 1: SplitRead (Soft clipping of the beginning of the read, 2: SplitRead (Soft clipping at the end of the read)
+	unsigned long int ten_x_barcode;
 
 	struct mei_Reads *next;
 } mei_Reads;

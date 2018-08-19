@@ -18,6 +18,7 @@ htslib also requires:
  * libbz2
  * liblzma
 
+
 Fetching TARDIS
 ===============
 
@@ -67,9 +68,19 @@ Running TARDIS - QUICK mode
 	tardis -i myinput.bam --ref human_g1k_v37.fasta --sonic human_g1k_v37.sonic  \
 		--out myoutput
 
-Additional parameters in SENSITIVE mode, helpful when debugging:
 
-	--skip-fastq --skip-sort --skip-remap
+Running TARDIS - SENSITIVE mode (mrFAST Mappings)
+=================================================
+
+Sensitive mode uses mrFast mappings (all possible mappings) with read-pair and read-depth signatures. This mode can detect Deletions, Insertions, Inversions, Mobile Element Insertions and Tandem Duplications.
+
+	tardis -i myinput.bam --ref human_g1k_v37.fasta --sonic human_g1k_v37.sonic  \
+		--sensitive --out myoutput
+
+This command first runs mrFAST and creates the DIVET file that contains all possible mappings of the reads in your BAM file. However, if you already have the DIVET files (there should be as many DIVET files as there are libraries in your BAM files), you can use --skip-mrfast
+
+DIVET files should be inside the TARDIS directory or under the divet/ folder
+
 
 All parameters
 ==============
@@ -87,9 +98,7 @@ All parameters
 	Additional parameters for sensitive mode:
 
 	--sensitive                : Sensitive mode that uses all map locations. Requires mrFAST remapping.
-	--skip-fastq               : Skip FASTQ dump for discordants. Use this only if you are regenerating the calls. Sensitive mode only.
-	--skip-sort                : Skip FASTQ sort for discordants. Use this only if you are regenerating the calls. Sensitive mode only. 
-	--skip-remap               : Skip FASTQ remapping for discordants. Use this only if you are regenerating the calls. Sensitive mode only
+	--skip-mrfast              : Skip mrFAST mapping. Use this only if you already have the correct divet file. Sensitive mode only
 	--threads                  : Number of threads for mrFAST to remap discordant reads.
 
 	Additional parameters to build SONIC file within TARDIS:
@@ -99,6 +108,11 @@ All parameters
 	--gaps  [gaps file]        : Assembly gap coordinates in BED3 format.
 	--dups  [dups file]        : Segmental duplication coordinates in BED3 format.
 	--reps  [reps file]        : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.
+	
+	Additional parameters for 10X Genomics Linked Reads (under development):
+
+	--10x                      : Enable 10X Genomics Linked Reads mode.
+	--output-hs                : Output the selected clusters homogeneity scores to the VCF file.
 
 	Information:
 	--version                  : Print version and exit.
@@ -115,6 +129,8 @@ Alternatively, use VCFlib: https://github.com/vcflib/vcflib
 
 
 
+
+=======
 ## Running TARDIS via Docker
 
 To build a Docker image:
@@ -127,6 +143,7 @@ Your image named "tardis" should be ready. You can run tardis using this image b
 	docker run --user=$UID -v /path/to/inputs:/input -v /path/to/outputdir:/output tardis [args]
 
 - ```[args]``` are usual arguments you would pass to tardis executable. Be careful about mapping. You need to specify folders respective to container directory structure.
-- You need to map host machine input and output directory to responding volume directories inside the container. These options are specified by '-v' argment.
+- You need to map host machine input and output directory to responding volume directories inside the container. These options are specified by '-v' argument.
 - Docker works with root user by default. "--user" option saves your outputs.
+
 

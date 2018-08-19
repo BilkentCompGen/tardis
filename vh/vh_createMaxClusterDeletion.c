@@ -113,11 +113,13 @@ int vh_createBreakPointIntervals_Deletion (int brkPointLeft)
 	RightBrkPointInterval *temp;
 	MappingOnGenome *ptrMappingOnGenome;
 
+	//qsort (g_listRightBrkPointIntr, g_listRightBrkPointIntrCount, sizeof (struct RightBrkPointInterval), vh_compare);
 	if (g_listRightBrkPointIntrCount > 0)
 	{
 		//TODO: Can this be made more efficient using a Heap?
 		while (count < g_listRightBrkPointIntrCount)
 		{
+			//fprintf(stderr, "%d - %d\n", (g_listRightBrkPointIntr[count].readMappingPtr->locMapLeftEnd + g_listRightBrkPointIntr[count].readMappingPtr->libInfo->maxDelta), brkPointLeft);
 			if (g_listRightBrkPointIntr[count].readMappingPtr->locMapLeftEnd +
 					g_listRightBrkPointIntr[count].readMappingPtr->libInfo->maxDelta == brkPointLeft)
 			{
@@ -132,7 +134,9 @@ int vh_createBreakPointIntervals_Deletion (int brkPointLeft)
 				tempListRightBrkPointIntrId++;
 			}
 		}
+		//fprintf(stderr, "\n");
 	}
+
 	ptrMappingOnGenome = g_genomeIndexStart[brkPointLeft];
 	while( ptrMappingOnGenome != NULL)
 	{

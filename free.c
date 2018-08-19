@@ -35,6 +35,7 @@ void free_mappings( bam_info** in_bams, parameters* params)
 	discordantMapping *ptrDisMap, *ptrDisMapNext;
 	alternativeMapping *ptrAltMap, *ptrAltMapNext;
 	discordantMappingMEI *ptrMEIMap, *ptrMEIMapNext;
+	discordantMappingNUMT *ptrNUMTMap, *ptrNUMTMapNext;
 
 	for( bam_index = 0; bam_index < params->num_bams; bam_index++)
 	{
@@ -55,6 +56,20 @@ void free_mappings( bam_info** in_bams, parameters* params)
 				ptrMEIMap = ptrMEIMapNext;
 			}
 			in_bams[bam_index]->libraries[i]->listMEI_Mapping = NULL;
+
+			ptrNUMTMap = in_bams[bam_index]->libraries[i]->listNUMT_Mapping;
+			while( ptrNUMTMap != NULL)
+			{
+				ptrNUMTMapNext = ptrNUMTMap->next;
+				if( ptrNUMTMap->chromosome_name != NULL)
+					free( ptrNUMTMap->chromosome_name);
+				if( ptrNUMTMap->readName != NULL)
+					free( ptrNUMTMap->readName);
+				if( ptrNUMTMap != NULL)
+					free( ptrNUMTMap);
+				ptrNUMTMap = ptrNUMTMapNext;
+			}
+			in_bams[bam_index]->libraries[i]->listNUMT_Mapping = NULL;
 
 			if( !params->no_soft_clip)
 			{
@@ -165,21 +180,17 @@ void free_the_rest( bam_info** in_bams, parameters* params)
 
 void free_sensitive(bam_info** in_bams, parameters *params)
 {
-	int lib_index, i, j;
+	int i, j;
 
-	if ( params->run_rd == 1)
+
+	/* Free the RD array */
+	for( i = 0; i < params->num_bams; i++)
 	{
-		/* Free the RD array */
-		for( i = 0; i < params->num_bams; i++)
-		{
-			for( lib_index = 0; lib_index < in_bams[i]->num_libraries; lib_index++)
-			{
-				for( j = 0; j < params->this_sonic->number_of_chromosomes; j++)
-					free( in_bams[i]->read_depth[j]);
-				free( in_bams[i]->read_depth);
-			}
-		}
+		for( j = params->first_chr; j <= params->last_chr; j++)
+			free( in_bams[i]->read_depth[j]);
+		free( in_bams[i]->read_depth);
 	}
+
 
 	for( i = 0; i < params->num_bams; i++)
 	{
@@ -210,7 +221,7 @@ void free_sensitive(bam_info** in_bams, parameters *params)
 
 void free_quick(bam_info** in_bams, parameters *params)
 {
-	int lib_index, i, j;
+	int i, j;
 
 	/* Free bams and related libraries */
 	for( i = 0; i < params->num_bams; i++)

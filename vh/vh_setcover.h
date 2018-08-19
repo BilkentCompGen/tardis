@@ -15,7 +15,7 @@
 #include "../variants.h"
 
 #define maxChroSize 1000000000
-#define MaxClusterCount 1000000
+#define MaxClusterCount 1750000
 #define inf 10000000 // a constant to represent infinity
 #define maxLengthSV_Del 500000 // maximum length of SV allowed
 #define maxLengthSV_Inv 20000000
@@ -54,6 +54,7 @@ typedef struct clusters_final
 	int mapping_quality_right;
 	float correct_mapping_qual;
 	bool split_read;
+	unsigned long ten_x_barcode;
 
 	struct clusters_final *next;
 } clusters_final;
@@ -104,6 +105,7 @@ typedef struct readMappingEl{
 	int mapq2;
 	float probEditDist;
 	float correctMappingQual;
+	unsigned long ten_x_barcode;
 	struct readMappingEl *next; //ptr to the next readMappingEl in this cluster
 }readMappingEl;
 
@@ -123,13 +125,19 @@ typedef struct clusterEl{
 	int oldBestIsGood; // is the last best score computed for this SV still the best or things have changes
 	float oldBestScore; // Whats is the best old score
 	int bestReadToRemove[totalNumInd]; // the support for each individual for the best old score(if oldBestIsGood is true then this array is still the best selection from this cluster).
-	char *mobileName;
+	char *mobileName; //MEI Subclass
+	char *mei_type; //MEI Class
 	struct readMappingEl *next; //a array of number of individuals for each list of read mappings (i.e. for each individual we have a different list of read mappings and they should be sorted).
 	struct readMappingEl *readMappingSelected; // The link list of all the read mappings which have been selected by set cover for this SV.
 
 	double *CNV_Score;
+
+    double weight_without_homogeniety_score;
+	double homogeneity_score;
 	bool MEI_Del;
 	bool LowQual;
+
+    double weight_without_homogeniety_score_at_read_covering;
 }clusterEl;
 
 clusterEl *listClusterEl; // the array of all the cluster reads
@@ -143,6 +151,13 @@ typedef struct clusterElRead{
 	struct readMappingEl readMappingElArray[maxListClusterSize];
 }clusterElRead;
 
+
+//Used to calculate barcode_homogeneity_score. It makes tha hash table elements
+typedef struct barcode_list_element{
+	unsigned long ten_x_barcode;
+	unsigned long count;
+	struct barcode_list_element* next;
+}barcode_list_element;
 
 float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *countBestSetPicked);
 void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf);

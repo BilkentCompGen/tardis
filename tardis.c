@@ -36,7 +36,7 @@ int main( int argc, char** argv)
 
 	/* Set program parameters */
 	init_params( &params);
-
+	fprintf(stderr,"AAAAAAAAAAAAAAAAA");
 	/* Parse command line arguments */	
 	return_value = parse_command_line( argc, argv, params);
 
@@ -46,7 +46,7 @@ int main( int argc, char** argv)
 	logFile = safe_fopen (log_file_path, "w");
 	fprintf( logFile, "#CreationDate=%d.%d.%d\n\n", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday);
 
-	
+
 	if( return_value == 0)
 		exit(EXIT_SUCCESS);
 	else if( return_value != 1)
@@ -77,8 +77,12 @@ int main( int argc, char** argv)
 	{
 		in_bams[i] = ( bam_info*) getMem( sizeof( bam_info));
 		in_bams[i]->sample_name = NULL;
-		load_bam( in_bams[i], params->bam_file_list[i], params->alt_mapping);
+		load_bam( in_bams[i], params->bam_file_list[i], params->alt_mapping, i);
 	}
+
+	/* Passing the flags to VH */
+	ten_x_flag = params->ten_x;
+	output_hs_flag = params->output_hs;
 
 	print_quote();
 	fprintf( stderr, "\n\tRun. Run, you clever boy... And remember.\n");
@@ -89,30 +93,20 @@ int main( int argc, char** argv)
 		fprintf( stderr, "\nTARDIS is running in Sensitive Mode - using mrFAST...\n\n");
 		fprintf( logFile, "(Running in sensitive mode - using mrFAST)\n\n");
 
-		/* Extract FASTQs of discordants, OEAs, and orphans */
-		if( params->skip_fastq == 0)
+		/* If you already have the correct divet file */
+		if( params->skip_mrfast == 0)
 		{
+			/* Extract FASTQs of discordants, OEAs, and orphans */
 			for( i = 0; i < params->num_bams; i++)
 				create_fastq( in_bams[i], params->bam_file_list[i], params);
 
 			fprintf( stderr, "All FASTQ files ready for remapping.\n");
-		}
-		else
-			fprintf( stderr, "Skipping FASTQ creation.\n");
 
-
-		/* Remap with mrFAST */
-		if( params->skip_remap == 0)
-		{
+			/* Remap with mrFAST */
 			return_value = remap_mrfast( params, in_bams, cfg);
-
 			if( return_value != RETURN_SUCCESS)
 				return EXIT_EXTERNAL_PROG_ERROR;
 		}
-		else
-			/* TODO: check if the remapping output indeed exists, so it is safe to skip */
-			fprintf( stderr, "Skipping remapping step.\n");
-
 		/* Read depth calculation */
 		return_value = run_rd( in_bams, params);
 		if( return_value != RETURN_SUCCESS)

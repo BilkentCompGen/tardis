@@ -324,8 +324,7 @@ int run_vh( parameters *params, bam_info ** in_bams)
 	print_vcf_header( fpVcf, in_bams, params);
 
 	vh_logInfo( "Calculating maximal clusters.");
-	if ( !params->skip_vhcluster) // this parameter is only intended for debugging purposes. End users shouldn't use this
-		vh_clustering( in_bams, params, preProsPrune, outputfile, outputread, overMapLimit);
+	vh_clustering( in_bams, params, preProsPrune, outputfile, outputread, overMapLimit);
 
 	vh_logInfo( "Applying SET-COVER approximation to find putative structural variation.");
 	vh_setcover( in_bams, params, fpVcf);

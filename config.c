@@ -94,7 +94,7 @@ void load_config( configuration* cfg, parameters* params)
 			fprintf( stderr, "bcftools path: %s\n", cfg->path_bcftools);
 		}
 		 */
-		if( ( running_mode == SENSITIVE) && ( params->skip_remap == 0))
+		if( ( running_mode == SENSITIVE) && ( params->skip_mrfast == 0))
 		{
 			if( cfg->path_mrfast == NULL)
 			{
