@@ -5,6 +5,8 @@ Toolkit for Automated and Rapid DIscovery of Structural variants
 
 Soylev, A., Kockan, C., Hormozdiari, F., & Alkan, C. (2017). Toolkit for automated and rapid discovery of structural variants. Methods, 129, 3-7. https://doi.org/10.1016/j.ymeth.2017.05.030
 
+Soylev, A., Le, T., Amini, H., Alkan, C., & Hormozdiari, F. (2018). Discovery of tandem and interspersed segmental duplications using high throughput sequencing. bioRxiv, posted August 16, 2018. https://doi.org/10.1101/393694
+
 Requirements
 ============
 
