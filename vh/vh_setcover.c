@@ -1311,7 +1311,9 @@ void init(bam_info **in_bams, parameters *params)
 void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 {
 	int i;
-
+	char *debugsr_path;
+	char *outputscore_path;
+	
 	numCallsRequested = maxNumSV;
 
 	sv_count = 0;
@@ -1323,9 +1325,16 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 	if( running_mode == SENSITIVE)
 		fprintf( logFile, "Total Cluster Count= %d\n", cluster_count);
 
-	cnvscoreFile = safe_fopen("output.score", "w");
-	debugSR = safe_fopen("debug.sr", "w");
-
+	outputscore_path = (char *) getMem(sizeof(char) * (1+strlen("output.score")+strlen(params->outdir)));
+	sprintf(outputscore_path, "%s%s", params->outdir, "output.score");
+	cnvscoreFile = safe_fopen(outputscore_path, "w");
+	free(outputscore_path);
+	
+	debugsr_path = (char *) getMem(sizeof(char) * (1+strlen("debug.sr")+strlen(params->outdir)));
+	sprintf(debugsr_path, "%s%s", params->outdir, "debug.sr");
+	debugSR = safe_fopen(debugsr_path, "w");
+	free(debugsr_path);
+	
 	init( in_bams, params);
 	fprintf( stderr, ".");
 	fflush( stderr);

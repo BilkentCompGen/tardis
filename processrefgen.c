@@ -196,7 +196,7 @@ int run_rd( bam_info** in_bam, parameters* params)
 		in_bam[bam_index]->bam_file_index = sam_index_load( in_bam[bam_index]->bam_file, params->bam_file_list[bam_index]);
 		if( in_bam[bam_index]->bam_file_index == NULL)
 		{
-			fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load)\n");
+			fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load2)\n");
 			exit( 1);
 		}
 

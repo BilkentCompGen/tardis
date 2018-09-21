@@ -534,7 +534,7 @@ int read_mapping( library_properties *library, parameters* params, bam1_t* bam_a
 	return -1;
 }
 
-void read_bam( bam_info* in_bam, parameters* params)
+int read_bam( bam_info* in_bam, parameters* params)
 {
 	/* Variables */
 	int i, chr_index_bam, return_type, ed, len, lib_index;
@@ -584,6 +584,10 @@ void read_bam( bam_info* in_bam, parameters* params)
 			del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, numt_cnt_bam, sr_cnt_bam, alt_cnt_bam);
 	fprintf( logFile, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li Split Read and %li XA regions found in BAM.\n",
 			del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam, alt_cnt_bam);
+
+	if (del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + numt_cnt_bam + sr_cnt_bam + alt_cnt_bam == 0)
+	  return 1;
+	return 0;
 }
 
 
@@ -595,6 +599,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 	char outputread[MAX_SEQ];
 	char svfile[MAX_SEQ];
 	FILE *fpVcf = NULL;
+	int skip_chromosome = 0;
 
 	sprintf( outputread, "%s.name", params->outprefix);
 	sprintf( outputfile, "%s.clusters", params->outprefix);
@@ -612,11 +617,6 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 		sprintf( outputfile, "%s.clusters", params->outprefix);
 
-		if( !params->no_soft_clip)
-		{
-			fprintf( stderr, "\nReading reference genome");
-			readReferenceSeq( params, chr_index);
-		}
 
 		for( bam_index = 0; bam_index < params->num_bams; bam_index++)
 		{
@@ -630,7 +630,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			in_bams[bam_index]->bam_file_index = sam_index_load( in_bams[bam_index]->bam_file, params->bam_file_list[bam_index]);
 			if( in_bams[bam_index]->bam_file_index == NULL)
 			{
-				fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load)\n");
+			        fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load): %s\n", params->bam_file_list[bam_index]);
 				exit( 1);
 			}
 
@@ -659,15 +659,37 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			init_rd_per_chr( in_bams[bam_index], params, chr_index);
 
 			/* Read bam file for this chromosome */
-			read_bam( in_bams[bam_index], params);
+			skip_chromosome = read_bam( in_bams[bam_index], params);
 
+
+			if ( skip_chromosome){
+			       /* Close the BAM file */
+			       return_value = hts_close( in_bams[bam_index]->bam_file);
+			       if( return_value != 0)
+				 {
+				   fprintf( stderr, "Error closing BAM file\n");
+				   exit( 1);
+				 }
+			       /* Free the bam related files */
+			       bam_itr_destroy( in_bams[bam_index]->iter);
+			       bam_hdr_destroy( in_bams[bam_index]->bam_header);
+			       hts_idx_destroy( in_bams[bam_index]->bam_file_index);
+			       continue;
+			}
+			
 			//fprintf( stderr, "%d altLeftPrimRight, %d primRightAltLeft, %d altLeftAltRight, %d primLeftAltRight\n", altLeftPrimRight, primRightAltLeft, altLeftAltRight, primLeftAltRight);
 
 			if( !params->no_soft_clip)
 			{
 				/* Count the number of softclip reads which are clustering for each read */
 				//fprintf( stderr, "\nCollecting soft clipped read information");
-				fprintf( stderr, "\nRunning Split Read..");
+			        if( !params->no_soft_clip)
+				  {
+				    fprintf( stderr, "\nReading reference genome [%s]", params->this_sonic->chromosome_names[chr_index]);
+				    readReferenceSeq( params, chr_index);
+				  }
+				
+				fprintf( stderr, "\nRunning Split Read mapping..");
 				countNumSoftClipInCluster( params, in_bams[bam_index], chr_index);
 				fprintf( stderr, "..");
 				//fprintf( stderr, "\nRemapping soft clipped reads");
@@ -694,7 +716,8 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			total_read_count += del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + numt_cnt_bam + sr_cnt_bam + alt_cnt_bam;
 			del_cnt_bam = 0, ins_cnt_bam = 0, inv_cnt_bam = 0, mei_cnt_bam = 0, numt_cnt_bam = 0, tandup_cnt_bam = 0, sr_cnt_bam = 0, alt_cnt_bam = 0;
 		}
-		if( not_in_bam == 1)
+		
+		if( not_in_bam == 1 || total_read_count == 0)
 			continue;
 
 		if( !params->no_soft_clip)

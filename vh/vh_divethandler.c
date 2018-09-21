@@ -8,7 +8,7 @@
 
 #define LINE_READING_LENGTH 512
 struct LibraryInfo *g_libInfo = NULL;
-FILE *divet_filee;
+FILE *divet_file;
 
 int scffab = 0, scffba = 0, scfrab = 0, scfrba = 0, scrfab = 0, scrfba = 0;
 long del_cnt_div = 0, ins_cnt_div = 0, inv_cnt_div = 0, tandup_cnt_div = 0, sr_cnt_div = 0, alt_cnt_div = 0;
@@ -370,7 +370,7 @@ DivetRow *vh_loadDivetRowFromBamAlternative( alternativeMapping *discordantReadP
 		orientRight = FORWARD;
 
 
-	fprintf( divet_filee, "%s\t%s\t%d\t%d\t%c\t=\t%d\t%d\t%c\t%c\t%d\t%d\t%d\n", discordantReadPtr->readName, discordantReadPtr->chromosome_name,
+	fprintf( divet_file, "%s\t%s\t%d\t%d\t%c\t=\t%d\t%d\t%c\t%c\t%d\t%d\t%d\n", discordantReadPtr->readName, discordantReadPtr->chromosome_name,
 			discordantReadPtr->pos1, discordantReadPtr->pos1_End, orientLeft, discordantReadPtr->pos2,
 			discordantReadPtr->pos2_End, orientRight, SV, discordantReadPtr->editDistance,
 			discordantReadPtr->mQual1, discordantReadPtr->mQual2);
@@ -729,11 +729,17 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 	int lib_cnt, read_cnt;
 	int j, bam_index, chr, divet_row_count = 0;
 	struct LibraryInfo *newLibInfo, *cursor, *t;
-
+	char *divetfile_path;
+	
 	g_maxListBrkPointIntr = MAXLISTBRKPOINTINTR;
 	g_libInfo = NULL;
 
-	divet_filee = safe_fopen ("divv.vh", "w");
+	
+	divetfile_path = (char *) getMem(sizeof(char) * (1+strlen("divv.vh")+strlen(params->outdir)));
+	sprintf(divetfile_path, "%s%s", params->outdir, "divv.vh");
+
+	divet_file = safe_fopen (divetfile_path, "w");
+	free(divetfile_path);
 	del_cnt_div = 0, ins_cnt_div = 0, inv_cnt_div = 0, tandup_cnt_div = 0, sr_cnt_div = 0, alt_cnt_div = 0;
 
 	for( bam_index = 0; bam_index < params->num_bams; bam_index++)
@@ -856,7 +862,7 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 		}
 	}
 	fprintf( logFile, "%li Split Read Divets\n", sr_cnt_div);
-	fclose( divet_filee);
+	fclose( divet_file);
 	return divet_row_count;
 }
 
