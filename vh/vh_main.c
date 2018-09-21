@@ -317,7 +317,7 @@ int run_vh( parameters *params, bam_info ** in_bams)
 	{
 		for ( j = 0; j < in_bams[i]->num_libraries; j++)
 		{
-			sprintf( divetfile, "%s-%s.sam_DIVET.vh",  in_bams[i]->sample_name, in_bams[i]->libraries[j]->libname);
+		        sprintf( divetfile, "%s/%s-%s.sam_DIVET.vh", params->outdir, in_bams[i]->sample_name, in_bams[i]->libraries[j]->libname);
 			set_str( &( in_bams[i]->libraries[j]->divet), divetfile);
 		}
 	}
