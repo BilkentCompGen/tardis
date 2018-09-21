@@ -54,7 +54,7 @@ int main( int argc, char** argv)
 	sprintf(log_file_path, "%s%s", params->outdir, "tardis.log");
 	logFile = safe_fopen (log_file_path, "w");
 	fprintf( logFile, "#CreationDate=%d.%d.%d\n\n", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday);
-
+	free(log_file_path);
 
 	/* Load configuration file (created if it does not exist) */
 	cfg = ( configuration*) getMem( sizeof( configuration));
