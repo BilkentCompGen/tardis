@@ -20,6 +20,9 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) -c $(CFLAGS) $< -o $@
 
 clean:
+	make clean -C htslib
+	make clean -C sonic
+	make clean -C vh
 	rm -f $(EXECUTABLE) *.o *~
 
 libs:

@@ -6,6 +6,8 @@
 void load_config( configuration* cfg, parameters* params)
 {
 	FILE* config;
+	FILE *pipe;
+	char executable_path[MAX_LENGTH];
 	char* next_line = NULL;
 	char config_filename[MAX_LENGTH];
 	size_t len = 0;
@@ -19,6 +21,36 @@ void load_config( configuration* cfg, parameters* params)
 	cfg->path_gnuplot = NULL;
 	cfg->path_megablast = NULL;
 
+
+	
+	
+	/* this function will be deprecated - CAN ALKAN - September 21, 2018*/
+
+
+	/* pre-deprecation code */
+
+	pipe = popen( "which mrfast 2>/dev/null", "r");
+	if( pipe == NULL)
+	{
+		fprintf( stderr, "Error opening pipe\n");
+	}
+	else
+	{
+		if( fgets( executable_path, MAX_LENGTH, pipe) == NULL)
+		{
+			fprintf( stderr, "mrfast not found in PATH. Install it or manually configure the %s file.\n", config_filename);
+		}
+		else
+		{
+			set_str( &( cfg->path_mrfast), executable_path);
+		}
+		pclose( pipe);
+	}
+
+	return;
+
+	/* remainder code will be deprecated */
+	
 	/* Combine the home directory path with the name of the configuration file */
 	sprintf( config_filename, "%s/%s", getenv( "HOME"), CONFIG_FILE);
 
