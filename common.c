@@ -489,13 +489,13 @@ void get_working_directory(parameters *params){
   char *directory;
 
   int i;
+
   
   directory = strrchr(params->outprefix, '/');
 
   if (directory == NULL)
     set_str(&(params->outdir), "./");
 
-  return;
     
   i = 0;
   while (params->outprefix+i != directory)
