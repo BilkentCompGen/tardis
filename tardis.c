@@ -40,10 +40,14 @@ int main( int argc, char** argv)
 	return_value = parse_command_line( argc, argv, params);
 
 
-	if( return_value == 0)
+	if( return_value == 0){
+	        fprintf(stderr, "parse_command_line returned 0.\n");
 		exit(EXIT_SUCCESS);
-	else if( return_value != 1)
+	}
+	else if( return_value != 1){
+	        fprintf(stderr, "parse_command_line returned %d.\n", return_value);
 		exit( return_value);
+	}
 
 	/* Keeping simple logs in tardis.log file */
 	log_file_path = (char *) getMem(sizeof(char) * (11+strlen(params->outdir)));
