@@ -354,6 +354,8 @@ void print_help( void)
 	fprintf( stdout, "\t--read-count [int]         : # of clusters that a specific read can be involved in (Default is 10).\n");
 	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]   : List of mobile element names.\n");
 	fprintf( stdout, "\t--no-soft-clip             : Skip soft clip remapping.\n");
+	fprintf( stdout, "\t--no-interdup              : Skip interspersed duplication clustering.\n");
+	fprintf( stdout, "\t--resolved	               : Output sequence resolved vcf calls.\n");
 	fprintf( stdout, "\t--xa                       : Look for the alternative mapping locations in BWA.\n");
 	fprintf( stdout, "\t--first-chr [chr_index]	   : Start running from a specific chromosome [index in reference file].\n");
 	fprintf( stdout, "\t--last-chr [chr_index]	   : Run up to a specific chromosome [index in reference file].\n");
