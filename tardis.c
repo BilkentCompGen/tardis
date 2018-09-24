@@ -41,11 +41,11 @@ int main( int argc, char** argv)
 
 
 	if( return_value == 0){
-	        fprintf(stderr, "parse_command_line returned 0.\n");
+	  /*        fprintf(stderr, "parse_command_line returned 0.\n"); */
 		exit(EXIT_SUCCESS);
 	}
 	else if( return_value != 1){
-	        fprintf(stderr, "parse_command_line returned %d.\n", return_value);
+	  /*      fprintf(stderr, "parse_command_line returned %d.\n", return_value); */
 		exit( return_value);
 	}
 
