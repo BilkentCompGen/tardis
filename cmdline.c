@@ -32,8 +32,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 {
 	int index;
 	int o;
-	static int sensitive = 0, no_soft_clip = 0, debug = 0;
-	static int skip_mrfast = 0, quick = 0, ten_x = 0, output_hs = 0, alt_mapping = 0;
+	static int sensitive = 0, no_soft_clip = 0, debug = 0, no_interdup = 0;
+	static int skip_mrfast = 0, quick = 0, ten_x = 0, output_hs = 0, alt_mapping = 0, resolved = 0;
 	static int make_sonic = 0;
 	static int load_sonic = 0;
 	static int do_remap = 0;
@@ -63,8 +63,10 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"rp", required_argument, 0, 'j'},
 			{"read-cluster", required_argument, 0, 'k'},
 			{"no-soft-clip", no_argument, &no_soft_clip, 1 },
+			{"no-interdup", no_argument, &no_interdup, 1 },
 			{"debug", no_argument, &debug, 1 },
 			{"xa", no_argument, &alt_mapping, 1 },
+			{"resolved", no_argument, &resolved, 1 },
 			{"sensitive", no_argument, &sensitive,    1 },
 			{"skip-mrfast", no_argument, &skip_mrfast,  1 },
 			{"quick" , no_argument, &quick,  1 },
@@ -308,6 +310,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	params->sensitive = sensitive;
 	params->number_of_different_mei_types = count_mei_columns( params->mei);
 	params->alt_mapping = alt_mapping;
+	params->no_interdup = no_interdup;
+	params->seq_resolved = resolved;
 
 	debug_mode = debug;
 

@@ -586,7 +586,7 @@ int read_bam( bam_info* in_bam, parameters* params)
 			del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam, alt_cnt_bam);
 
 	if (del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + numt_cnt_bam + sr_cnt_bam + alt_cnt_bam == 0)
-	  return 1;
+		return 1;
 	return 0;
 }
 
@@ -630,7 +630,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			in_bams[bam_index]->bam_file_index = sam_index_load( in_bams[bam_index]->bam_file, params->bam_file_list[bam_index]);
 			if( in_bams[bam_index]->bam_file_index == NULL)
 			{
-			        fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load): %s\n", params->bam_file_list[bam_index]);
+				fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load): %s\n", params->bam_file_list[bam_index]);
 				exit( 1);
 			}
 
@@ -663,33 +663,33 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 
 			if ( skip_chromosome){
-			       /* Close the BAM file */
-			       return_value = hts_close( in_bams[bam_index]->bam_file);
-			       if( return_value != 0)
-				 {
-				   fprintf( stderr, "Error closing BAM file\n");
-				   exit( 1);
-				 }
-			       /* Free the bam related files */
-			       bam_itr_destroy( in_bams[bam_index]->iter);
-			       bam_hdr_destroy( in_bams[bam_index]->bam_header);
-			       hts_idx_destroy( in_bams[bam_index]->bam_file_index);
-			       continue;
+				/* Close the BAM file */
+				return_value = hts_close( in_bams[bam_index]->bam_file);
+				if( return_value != 0)
+				{
+					fprintf( stderr, "Error closing BAM file\n");
+					exit( 1);
+				}
+				/* Free the bam related files */
+				bam_itr_destroy( in_bams[bam_index]->iter);
+				bam_hdr_destroy( in_bams[bam_index]->bam_header);
+				hts_idx_destroy( in_bams[bam_index]->bam_file_index);
+				continue;
 			}
-			
+
 			//fprintf( stderr, "%d altLeftPrimRight, %d primRightAltLeft, %d altLeftAltRight, %d primLeftAltRight\n", altLeftPrimRight, primRightAltLeft, altLeftAltRight, primLeftAltRight);
 
 			if( !params->no_soft_clip)
 			{
 				/* Count the number of softclip reads which are clustering for each read */
 				//fprintf( stderr, "\nCollecting soft clipped read information");
-			        if( !params->no_soft_clip)
-				  {
-				    fprintf( stderr, "\nReading reference genome [%s]", params->this_sonic->chromosome_names[chr_index]);
-				    readReferenceSeq( params, chr_index);
-				  }
-				
-				fprintf( stderr, "\nRunning Split Read mapping..");
+				if( !params->no_soft_clip)
+				{
+					fprintf( stderr, "\nReading reference genome");
+					readReferenceSeq( params, chr_index);
+				}
+
+				fprintf( stderr, "\nRunning split read mapping..");
 				countNumSoftClipInCluster( params, in_bams[bam_index], chr_index);
 				fprintf( stderr, "..");
 				//fprintf( stderr, "\nRemapping soft clipped reads");
@@ -716,7 +716,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			total_read_count += del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + numt_cnt_bam + sr_cnt_bam + alt_cnt_bam;
 			del_cnt_bam = 0, ins_cnt_bam = 0, inv_cnt_bam = 0, mei_cnt_bam = 0, numt_cnt_bam = 0, tandup_cnt_bam = 0, sr_cnt_bam = 0, alt_cnt_bam = 0;
 		}
-		
+
 		if( not_in_bam == 1 || total_read_count == 0)
 			continue;
 
@@ -812,34 +812,37 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			fflush( stderr);
 		}
 
-		/* Interspersed Direct Duplication */
-		fprintf( stderr, "\nPreparing Interspersed Duplication clusters");
-		for( interdup_location = 0; interdup_location <= RIGHTSIDE; interdup_location++)
+		if( params->no_interdup == 0)
 		{
-			vh_initializeReadMapping_InterDup( params->this_sonic, chr_index, interdup_location);
-			fprintf( stderr, ".");
-			fflush( stderr);
-			vh_createInterDupClusters( params->this_sonic->chromosome_lengths[chr_index], interdup_location);
-			fprintf( stderr, ".");
-			fflush( stderr);
-			vh_finalizeReadMapping_InterDup( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
-			fprintf( stderr, ".");
-			fflush( stderr);
-		}
+			/* Interspersed Direct Duplication */
+			fprintf( stderr, "\nPreparing Interspersed Duplication clusters");
+			for( interdup_location = 0; interdup_location <= RIGHTSIDE; interdup_location++)
+			{
+				vh_initializeReadMapping_InterDup( params->this_sonic, chr_index, interdup_location);
+				fprintf( stderr, ".");
+				fflush( stderr);
+				vh_createInterDupClusters( params->this_sonic->chromosome_lengths[chr_index], interdup_location);
+				fprintf( stderr, ".");
+				fflush( stderr);
+				vh_finalizeReadMapping_InterDup( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+				fprintf( stderr, ".");
+				fflush( stderr);
+			}
 
-		/* Interspersed Inverted Duplication */
-		fprintf( stderr, "\nPreparing Interspersed Duplication (Inverted) clusters");
-		for( invdup_location = 0; invdup_location <= RIGHTSIDE; invdup_location++)
-		{
-			vh_initializeReadMapping_InvDup( params->this_sonic, chr_index, invdup_location);
-			fprintf( stderr, ".");
-			fflush( stderr);
-			vh_createInvDupClusters( params->this_sonic->chromosome_lengths[chr_index], invdup_location);
-			fprintf( stderr, ".");
-			fflush( stderr);
-			vh_finalizeReadMapping_InvDup( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
-			fprintf( stderr, ".");
-			fflush( stderr);
+			/* Interspersed Inverted Duplication */
+			fprintf( stderr, "\nPreparing Interspersed Duplication (Inverted) clusters");
+			for( invdup_location = 0; invdup_location <= RIGHTSIDE; invdup_location++)
+			{
+				vh_initializeReadMapping_InvDup( params->this_sonic, chr_index, invdup_location);
+				fprintf( stderr, ".");
+				fflush( stderr);
+				vh_createInvDupClusters( params->this_sonic->chromosome_lengths[chr_index], invdup_location);
+				fprintf( stderr, ".");
+				fflush( stderr);
+				vh_finalizeReadMapping_InvDup( params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);
+				fprintf( stderr, ".");
+				fflush( stderr);
+			}
 		}
 		fprintf( stderr, "\n");
 
@@ -869,9 +872,9 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 	fprintf( stderr, "TARDIS is complete. Found %d SVs", total_sv);
 
 	fprintf( logFile, "\n\nTotal read count = %li; %li Concordant, %li Unmapped, %li Discordant\n",
-				cnt_total_reads, cnt_concordant, cnt_unmapped, cnt_discordant);
+			cnt_total_reads, cnt_concordant, cnt_unmapped, cnt_discordant);
 	fprintf( stderr, "\n\nTotal read count = %li; %li Concordant, %li Unmapped, %li Discordant\n",
-				cnt_total_reads, cnt_concordant, cnt_unmapped, cnt_discordant);
+			cnt_total_reads, cnt_concordant, cnt_unmapped, cnt_discordant);
 
 	print_sv_stats();
 }
