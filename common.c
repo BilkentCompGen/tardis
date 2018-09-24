@@ -493,9 +493,11 @@ void get_working_directory(parameters *params){
   
   directory = strrchr(params->outprefix, '/');
 
-  if (directory == NULL)
-    set_str(&(params->outdir), "./");
-
+  if (directory == NULL){
+    //set_str(&(params->outdir), "./");
+    set_str(&(params->outdir), "");
+    return;
+  }
     
   i = 0;
   while (params->outprefix+i != directory)

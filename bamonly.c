@@ -882,11 +882,11 @@ int bamonly_run( parameters *params, bam_info ** in_bams)
 	int sv_total, i, len;
 
 	/* Initialize and read bam file */
-	fprintf( stderr, "Processing bam file for read pair and read depth filtering\n"
+	fprintf( stderr, "Processing BAM file for read pair and read depth filtering\n"
 			"(Mapping Quality Threshold: %d; RP Support Threshold: %d)\n\n"
 			, params->mq_threshold, params->rp_threshold);
 
-	fprintf( logFile,"\n--> Processing bam file for read pair and read depth filtering\n"
+	fprintf( logFile,"\n--> Processing BAM file for read pair and read depth filtering\n"
 			"(Mapping Quality Threshold: %d; RP Support Threshold: %d)\n\n"
 			, params->mq_threshold, params->rp_threshold);
 
