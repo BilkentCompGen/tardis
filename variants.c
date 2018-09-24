@@ -245,7 +245,7 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 				free( seq);
 		}
 		else
-			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_mei_", ++mei_cnt, ".", "<", "INS:ME:", sv->mei_type, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
+			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_mei_", ++mei_cnt, ".", "<", "INS:ME:", sv->mei_name, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
 
 		total_mei_length += sv_len;
 	}
