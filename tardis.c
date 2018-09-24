@@ -139,6 +139,7 @@ int main( int argc, char** argv)
 	getlogin_r( username, (MAX_SEQ - 1));
 	fprintf( stderr, "\n%s, before I go, I just want to tell you: you were fantastic. Absolutely fantastic. And you know what? So was I.\n", username);
 
+	clean_up_temp_files(params);
 	fclose( logFile);
 
 	free( username);
