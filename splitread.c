@@ -170,6 +170,9 @@ posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 	posMapSoftClip *tmpSoftClipMap, *returnPtr;
 	returnPtr = NULL;
 
+	if (strchr(str, 'N') != NULL)
+	  return NULL;
+	
 	strncpy( seed, str, HASHKMERLEN);
 	seed[HASHKMERLEN] = '\0';
 	index = hash_function_ref( seed);
