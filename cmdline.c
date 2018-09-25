@@ -352,10 +352,10 @@ void print_help( void)
 	fprintf( stdout, "\t--ref   [reference genome] : Reference genome in FASTA format.\n");
 	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n");	
 	fprintf( stdout, "\t--read-count [int]         : # of clusters that a specific read can be involved in (Default is 10).\n");
-	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]   : List of mobile element names.\n");
+	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]     : List of mobile element names.\n");
 	fprintf( stdout, "\t--no-soft-clip             : Skip soft clip remapping.\n");
 	fprintf( stdout, "\t--no-interdup              : Skip interspersed duplication clustering.\n");
-	fprintf( stdout, "\t--resolved	               : Output sequence resolved vcf calls.\n");
+	fprintf( stdout, "\t--resolved                 : Output sequence resolved vcf calls.\n");
 	fprintf( stdout, "\t--xa                       : Look for the alternative mapping locations in BWA.\n");
 	fprintf( stdout, "\t--first-chr [chr_index]	   : Start running from a specific chromosome [index in reference file].\n");
 	fprintf( stdout, "\t--last-chr [chr_index]	   : Run up to a specific chromosome [index in reference file].\n");
@@ -365,17 +365,20 @@ void print_help( void)
 	fprintf( stdout, "\t--skip-mrfast              : Skip mrFAST mapping. Use this only if you already have the correct divet file. Sensitive mode only\n");
 	fprintf( stdout, "\t--threads                  : Number of threads for mrFAST to remap discordant reads.\n");
 
+	/* deprecated
 	fprintf( stdout, "\n\tAdditional parameters to build SONIC file within TARDIS:\n\n");
 	fprintf( stdout, "\t--make-sonic [sonic file]  : SONIC file that will contain the assembly annotations.\n");
 	fprintf( stdout, "\t--sonic-info [\"string\"]    : SONIC information string to be used as the reference genome name.\n");
 	fprintf( stdout, "\t--gaps  [gaps file]        : Assembly gap coordinates in BED3 format.\n");
 	fprintf( stdout, "\t--dups  [dups file]        : Segmental duplication coordinates in BED3 format.\n"); 
 	fprintf( stdout, "\t--reps  [reps file]        : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.\n");
-
+	*/
+	/* hidden
 	fprintf( stdout, "\n\tAdditional parameters for 10X Genomics Linked Reads (under development):\n\n");
 	fprintf( stdout, "\t--10x                      : Enable 10X Genomics Linked Reads mode.\n");
 	fprintf( stdout, "\t--output-hs                : Output the selected clusters homogeneity scores to the VCF file.");
-
+	*/
+	
 	fprintf( stdout, "\n\n\tInformation:\n");
 	fprintf( stdout, "\t--version                  : Print version and exit.\n");
 	fprintf( stdout, "\t--help                     : Print this help screen and exit.\n\n");

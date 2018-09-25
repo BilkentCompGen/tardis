@@ -631,7 +631,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			if( in_bams[bam_index]->bam_file_index == NULL)
 			{
 				fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load): %s\n", params->bam_file_list[bam_index]);
-				exit( 1);
+				exit( EXIT_BAM_INDEX);
 			}
 
 			chr_index_bam = find_chr_index_bam( params->this_sonic->chromosome_names[chr_index], in_bams[bam_index]->bam_header);
@@ -647,7 +647,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			if( in_bams[bam_index]->iter == NULL)
 			{
 				fprintf( stderr, "Error: Iterator cannot be loaded (bam_itr_queryi)\n");
-				exit( 1);
+				exit( EXIT_ITERATOR_LOAD);
 			}
 
 			fprintf( stderr, "\n                                                        ");
@@ -668,7 +668,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 				if( return_value != 0)
 				{
 					fprintf( stderr, "Error closing BAM file\n");
-					exit( 1);
+					exit( EXIT_BAM_CLOSE);
 				}
 				/* Free the bam related files */
 				bam_itr_destroy( in_bams[bam_index]->iter);
@@ -705,7 +705,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			if( return_value != 0)
 			{
 				fprintf( stderr, "Error closing BAM file\n");
-				exit( 1);
+				exit( EXIT_BAM_CLOSE);
 			}
 			/* Free the bam related files */
 			bam_itr_destroy( in_bams[bam_index]->iter);

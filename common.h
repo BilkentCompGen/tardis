@@ -53,6 +53,9 @@
 #define EXIT_FILE_OPEN_ERROR 5
 #define EXIT_READGROUP 6
 #define EXIT_SONIC 7
+#define EXIT_BAM_INDEX 8
+#define EXIT_ITERATOR_LOAD 9
+#define EXIT_BAM_CLOSE 10
 
 /* Return Codes */
 #define RETURN_SUCCESS 1

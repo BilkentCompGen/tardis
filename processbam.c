@@ -243,7 +243,7 @@ void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt)
 	if( return_value != 0)
 	{
 		fprintf( stderr, "Error closing BAM file\n");
-		exit( 1);
+		exit( EXIT_BAM_CLOSE);
 	}
 
 	/* Free Memory */

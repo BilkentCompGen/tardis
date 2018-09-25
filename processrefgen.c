@@ -197,7 +197,7 @@ int run_rd( bam_info** in_bam, parameters* params)
 		if( in_bam[bam_index]->bam_file_index == NULL)
 		{
 			fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load2)\n");
-			exit( 1);
+			exit( EXIT_BAM_INDEX);
 		}
 
 		for ( chr_index = params->first_chr; chr_index <= params->last_chr; chr_index++)
@@ -219,7 +219,7 @@ int run_rd( bam_info** in_bam, parameters* params)
 			if( in_bam[bam_index]->iter == NULL)
 			{
 				fprintf( stderr, "Error: Iterator cannot be loaded (bam_itr_queryi)\n");
-				exit( 1);
+				exit( EXIT_ITERATOR_LOAD);
 			}
 
 			while( bam_itr_next( in_bam[bam_index]->bam_file, in_bam[bam_index]->iter, bam_alignment) > 0)
@@ -244,7 +244,7 @@ int run_rd( bam_info** in_bam, parameters* params)
 		if( return_value != 0)
 		{
 			fprintf( stderr, "Error closing BAM file\n");
-			exit( 1);
+			exit( EXIT_BAM_CLOSE);
 		}
 		/* Free the bam related files */
 		bam_itr_destroy( in_bam[bam_index]->iter);

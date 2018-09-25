@@ -295,7 +295,7 @@ void create_fastq_library( struct library_properties* in_lib, char* sample_name,
 	if( !fastq)
 	{
 		fprintf( stderr, "Error opening the first FASTQ file\n");
-		exit( 1);
+		exit( EXIT_FILE_OPEN_ERROR);
 	}
 
 	/* Open the second FASTQ file for writing */	
@@ -303,7 +303,7 @@ void create_fastq_library( struct library_properties* in_lib, char* sample_name,
 	if( !fastq2)
 	{
 		fprintf( stderr, "Error opening the second FASTQ file\n");
-		exit( 1);
+		exit( EXIT_FILE_OPEN_ERROR);
 	}
 
 	/* Open BAM file for reading */
@@ -453,7 +453,7 @@ void create_fastq_library( struct library_properties* in_lib, char* sample_name,
 	if( return_value != 0)
 	{
 		fprintf( stderr, "Error closing BAM file\n");
-		exit( 1);
+		exit( EXIT_BAM_CLOSE);
 	}
 
 	/* Close the FASTQ file */
