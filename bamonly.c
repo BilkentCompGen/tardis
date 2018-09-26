@@ -798,7 +798,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 		/* NumT */
 		if( ( strcmp( params->this_sonic->chromosome_names[chr_index], "MT") != 0)
-				|| ( strcmp( params->this_sonic->chromosome_names[chr_index], "chrM") != 0))
+				&& ( strcmp( params->this_sonic->chromosome_names[chr_index], "chrM") != 0))
 		{
 			fprintf( stderr, "\nPreparing NUMT clusters");
 			initializeReadMapping_NUMT( in_bams, params, chr_index);
