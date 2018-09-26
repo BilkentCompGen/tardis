@@ -193,7 +193,11 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	if( params->outprefix == NULL && !make_sonic)
 	{
 		fprintf( stderr, "[TARDIS CMDLINE ERROR] Please enter the output file name prefix using the --out option.\n");
-		return EXIT_PARAM_ERROR;
+		char *tmp_output_prefix = (char *) malloc(sizeof (char) * (strlen(params->bam_file_list[0]) + strlen("-output") + 2));
+		sprintf( tmp_output_prefix, "%s-output", params->bam_file_list[0]);
+		set_str( &( params->outprefix), tmp_output_prefix);
+		free( tmp_output_prefix);
+		//return EXIT_PARAM_ERROR;
 	}
 
 	/* check if --num-bams > 0 */
@@ -365,14 +369,13 @@ void print_help( void)
 	fprintf( stdout, "\t--skip-mrfast              : Skip mrFAST mapping. Use this only if you already have the correct divet file. Sensitive mode only\n");
 	fprintf( stdout, "\t--threads                  : Number of threads for mrFAST to remap discordant reads.\n");
 
-	/* deprecated
 	fprintf( stdout, "\n\tAdditional parameters to build SONIC file within TARDIS:\n\n");
 	fprintf( stdout, "\t--make-sonic [sonic file]  : SONIC file that will contain the assembly annotations.\n");
 	fprintf( stdout, "\t--sonic-info [\"string\"]    : SONIC information string to be used as the reference genome name.\n");
 	fprintf( stdout, "\t--gaps  [gaps file]        : Assembly gap coordinates in BED3 format.\n");
 	fprintf( stdout, "\t--dups  [dups file]        : Segmental duplication coordinates in BED3 format.\n"); 
 	fprintf( stdout, "\t--reps  [reps file]        : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.\n");
-	*/
+
 	/* hidden
 	fprintf( stdout, "\n\tAdditional parameters for 10X Genomics Linked Reads (under development):\n\n");
 	fprintf( stdout, "\t--10x                      : Enable 10X Genomics Linked Reads mode.\n");
