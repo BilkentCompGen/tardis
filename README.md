@@ -74,7 +74,7 @@ Running TARDIS - QUICK mode
 Running TARDIS - SENSITIVE mode (mrFAST Mappings)
 =================================================
 
-Sensitive mode uses mrFast mappings (all possible mappings) with read-pair and read-depth signatures. This mode can detect Deletions, Insertions, Inversions, Mobile Element Insertions and Tandem Duplications.
+Sensitive mode uses mrFAST mappings (all possible mappings) with read-pair and read-depth signatures. 
 
 	tardis -i myinput.bam --ref human_g1k_v37.fasta --sonic human_g1k_v37.sonic  \
 		--sensitive --out myoutput
@@ -92,8 +92,12 @@ All parameters
 	--out   [output prefix]    : Prefix for the output file names.
 	--ref   [reference genome] : Reference genome in FASTA format.
 	--sonic [sonic file]       : SONIC file that contains assembly annotations.
+	--read-count [int]         : # of clusters that a specific read can be involved in (Default is 10).
 	--mei   ["Alu:L1:SVA"]     : List of mobile element names.
 	--no-soft-clip             : Skip soft clip remapping.
+	--no-interdup              : Skip interspersed duplication clustering.
+	--resolved                 : Output sequence resolved vcf calls.
+	--xa                       : Look for the alternative mapping locations in BWA.
 	--first-chr [chr_index]	   : Start running from a specific chromosome [index in ref]
 	--last-chr  [chr_index]	   : Run up to a specific chromosome [index in ref]
 
