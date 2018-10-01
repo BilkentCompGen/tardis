@@ -148,7 +148,8 @@ void fastq_match( char* filename1, char* filename2, int num_seq, int read_length
 	free_reads( &reads2, num_batch);
 }
 
-static int fastq_qname_comp( const void* p1, const void* p2)
+//static
+int fastq_qname_comp( const void* p1, const void* p2)
 {
 	struct read* a; 
 	struct read* b;

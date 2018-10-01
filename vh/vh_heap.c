@@ -3,6 +3,51 @@
 
 Heap *g_intersectInterval;
 
+Heap *vh_newHeap(void)
+{
+       Heap *tmp_heap;
+       tmp_heap = (Heap *) getMem (sizeof (Heap));
+       tmp_heap->heapArray = (struct HeapEl *) getMem(sizeof(struct HeapEl) * MAX_CLUSTER_SIZE); // I really don't like this max_cluster_size thing
+       return tmp_heap;
+}
+
+HeapMEI *vh_newHeapMEI(void)
+{
+       HeapMEI *tmp_heap;
+       tmp_heap = (HeapMEI *) getMem (sizeof (HeapMEI));
+       tmp_heap->heapArray = (struct HeapElMEI *) getMem(sizeof(struct HeapElMEI) * MAX_CLUSTER_SIZE); // I really don't like this max_cluster_size thing
+       return tmp_heap;
+}
+
+HeapNUMT *vh_newHeapNUMT(void)
+{
+       HeapNUMT *tmp_heap;
+       tmp_heap = (HeapNUMT *) getMem (sizeof (HeapNUMT));
+       tmp_heap->heapArray = (struct HeapElNUMT *) getMem(sizeof(struct HeapElNUMT) * MAX_CLUSTER_SIZE); // I really don't like this max_cluster_size thing
+       return tmp_heap;
+}
+
+void vh_free_heap(Heap *h)
+{
+  free(h->heapArray);
+  free(h);
+}
+
+void vh_free_heap_mei(HeapMEI *h)
+{
+  free(h->heapArray);
+  free(h);
+}
+
+void vh_free_heap_numt(HeapNUMT *h)
+{
+  free(h->heapArray);
+  free(h);
+}
+
+
+
+
 void vh_writeHeap (Heap * heapName)
 {
 	int count;

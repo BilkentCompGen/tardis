@@ -60,7 +60,8 @@ void vh_initializeReadMapping_Insertion (sonic *this_sonic, int chr_index)
 	vh_addToGenomeIndex_Insertion (this_sonic, chr_index);
 
 	/////Malocing the intersectingInterval (intersectinterval) heap
-	g_intersectInterval = (Heap *) getMem (sizeof (Heap));
+	//g_intersectInterval = (Heap *) getMem (sizeof (Heap));
+	g_intersectInterval = vh_newHeap();
 	g_intersectInterval->heapSize = 0;
 
 	while (libInfoPtr != NULL)

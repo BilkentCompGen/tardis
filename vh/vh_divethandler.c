@@ -156,7 +156,7 @@ struct DivetRow *vh_loadDivetRowFromString (struct ReadName *hash[], char *line,
 
 
 	if (ten_x_flag || output_hs_flag){
-		sscanf(readName + strlen(readName) - 20, "%020lu%0", &ten_x_barcode); // 20 is the number of digits in the largest unsigned long value. All read names have ten-x barcode info as a 20 digit, 0-padded suffix
+		sscanf(readName + strlen(readName) - 20, "%20lu%0", &ten_x_barcode); // 20 is the number of digits in the largest unsigned long value. All read names have ten-x barcode info as a 20 digit, 0-padded suffix
 		if (ten_x_barcode != (unsigned long)-1){
 			ten_x_barcode = ten_x_barcode | ((unsigned long)libInfo->libId << (sizeof(unsigned long)-1)*8); //use the last byte of the ten x barcode to make sure no two libraries share a barcode
 		}

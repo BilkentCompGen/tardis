@@ -65,7 +65,8 @@ void vh_initializeReadMapping_Deletion( sonic *this_sonic, int chr_index)
 	vh_addToGenomeIndex_Deletion( this_sonic, chr_index);
 
 	/////Mallocing the intersectingInterval (intersectinterval) heap
-	g_intersectInterval = (Heap *) getMem (sizeof (Heap));
+	//	g_intersectInterval = (Heap *) getMem (sizeof (Heap));
+	g_intersectInterval = vh_newHeap();
 	g_intersectInterval->heapSize = 0;
 
 	while (libInfoPtr != NULL)

@@ -48,7 +48,8 @@ typedef struct library_properties
 /* Function Prototypes */
 void fastq_match( char*, char*, int, int);
 int load_reads( gzFile, struct read**, int);
-static int fastq_qname_comp( const void*, const void*);
+//static
+int fastq_qname_comp( const void*, const void*);
 void alloc_reads( struct read***, int);
 void realloc_reads( struct read***, int, int);
 void free_reads( struct read***, int);

@@ -24,7 +24,8 @@ typedef struct SV_selected{
 	struct SV_selected* conflict_Next; // keep a link list of all other SVs selected which are in conlift with this SV (in hapolid genome)
 } SV_selected;
 
-SV_selected listSelectedSV[maxNumSV];// the array of all the SVs selected till now
+//SV_selected listSelectedSV[maxNumSV];// the array of all the SVs selected till now
+SV_selected *listSelectedSV;// the array of all the SVs selected till now
 
 
 int conflictsAny(int i, int *supInd);

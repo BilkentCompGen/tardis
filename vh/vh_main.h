@@ -3,7 +3,7 @@
 
 #include "../processrefgen.h"
 #include "vh_common.h"
-
+#include "vh_conflict.h"
 
 void vh_clustering (bam_info** in_bams, parameters *params, double preProsPrune, char *outputFile, char *outputRead, int overMapLimit);
 void vh_quitProgram (int);

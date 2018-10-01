@@ -1,7 +1,8 @@
 #ifndef _VH_HEAP__H_
 #define _VH_HEAP__H_
 
-#define MAX_CLUSTER_SIZE 10000000	//TODO: Ye karish bokon
+#define MAX_CLUSTER_SIZE 10000000
+
 
 #include "vh_common.h"
 #include "vh_createMaxClusterMEI.h"
@@ -24,8 +25,8 @@ typedef struct HeapEl
 
 typedef struct Heap
 {
-  struct HeapEl heapArray[MAX_CLUSTER_SIZE];
-  int heapSize;
+        struct HeapEl *heapArray;
+        int heapSize;
 } Heap;
 
 typedef struct HeapElMEI{
@@ -35,7 +36,7 @@ typedef struct HeapElMEI{
 
 
 typedef struct HeapMEI{
-	HeapElMEI heapArray[MAX_CLUSTER_SIZE];
+        HeapElMEI *heapArray;
 	int heapSize;
 } HeapMEI;
 
@@ -46,13 +47,19 @@ typedef struct HeapElNUMT{
 
 
 typedef struct HeapNUMT{
-	HeapElNUMT heapArray[MAX_CLUSTER_SIZE];
+        HeapElNUMT *heapArray;
 	int heapSize;
 } HeapNUMT;
 
 
 extern Heap *g_intersectInterval;
 
+Heap *vh_newHeap(void);
+HeapMEI *vh_newHeapMEI(void);
+HeapNUMT *vh_newHeapNUMT(void);
+void vh_free_heap(Heap *);
+void vh_free_heap_mei(HeapMEI *);
+void vh_free_heap_numt(HeapNUMT *);
 void vh_copyHeapEl (struct HeapEl *dest, struct HeapEl *src);
 void vh_push_heap( struct Heap *heapName, struct HeapEl *newEl);
 int vh_minValue_heap( struct Heap *heapName);

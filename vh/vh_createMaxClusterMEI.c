@@ -7,9 +7,9 @@
 #include "../bamonly.h"
 
 mei_Reads **mReads = NULL;
-HeapMEI H_F; /* The forward mapping heap from left of breakpoint */
-HeapMEI H_R; /* the reverse mapping heap from right of breakpoint */
-HeapMEI H_S; /* The soft clipping read */
+HeapMEI *H_F; /* The forward mapping heap from left of breakpoint */
+HeapMEI *H_R; /* the reverse mapping heap from right of breakpoint */
+HeapMEI *H_S; /* The soft clipping read */
 
 int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromosome_name, int chroSize)
 {
@@ -235,10 +235,10 @@ void add_R_Heap( int pos)
 	{
 		if (mei_ReadsPtr->orient == REVERSE && mei_ReadsPtr->readTypeSupport == 0)
 		{
-			newEl = (HeapElMEI *)getMem(sizeof(HeapElMEI));
+		        newEl = (HeapElMEI *)getMem(sizeof(HeapElMEI));
 			newEl->mei_ReadsPtr = mei_ReadsPtr;
 			newEl->priorityValue = mei_ReadsPtr->pos;
-			push_heap_mei(&H_R, newEl);
+			push_heap_mei(H_R, newEl);
 			free(newEl);
 		}
 		mei_ReadsPtr = mei_ReadsPtr->next;
@@ -254,10 +254,10 @@ void add_S_Heap( int pos)
 	{
 		if ( mei_ReadsPtr->readTypeSupport == 1 || mei_ReadsPtr->readTypeSupport == 2)
 		{
-			newEl = ( HeapElMEI *) getMem( sizeof( HeapElMEI));
+		        newEl = ( HeapElMEI *) getMem( sizeof( HeapElMEI));
 			newEl->mei_ReadsPtr = mei_ReadsPtr;
 			newEl->priorityValue = pos + ( 2 * lenSplitReadBrakWindow);
-			push_heap_mei( &H_S, newEl);
+			push_heap_mei( H_S, newEl);
 			free( newEl);
 		}
 		mei_ReadsPtr = mei_ReadsPtr->next;
@@ -276,7 +276,7 @@ void add_F_Heap( int pos)
 	{
 		if( mei_ReadsPtr->orient == FORWARD && mei_ReadsPtr->readTypeSupport == 0)
 		{
-			newEl = ( HeapElMEI *) getMem( sizeof( HeapElMEI));
+		        newEl = ( HeapElMEI *) getMem( sizeof( HeapElMEI));		 
 			newEl->mei_ReadsPtr = mei_ReadsPtr;
 			libInfo = g_libInfo;
 			max_delta_val = 0;
@@ -295,7 +295,7 @@ void add_F_Heap( int pos)
 				max_delta_val = 5 * SOFTCLIP_WRONGMAP_WINDOW;
 				newEl->priorityValue = mei_ReadsPtr->pos + max_delta_val;
 			}
-			push_heap_mei( &H_F, newEl);
+			push_heap_mei( H_F, newEl);
 			free( newEl);
 		}
 		mei_ReadsPtr = mei_ReadsPtr->next;
@@ -312,7 +312,7 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 	int written; /* Work around. Arda should fix this. Some clusters come out empty */
 	clusters_final *cluster_new, *tmp;
 
-	if( H_F.heapSize > 0 && H_R.heapSize > 0)
+	if( H_F->heapSize > 0 && H_R->heapSize > 0)
 	{
 		/* Iterate through all MEI types including the reverse orientations of each*/
 		for( MEIType = 0; MEIType < (params->number_of_different_mei_types * 2); MEIType++)
@@ -335,39 +335,39 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 			}
 
 			/* Count the number of MEIs in H_F that matches the MEIType */
-			for( count = 0; count < H_F.heapSize; count++)
+			for( count = 0; count < H_F->heapSize; count++)
 			{
-				if( H_F.heapArray[count].mei_ReadsPtr->MEI_Type == MEIType)
+				if( H_F->heapArray[count].mei_ReadsPtr->MEI_Type == MEIType)
 					F_count++;
 			}
 			/* Count the number of MEIs in H_R that matches the MEIType2 */
-			for( count = 0; count < H_R.heapSize; count++)
+			for( count = 0; count < H_R->heapSize; count++)
 			{
-				if( H_R.heapArray[count].mei_ReadsPtr->MEI_Type == MEIType2)
+				if( H_R->heapArray[count].mei_ReadsPtr->MEI_Type == MEIType2)
 					R_count++;
 			}
 
 			if( F_count > 2 && R_count > 2)
 			{
 				written = 0;
-				for( count = 0; count < H_F.heapSize; count++)
+				for( count = 0; count < H_F->heapSize; count++)
 				{
-					if( H_F.heapArray[count].mei_ReadsPtr->MEI_Type == MEIType)
+					if( H_F->heapArray[count].mei_ReadsPtr->MEI_Type == MEIType)
 					{
 						if( debug_mode)
 							fprintf( fileOutput, "%s %s %i %s %i %c %i %i %s %s F F %i %i ",
-									H_F.heapArray[count].mei_ReadsPtr->readName,
+									H_F->heapArray[count].mei_ReadsPtr->readName,
 									chromosome_name,
-									H_F.heapArray[count].mei_ReadsPtr->pos,
-									H_F.heapArray[count].mei_ReadsPtr->MEI_Subclass,
-									H_F.heapArray[count].mei_ReadsPtr->pos,
+									H_F->heapArray[count].mei_ReadsPtr->pos,
+									H_F->heapArray[count].mei_ReadsPtr->MEI_Subclass,
+									H_F->heapArray[count].mei_ReadsPtr->pos,
 									orientMEI,
-									H_F.heapArray[count].mei_ReadsPtr->mQual,
-									H_F.heapArray[count].mei_ReadsPtr->mQual,
-									H_F.heapArray[count].mei_ReadsPtr->libName,
-									H_F.heapArray[count].mei_ReadsPtr->indName,
-									H_F.heapArray[count].mei_ReadsPtr->mQual,
-									H_F.heapArray[count].mei_ReadsPtr->mQual);
+									H_F->heapArray[count].mei_ReadsPtr->mQual,
+									H_F->heapArray[count].mei_ReadsPtr->mQual,
+									H_F->heapArray[count].mei_ReadsPtr->libName,
+									H_F->heapArray[count].mei_ReadsPtr->indName,
+									H_F->heapArray[count].mei_ReadsPtr->mQual,
+									H_F->heapArray[count].mei_ReadsPtr->mQual);
 
 						/* Fill the clusters struct */
 						cluster_new = ( clusters_final *) getMem( sizeof( clusters_final));
@@ -375,36 +375,36 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						cluster_new->id = cluster_count;
 
 						cluster_new->read_name = NULL;
-						set_str( &cluster_new->read_name, H_F.heapArray[count].mei_ReadsPtr->readName);
+						set_str( &cluster_new->read_name, H_F->heapArray[count].mei_ReadsPtr->readName);
 
 						cluster_new->chromosome_name1 = NULL;
 						set_str( &cluster_new->chromosome_name1, chromosome_name);
 
-						cluster_new->start_position = H_F.heapArray[count].mei_ReadsPtr->pos;
+						cluster_new->start_position = H_F->heapArray[count].mei_ReadsPtr->pos;
 						cluster_new->chromosome_name2 = NULL;
 
-						cluster_new->end_position = H_F.heapArray[count].mei_ReadsPtr->pos;
+						cluster_new->end_position = H_F->heapArray[count].mei_ReadsPtr->pos;
 						cluster_new->SV_type = orientMEI;
-						cluster_new->phred_score = H_F.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->edit_distance = H_F.heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->phred_score = H_F->heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->edit_distance = H_F->heapArray[count].mei_ReadsPtr->mQual;
 
 						cluster_new->library_name = NULL;
-						set_str( &cluster_new->library_name, H_F.heapArray[count].mei_ReadsPtr->libName);
+						set_str( &cluster_new->library_name, H_F->heapArray[count].mei_ReadsPtr->libName);
 
 						cluster_new->individual_name = NULL;
-						set_str( &cluster_new->individual_name, H_F.heapArray[count].mei_ReadsPtr->indName);
+						set_str( &cluster_new->individual_name, H_F->heapArray[count].mei_ReadsPtr->indName);
 
 						cluster_new->orientation_left = FORWARD;
 						cluster_new->orientation_right = FORWARD;
-						cluster_new->mapping_quality_left = H_F.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->mapping_quality_right = H_F.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->ten_x_barcode = H_F.heapArray[count].mei_ReadsPtr->ten_x_barcode;
+						cluster_new->mapping_quality_left = H_F->heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->mapping_quality_right = H_F->heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->ten_x_barcode = H_F->heapArray[count].mei_ReadsPtr->ten_x_barcode;
 
 						cluster_new->mei_type = NULL;
-						set_str( &cluster_new->mei_type, H_F.heapArray[count].mei_ReadsPtr->MEI_Class);
+						set_str( &cluster_new->mei_type, H_F->heapArray[count].mei_ReadsPtr->MEI_Class);
 
 						cluster_new->mei_subclass = NULL;
-						set_str( &cluster_new->mei_subclass, H_F.heapArray[count].mei_ReadsPtr->MEI_Subclass);
+						set_str( &cluster_new->mei_subclass, H_F->heapArray[count].mei_ReadsPtr->MEI_Subclass);
 
 						if( ( clusters_all[cluster_count] == NULL) || ( clusters_all[cluster_count]->edit_distance >= cluster_new->edit_distance))
 						{
@@ -423,24 +423,24 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						written = 1;
 					}
 				}
-				for( count = 0; count < H_R.heapSize; count++)
+				for( count = 0; count < H_R->heapSize; count++)
 				{
-					if( H_R.heapArray[count].mei_ReadsPtr->MEI_Type == MEIType2)
+					if( H_R->heapArray[count].mei_ReadsPtr->MEI_Type == MEIType2)
 					{
 						if( debug_mode)
 							fprintf( fileOutput, "%s %s %i %s %i %c %i %i %s %s R R %i %i ",
-									H_R.heapArray[count].mei_ReadsPtr->readName,
+									H_R->heapArray[count].mei_ReadsPtr->readName,
 									chromosome_name,
-									H_R.heapArray[count].mei_ReadsPtr->pos,
-									H_R.heapArray[count].mei_ReadsPtr->MEI_Subclass,
-									H_R.heapArray[count].mei_ReadsPtr->pos,
+									H_R->heapArray[count].mei_ReadsPtr->pos,
+									H_R->heapArray[count].mei_ReadsPtr->MEI_Subclass,
+									H_R->heapArray[count].mei_ReadsPtr->pos,
 									orientMEI,
-									H_R.heapArray[count].mei_ReadsPtr->mQual,
-									H_R.heapArray[count].mei_ReadsPtr->mQual,
-									H_R.heapArray[count].mei_ReadsPtr->libName,
-									H_R.heapArray[count].mei_ReadsPtr->indName,
-									H_R.heapArray[count].mei_ReadsPtr->mQual,
-									H_R.heapArray[count].mei_ReadsPtr->mQual);
+									H_R->heapArray[count].mei_ReadsPtr->mQual,
+									H_R->heapArray[count].mei_ReadsPtr->mQual,
+									H_R->heapArray[count].mei_ReadsPtr->libName,
+									H_R->heapArray[count].mei_ReadsPtr->indName,
+									H_R->heapArray[count].mei_ReadsPtr->mQual,
+									H_R->heapArray[count].mei_ReadsPtr->mQual);
 
 						/* Fill the clusters struct */
 						cluster_new = ( clusters_final *) getMem( sizeof( clusters_final));
@@ -448,36 +448,36 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 						cluster_new->id = cluster_count;
 
 						cluster_new->read_name = NULL;
-						set_str( &cluster_new->read_name, H_R.heapArray[count].mei_ReadsPtr->readName);
+						set_str( &cluster_new->read_name, H_R->heapArray[count].mei_ReadsPtr->readName);
 
 						cluster_new->chromosome_name1 = NULL;
 						set_str( &cluster_new->chromosome_name1, chromosome_name);
 
-						cluster_new->start_position = H_R.heapArray[count].mei_ReadsPtr->pos;
+						cluster_new->start_position = H_R->heapArray[count].mei_ReadsPtr->pos;
 						cluster_new->chromosome_name2 = NULL;
 
-						cluster_new->end_position = H_R.heapArray[count].mei_ReadsPtr->pos;
+						cluster_new->end_position = H_R->heapArray[count].mei_ReadsPtr->pos;
 						cluster_new->SV_type = orientMEI;
-						cluster_new->phred_score = H_R.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->edit_distance = H_R.heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->phred_score = H_R->heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->edit_distance = H_R->heapArray[count].mei_ReadsPtr->mQual;
 
 						cluster_new->library_name = NULL;
-						set_str( &cluster_new->library_name, H_R.heapArray[count].mei_ReadsPtr->libName);
+						set_str( &cluster_new->library_name, H_R->heapArray[count].mei_ReadsPtr->libName);
 
 						cluster_new->individual_name = NULL;
-						set_str( &cluster_new->individual_name, H_R.heapArray[count].mei_ReadsPtr->indName);
+						set_str( &cluster_new->individual_name, H_R->heapArray[count].mei_ReadsPtr->indName);
 
 						cluster_new->orientation_left = REVERSE;
 						cluster_new->orientation_right = REVERSE;
-						cluster_new->mapping_quality_left = H_R.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->mapping_quality_right = H_R.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->ten_x_barcode = H_R.heapArray[count].mei_ReadsPtr->ten_x_barcode;
+						cluster_new->mapping_quality_left = H_R->heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->mapping_quality_right = H_R->heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->ten_x_barcode = H_R->heapArray[count].mei_ReadsPtr->ten_x_barcode;
 
 						cluster_new->mei_type = NULL;
-						set_str( &cluster_new->mei_type, H_R.heapArray[count].mei_ReadsPtr->MEI_Class);
+						set_str( &cluster_new->mei_type, H_R->heapArray[count].mei_ReadsPtr->MEI_Class);
 
 						cluster_new->mei_subclass = NULL;
-						set_str( &cluster_new->mei_subclass, H_R.heapArray[count].mei_ReadsPtr->MEI_Subclass);
+						set_str( &cluster_new->mei_subclass, H_R->heapArray[count].mei_ReadsPtr->MEI_Subclass);
 
 						if( ( clusters_all[cluster_count] == NULL) || ( clusters_all[cluster_count]->edit_distance >= cluster_new->edit_distance))
 						{
@@ -497,69 +497,69 @@ void outputMEIClusters( parameters* params, char* chromosome_name)
 					}
 				}
 
-				for( count = 0; count < H_S.heapSize; count++)
+				for( count = 0; count < H_S->heapSize; count++)
 				{
-					if( H_S.heapArray[count].mei_ReadsPtr->MEI_Type == MEIType2 &&
-							H_S.heapArray[count].mei_ReadsPtr->readName != NULL)
+					if( H_S->heapArray[count].mei_ReadsPtr->MEI_Type == MEIType2 &&
+							H_S->heapArray[count].mei_ReadsPtr->readName != NULL)
 					{
 						if( debug_mode)
 						{
 							fprintf(stderr,"%d MEITYPE%d MEITYPE2%d -", count, MEIType, MEIType2);
-							fprintf( stderr, "%s ", H_S.heapArray[count].mei_ReadsPtr->readName);
+							fprintf( stderr, "%s ", H_S->heapArray[count].mei_ReadsPtr->readName);
 							fprintf( stderr, "%s ", chromosome_name);
-							fprintf( stderr, "%d ", H_S.heapArray[count].mei_ReadsPtr->pos);
-							fprintf( stderr, "%s ", H_S.heapArray[count].mei_ReadsPtr->MEI_Subclass);
-							fprintf( stderr, "%s ", H_S.heapArray[count].mei_ReadsPtr->indName);
-							fprintf( stderr, "%d ", H_S.heapArray[count].mei_ReadsPtr->mQual);
+							fprintf( stderr, "%d ", H_S->heapArray[count].mei_ReadsPtr->pos);
+							fprintf( stderr, "%s ", H_S->heapArray[count].mei_ReadsPtr->MEI_Subclass);
+							fprintf( stderr, "%s ", H_S->heapArray[count].mei_ReadsPtr->indName);
+							fprintf( stderr, "%d ", H_S->heapArray[count].mei_ReadsPtr->mQual);
 							fprintf( stderr, "\n");
 
 							fprintf( fileOutput, "%s %s %i %s %i %c %i %i SplitRead %s S S %i %i ",
-									H_S.heapArray[count].mei_ReadsPtr->readName,
+									H_S->heapArray[count].mei_ReadsPtr->readName,
 									chromosome_name,
-									H_S.heapArray[count].mei_ReadsPtr->pos,
-									H_S.heapArray[count].mei_ReadsPtr->MEI_Subclass,
-									H_S.heapArray[count].mei_ReadsPtr->pos,
+									H_S->heapArray[count].mei_ReadsPtr->pos,
+									H_S->heapArray[count].mei_ReadsPtr->MEI_Subclass,
+									H_S->heapArray[count].mei_ReadsPtr->pos,
 									orientMEI,
-									H_S.heapArray[count].mei_ReadsPtr->mQual,
-									H_S.heapArray[count].mei_ReadsPtr->mQual,
-									H_S.heapArray[count].mei_ReadsPtr->indName,
-									H_S.heapArray[count].mei_ReadsPtr->mQual,
-									H_S.heapArray[count].mei_ReadsPtr->mQual);
+									H_S->heapArray[count].mei_ReadsPtr->mQual,
+									H_S->heapArray[count].mei_ReadsPtr->mQual,
+									H_S->heapArray[count].mei_ReadsPtr->indName,
+									H_S->heapArray[count].mei_ReadsPtr->mQual,
+									H_S->heapArray[count].mei_ReadsPtr->mQual);
 						}
 						/* Fill the clusters struct */
 						cluster_new = ( clusters_final *) getMem( sizeof( clusters_final));
 
 						cluster_new->read_name = NULL;
-						set_str( &cluster_new->read_name, H_S.heapArray[count].mei_ReadsPtr->readName);
+						set_str( &cluster_new->read_name, H_S->heapArray[count].mei_ReadsPtr->readName);
 
 						cluster_new->chromosome_name1 = NULL;
 						set_str( &cluster_new->chromosome_name1, chromosome_name);
 
-						cluster_new->start_position = H_S.heapArray[count].mei_ReadsPtr->pos;
+						cluster_new->start_position = H_S->heapArray[count].mei_ReadsPtr->pos;
 						cluster_new->chromosome_name2 = NULL;
 
-						cluster_new->end_position = H_S.heapArray[count].mei_ReadsPtr->pos;
+						cluster_new->end_position = H_S->heapArray[count].mei_ReadsPtr->pos;
 						cluster_new->SV_type = orientMEI;
-						cluster_new->phred_score = H_S.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->edit_distance = H_S.heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->phred_score = H_S->heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->edit_distance = H_S->heapArray[count].mei_ReadsPtr->mQual;
 
 						cluster_new->library_name = NULL;
 						set_str( &cluster_new->library_name, "SplitRead");
 
 						cluster_new->individual_name = NULL;
-						set_str( &cluster_new->individual_name, H_S.heapArray[count].mei_ReadsPtr->indName);
+						set_str( &cluster_new->individual_name, H_S->heapArray[count].mei_ReadsPtr->indName);
 
 						cluster_new->orientation_left = 'S';
 						cluster_new->orientation_right = 'S';
-						cluster_new->mapping_quality_left = H_S.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->mapping_quality_right = H_S.heapArray[count].mei_ReadsPtr->mQual;
-						cluster_new->ten_x_barcode = H_S.heapArray[count].mei_ReadsPtr->ten_x_barcode;
+						cluster_new->mapping_quality_left = H_S->heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->mapping_quality_right = H_S->heapArray[count].mei_ReadsPtr->mQual;
+						cluster_new->ten_x_barcode = H_S->heapArray[count].mei_ReadsPtr->ten_x_barcode;
 
 						cluster_new->mei_type = NULL;
-						set_str( &cluster_new->mei_type, H_S.heapArray[count].mei_ReadsPtr->MEI_Class);
+						set_str( &cluster_new->mei_type, H_S->heapArray[count].mei_ReadsPtr->MEI_Class);
 
 						cluster_new->mei_subclass = NULL;
-						set_str( &cluster_new->mei_subclass, H_S.heapArray[count].mei_ReadsPtr->MEI_Subclass);
+						set_str( &cluster_new->mei_subclass, H_S->heapArray[count].mei_ReadsPtr->MEI_Subclass);
 
 						if( ( clusters_all[cluster_count] == NULL) || ( clusters_all[cluster_count]->edit_distance >= cluster_new->edit_distance))
 						{
@@ -605,23 +605,23 @@ void MEICluster_Region( parameters* params, int chr_index)
 			boolMEITypeNewAdded = 1;
 		}
 
-		if( ( ( H_R.heapSize > 0 && minValue_heapMEI( &H_R) == leftBreakPoint) ||
-				( H_F.heapSize > 0 && minValue_heapMEI( &H_F) == leftBreakPoint) ||
-				( H_S.heapSize > 0 && minValue_heapMEI( &H_S) == leftBreakPoint)) && boolMEITypeNewAdded)
+		if( ( ( H_R->heapSize > 0 && minValue_heapMEI( H_R) == leftBreakPoint) ||
+				( H_F->heapSize > 0 && minValue_heapMEI( H_F) == leftBreakPoint) ||
+				( H_S->heapSize > 0 && minValue_heapMEI( H_S) == leftBreakPoint)) && boolMEITypeNewAdded)
 		{
-			if( ( H_R.heapSize + H_F.heapSize + H_S.heapSize) > 0)
+			if( ( H_R->heapSize + H_F->heapSize + H_S->heapSize) > 0)
 				outputMEIClusters( params, params->this_sonic->chromosome_names[chr_index]);
 
 			boolMEITypeNewAdded = 0;
 		}
-		while( H_R.heapSize > 0 && minValue_heapMEI( &H_R) == leftBreakPoint)
-			heap_remove_topMEI( &H_R);
+		while( H_R->heapSize > 0 && minValue_heapMEI( H_R) == leftBreakPoint)
+			heap_remove_topMEI( H_R);
 
-		while( H_F.heapSize > 0 && minValue_heapMEI( &H_F) == leftBreakPoint)
-			heap_remove_topMEI( &H_F);
+		while( H_F->heapSize > 0 && minValue_heapMEI( H_F) == leftBreakPoint)
+			heap_remove_topMEI( H_F);
 
-		while( H_S.heapSize > 0 && minValue_heapMEI( &H_S) == leftBreakPoint)
-			heap_remove_topMEI( &H_S);
+		while( H_S->heapSize > 0 && minValue_heapMEI( H_S) == leftBreakPoint)
+			heap_remove_topMEI( H_S);
 	}
 }
 
@@ -656,6 +656,9 @@ void vh_finalizeReadMapping_Mei( int chroSize)
 		free( mReads);
 		mReads = NULL;
 	}
+	vh_free_heap_mei(H_F);
+	vh_free_heap_mei(H_R);
+	vh_free_heap_mei(H_S);
 }
 
 int mei_regions( parameters *params, char* chromosome_name)
@@ -733,9 +736,12 @@ void initializeReadMapping_MEI( bam_info** in_bams, parameters *params, int chr_
 	for( i = 0; i < params->this_sonic->chromosome_lengths[chr_index]; i++)
 		mReads[i] = NULL;
 
-	H_F.heapSize = 0;
-	H_R.heapSize = 0;
-	H_S.heapSize = 0;
+	H_F = vh_newHeapMEI();
+	H_R = vh_newHeapMEI();
+	H_S = vh_newHeapMEI();
+	H_F->heapSize = 0;
+	H_R->heapSize = 0;
+	H_S->heapSize = 0;
 
 	if( running_mode == QUICK)
 		mei_count = addToGenomeIndex_MEI( in_bams, params, params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);

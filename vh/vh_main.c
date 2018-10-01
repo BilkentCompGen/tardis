@@ -73,6 +73,12 @@ void vh_init(bam_info** in_bams, parameters *params, double preProsPrune, char *
 	/*Hold the libraries in a linked list*/
 	g_libInfo = NULL;
 
+
+	/* create conflict array */
+	listSelectedSV = (struct SV_selected *) getMem(sizeof(struct SV_selected) * maxNumSV);
+	fprintf(stderr, "Conflict array initialized\n");
+	exit(1);
+	
 	for (k = 0; k < num_bams; k++)
 	{
 		for (i = 0; i < in_bams[k]->num_libraries; i++)
