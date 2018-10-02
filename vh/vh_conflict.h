@@ -12,6 +12,8 @@
 
 #define maxNumSV 10000000 /* maximum number of SV's allowed to be reported. */
 
+//int maxNumSV 50000 /* maximum number of SV's allowed to be reported. */
+
 /* SVs which are selected for output are kept for conflict resolution */
 typedef struct SV_selected{
 
@@ -25,13 +27,18 @@ typedef struct SV_selected{
 } SV_selected;
 
 //SV_selected listSelectedSV[maxNumSV];// the array of all the SVs selected till now
-SV_selected *listSelectedSV;// the array of all the SVs selected till now
+SV_selected **listSelectedSV;// the array of all the SVs selected till now
 
 
 int conflictsAny(int i, int *supInd);
 void addToListOfConflicts(int i, int j, int *countReads);
 void addToConflict(int maxWeightSet, int *countReads);
 void initConflict( int max_sv_count);
-
+void vh_new_conflict_list(int);
+void vh_enlarge_conflict_list(int, int);
+SV_selected *vh_new_conflict_item(void);
+void vh_free_conflict_list(int);
+extern int current_conflict_size;
+extern int numSV;
 
 #endif /* VH_VH_CONFLICT_H_ */

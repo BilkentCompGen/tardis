@@ -1,7 +1,7 @@
 #ifndef _VH_HEAP__H_
 #define _VH_HEAP__H_
 
-#define MAX_CLUSTER_SIZE 10000000
+#define MAX_CLUSTER_SIZE 50000
 
 
 #include "vh_common.h"
@@ -27,6 +27,7 @@ typedef struct Heap
 {
         struct HeapEl *heapArray;
         int heapSize;
+        int current_max_size;
 } Heap;
 
 typedef struct HeapElMEI{
@@ -38,6 +39,7 @@ typedef struct HeapElMEI{
 typedef struct HeapMEI{
         HeapElMEI *heapArray;
 	int heapSize;
+        int current_max_size;
 } HeapMEI;
 
 typedef struct HeapElNUMT{
@@ -49,6 +51,7 @@ typedef struct HeapElNUMT{
 typedef struct HeapNUMT{
         HeapElNUMT *heapArray;
 	int heapSize;
+        int current_max_size;
 } HeapNUMT;
 
 
@@ -57,6 +60,10 @@ extern Heap *g_intersectInterval;
 Heap *vh_newHeap(void);
 HeapMEI *vh_newHeapMEI(void);
 HeapNUMT *vh_newHeapNUMT(void);
+void vh_renewHeap(Heap *);
+void vh_renewHeapMEI(HeapMEI *);
+void vh_renewHeapNUMT(HeapNUMT *);
+  
 void vh_free_heap(Heap *);
 void vh_free_heap_mei(HeapMEI *);
 void vh_free_heap_numt(HeapNUMT *);

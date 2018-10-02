@@ -8,6 +8,8 @@ Heap *vh_newHeap(void)
        Heap *tmp_heap;
        tmp_heap = (Heap *) getMem (sizeof (Heap));
        tmp_heap->heapArray = (struct HeapEl *) getMem(sizeof(struct HeapEl) * MAX_CLUSTER_SIZE); // I really don't like this max_cluster_size thing
+       tmp_heap->heapSize = 0;
+       tmp_heap->current_max_size = MAX_CLUSTER_SIZE;
        return tmp_heap;
 }
 
@@ -16,6 +18,8 @@ HeapMEI *vh_newHeapMEI(void)
        HeapMEI *tmp_heap;
        tmp_heap = (HeapMEI *) getMem (sizeof (HeapMEI));
        tmp_heap->heapArray = (struct HeapElMEI *) getMem(sizeof(struct HeapElMEI) * MAX_CLUSTER_SIZE); // I really don't like this max_cluster_size thing
+       tmp_heap->heapSize = 0;
+       tmp_heap->current_max_size = MAX_CLUSTER_SIZE;
        return tmp_heap;
 }
 
@@ -24,8 +28,53 @@ HeapNUMT *vh_newHeapNUMT(void)
        HeapNUMT *tmp_heap;
        tmp_heap = (HeapNUMT *) getMem (sizeof (HeapNUMT));
        tmp_heap->heapArray = (struct HeapElNUMT *) getMem(sizeof(struct HeapElNUMT) * MAX_CLUSTER_SIZE); // I really don't like this max_cluster_size thing
+       tmp_heap->heapSize = 0;
+       tmp_heap->current_max_size = MAX_CLUSTER_SIZE;
        return tmp_heap;
 }
+
+
+void vh_renewHeap(Heap *h)
+{
+       Heap *tmp_heap;
+       int new_size = h->current_max_size + MAX_CLUSTER_SIZE;
+       tmp_heap = (Heap *) getMem (sizeof (Heap));
+       tmp_heap->heapArray = (struct HeapEl *) getMem(sizeof(struct HeapEl) * new_size);
+       tmp_heap->heapSize = h->heapSize;
+       tmp_heap->current_max_size = new_size;
+       memcpy(tmp_heap->heapArray, h->heapArray, (h->heapSize * sizeof(struct HeapEl)));
+       vh_free_heap(h);
+       h = tmp_heap;
+}
+
+void vh_renewHeapMEI(HeapMEI *h)
+{
+       HeapMEI *tmp_heap;
+       int new_size = h->current_max_size + MAX_CLUSTER_SIZE;
+       tmp_heap = (HeapMEI *) getMem (sizeof (HeapMEI));
+       tmp_heap->heapArray = (struct HeapElMEI *) getMem(sizeof(struct HeapElMEI) * new_size);
+       tmp_heap->heapSize = h->heapSize;
+       tmp_heap->current_max_size = new_size;
+       memcpy(tmp_heap->heapArray, h->heapArray, (h->heapSize * sizeof(struct HeapEl)));
+       vh_free_heap_mei(h);
+       h = tmp_heap;
+}
+
+void vh_renewHeapNUMT(HeapNUMT *h)
+{
+       HeapNUMT *tmp_heap;
+       int new_size = h->current_max_size + MAX_CLUSTER_SIZE;
+       tmp_heap = (HeapNUMT *) getMem (sizeof (HeapNUMT));
+       tmp_heap->heapArray = (struct HeapElNUMT *) getMem(sizeof(struct HeapElNUMT) * new_size); 
+       tmp_heap->heapSize = h->heapSize;
+       tmp_heap->current_max_size = new_size;
+       memcpy(tmp_heap->heapArray, h->heapArray, (h->heapSize * sizeof(struct HeapEl)));
+       vh_free_heap_numt(h);
+       h = tmp_heap;
+}
+
+
+
 
 void vh_free_heap(Heap *h)
 {
@@ -72,6 +121,12 @@ void vh_push_heap (Heap * heapName, HeapEl * newEl)
 {
 	int heapIndex = heapName->heapSize;
 	HeapEl tempEl;
+
+	/* HEAP_MEMORY_REALLOCATION */
+	if (heapName->heapSize == heapName->current_max_size)
+	  vh_renewHeap(heapName);
+	
+
 	heapName->heapSize++;
 	vh_copyHeapEl (&(heapName->heapArray[heapIndex]), newEl);
 	heapIndex = heapName->heapSize - 1;;
@@ -274,6 +329,12 @@ void push_heap_mei(HeapMEI *heapName, HeapElMEI *newEl)
 {
 	int heapIndex = heapName->heapSize;
 	HeapElMEI tempEl;
+
+	/* HEAP_MEMORY_REALLOCATION  */
+	if (heapName->heapSize == heapName->current_max_size)
+	  vh_renewHeapMEI(heapName);
+	
+	
 	heapName->heapSize++;
 	copyHeapElMEI(&(heapName->heapArray[heapIndex]), newEl);
 	heapIndex = heapName->heapSize - 1;
@@ -291,6 +352,12 @@ void push_heap_numt(HeapNUMT *heapName, HeapElNUMT *newEl)
 {
 	int heapIndex = heapName->heapSize;
 	HeapElNUMT tempEl;
+
+	/* HEAP_MEMORY_REALLOCATION */
+	if (heapName->heapSize == heapName->current_max_size)
+	  vh_renewHeapNUMT(heapName);
+	
+
 	heapName->heapSize++;
 	copyHeapElNUMT(&(heapName->heapArray[heapIndex]), newEl);
 	heapIndex = heapName->heapSize - 1;

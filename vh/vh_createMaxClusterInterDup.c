@@ -273,8 +273,6 @@ void vh_createInterDupClusters (int chroSize, int inter_dup_location)
 	Heap *FRHeap = vh_newHeap();
 	Heap *RFHeap = vh_newHeap();
 
-	FRHeap->heapSize = 0;
-	RFHeap->heapSize = 0;
 
 	g_intersectInterval->heapSize = 0;
 
@@ -489,7 +487,6 @@ void vh_initializeReadMapping_InterDup (sonic *this_sonic, int chr_index, int in
 	for( i = 0; i < g_maxListBrkPointIntr; i++)
 		g_listRightBrkPointIntr[i].readMappingPtr = NULL;
 
-	//	g_intersectInterval = (Heap *) getMem (sizeof (Heap));
 	g_intersectInterval = vh_newHeap();
-	g_intersectInterval->heapSize = 0;
+
 }

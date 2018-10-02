@@ -1317,7 +1317,11 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 	numCallsRequested = maxNumSV;
 
 	/* create conflict array */
-	listSelectedSV = (struct SV_selected *) getMem(sizeof(struct SV_selected) * maxNumSV);
+	current_conflict_size = maxNumSV;
+	vh_new_conflict_list(current_conflict_size);
+
+	//listSelectedSV = (struct SV_selected *) getMem(sizeof(struct SV_selected) * maxNumSV);
+	numSV = 0;
 	
 	sv_count = 0;
 	sv_lowqual_count = 0;
@@ -1384,5 +1388,7 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 	}
 	free( read_names);
 	read_names = NULL;
-	free( listSelectedSV);
+	vh_free_conflict_list(current_conflict_size);
+	//	free( listSelectedSV);
+	//	listSelectedSV = NULL;
 }

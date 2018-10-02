@@ -739,9 +739,6 @@ void initializeReadMapping_MEI( bam_info** in_bams, parameters *params, int chr_
 	H_F = vh_newHeapMEI();
 	H_R = vh_newHeapMEI();
 	H_S = vh_newHeapMEI();
-	H_F->heapSize = 0;
-	H_R->heapSize = 0;
-	H_S->heapSize = 0;
 
 	if( running_mode == QUICK)
 		mei_count = addToGenomeIndex_MEI( in_bams, params, params->this_sonic->chromosome_names[chr_index], params->this_sonic->chromosome_lengths[chr_index]);

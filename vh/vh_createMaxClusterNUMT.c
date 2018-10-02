@@ -422,8 +422,6 @@ void initializeReadMapping_NUMT( bam_info** in_bams, parameters *params, int chr
 
 	Heap_F = vh_newHeapNUMT();
 	Heap_R = vh_newHeapNUMT();
-	Heap_F->heapSize = 0;
-	Heap_R->heapSize = 0;
 
 	numt_count = addToGenomeIndex_NUMT( in_bams, params, chr_index);
 }

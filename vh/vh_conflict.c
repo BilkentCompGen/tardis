@@ -13,6 +13,7 @@
 #include "vh_common.h"
 
 int numSV = 0; // total number of distinct SVs picked
+int current_conflict_size = maxNumSV; 
 
 void removeInd( int ind, int j)
 {
@@ -52,11 +53,11 @@ int conflictsAny(int i, int *supInd) // return the individual that SV_i is in co
 
 	for (count=0; count<numSV; count++)
 	{
-		if (strcmp(listSelectedSV[count].chromosome_name, listClusterEl[i].chromosome_name)==0)
+		if (strcmp(listSelectedSV[count]->chromosome_name, listClusterEl[i].chromosome_name)==0)
 		{
-			if(conflictsBetweenTwoSV_Cord(listSelectedSV[count].posStart_SV, listSelectedSV[count].posEnd_SV, listSelectedSV[count].SVtype, listClusterEl[i].posStartSV, listClusterEl[i].posEndSV, listClusterEl[i].SVtype))
+			if(conflictsBetweenTwoSV_Cord(listSelectedSV[count]->posStart_SV, listSelectedSV[count]->posEnd_SV, listSelectedSV[count]->SVtype, listClusterEl[i].posStartSV, listClusterEl[i].posEndSV, listClusterEl[i].SVtype))
 			{
-				ptrSV=listSelectedSV[count].conflict_Next;
+				ptrSV=listSelectedSV[count]->conflict_Next;
 				while (ptrSV!=NULL)
 				{
 					if (conflictsBetweenTwoSV_Cord(ptrSV->posStart_SV, ptrSV->posEnd_SV, ptrSV->SVtype, listClusterEl[i].posStartSV, listClusterEl[i].posEndSV, listClusterEl[i].SVtype))
@@ -64,7 +65,7 @@ int conflictsAny(int i, int *supInd) // return the individual that SV_i is in co
 						int countInd=0;
 						for (countInd=0; countInd<multiIndCount; countInd++)
 						{
-							if (ptrSV->sup[countInd] > 0 && listClusterEl[i].indIdCount[countInd] <= 0 && listSelectedSV[count].sup[countInd] > 0 && supInd[countInd]>0)
+							if (ptrSV->sup[countInd] > 0 && listClusterEl[i].indIdCount[countInd] <= 0 && listSelectedSV[count]->sup[countInd] > 0 && supInd[countInd]>0)
 							{
 								removeInd(countInd, i);
 								conflict=1;
@@ -112,14 +113,14 @@ int conflictsTwoWay(int i, int j) //returns the individual that SV_i and SV_j ar
 {
 	int count=0;
 
-	if (strcmp(listSelectedSV[i].chromosome_name, listSelectedSV[j].chromosome_name)!=0)
+	if (strcmp(listSelectedSV[i]->chromosome_name, listSelectedSV[j]->chromosome_name)!=0)
 		return -1;
-	if (conflictsBetweenTwoSV_Cord(listSelectedSV[i].posStart_SV, listSelectedSV[i].posEnd_SV, listSelectedSV[i].SVtype, listSelectedSV[j].posStart_SV, listSelectedSV[j].posEnd_SV, listSelectedSV[j].SVtype)==0)
+	if (conflictsBetweenTwoSV_Cord(listSelectedSV[i]->posStart_SV, listSelectedSV[i]->posEnd_SV, listSelectedSV[i]->SVtype, listSelectedSV[j]->posStart_SV, listSelectedSV[j]->posEnd_SV, listSelectedSV[j]->SVtype)==0)
 		return -1;
 
 	for (count=0; count<multiIndCount; count++)
 	{
-		if (listSelectedSV[i].sup[count]>0 && listSelectedSV[j].sup[count]>0)
+		if (listSelectedSV[i]->sup[count]>0 && listSelectedSV[j]->sup[count]>0)
 			return count;
 	}
 	return -1;
@@ -131,19 +132,19 @@ int wasNotInConliftNowIsConflict(int i, int j, int *countReads)
 {
 	int count;
 
-	if (strcmp(listSelectedSV[i].chromosome_name, listSelectedSV[j].chromosome_name)!=0)
+	if (strcmp(listSelectedSV[i]->chromosome_name, listSelectedSV[j]->chromosome_name)!=0)
 		return -1;
-	if (conflictsBetweenTwoSV_Cord(listSelectedSV[i].posStart_SV, listSelectedSV[i].posEnd_SV, listSelectedSV[i].SVtype, listSelectedSV[j].posStart_SV, listSelectedSV[j].posEnd_SV, listSelectedSV[j].SVtype)==0)
+	if (conflictsBetweenTwoSV_Cord(listSelectedSV[i]->posStart_SV, listSelectedSV[i]->posEnd_SV, listSelectedSV[i]->SVtype, listSelectedSV[j]->posStart_SV, listSelectedSV[j]->posEnd_SV, listSelectedSV[j]->SVtype)==0)
 		return -1;
 
 	for (count=0; count<multiIndCount; count++)
 	{
-		if (listSelectedSV[i].sup[count]>0 && listSelectedSV[j].sup[count]>0)
+		if (listSelectedSV[i]->sup[count]>0 && listSelectedSV[j]->sup[count]>0)
 			return -1;
 	}
 	for (count=0; count<multiIndCount; count++)
 	{
-		if (listSelectedSV[i].sup[count]>0 && listSelectedSV[j].sup[count]==0 && countReads[count]>0)
+		if (listSelectedSV[i]->sup[count]>0 && listSelectedSV[j]->sup[count]==0 && countReads[count]>0)
 			return count;
 	}
 	return -1;
@@ -153,22 +154,22 @@ void addToListOfConflicts(int i, int j, int *countReads) // adds SV i to SV j's 
 {
 	int count;
 	SV_selected *newSV;
-	newSV = (SV_selected *) getMem( sizeof( SV_selected));
-	newSV->posStart_SV = listSelectedSV[i].posStart_SV;
-	newSV->posEnd_SV = listSelectedSV[i].posEnd_SV;
-	newSV->clusterId = listSelectedSV[i].clusterId;
-	newSV->SVtype = listSelectedSV[i].SVtype;
+	newSV = vh_new_conflict_item(); //(SV_selected *) getMem( sizeof( SV_selected));
+	newSV->posStart_SV = listSelectedSV[i]->posStart_SV;
+	newSV->posEnd_SV = listSelectedSV[i]->posEnd_SV;
+	newSV->clusterId = listSelectedSV[i]->clusterId;
+	newSV->SVtype = listSelectedSV[i]->SVtype;
 
 	newSV->chromosome_name = NULL;
-	set_str( &(newSV->chromosome_name), listSelectedSV[i].chromosome_name);
+	set_str( &(newSV->chromosome_name), listSelectedSV[i]->chromosome_name);
 
 	for( count = 0; count < multiIndCount; count++)
 	{
-		newSV->sup[count] = listSelectedSV[i].sup[count];
+		newSV->sup[count] = listSelectedSV[i]->sup[count];
 	}
-	newSV->conflict_Next = listSelectedSV[j].conflict_Next;
-	listSelectedSV[j].conflict_Next=newSV;
-	newSV=listSelectedSV[j].conflict_Next;
+	newSV->conflict_Next = listSelectedSV[j]->conflict_Next;
+	listSelectedSV[j]->conflict_Next=newSV;
+	newSV=listSelectedSV[j]->conflict_Next;
 }
 
 
@@ -180,22 +181,22 @@ void addToConflict(int maxWeightSet, int *countReads)// adds the SV numSV to the
 
 	for( i = 0; i < numSV; i++)
 	{
-		if( listSelectedSV[i].clusterId == maxWeightSet)
+		if( listSelectedSV[i]->clusterId == maxWeightSet)
 			idSV2Add = i;
 	}
 	if( idSV2Add == -1)
 	{
-		listSelectedSV[numSV].chromosome_name = NULL;
-		set_str( &(listSelectedSV[numSV].chromosome_name), listClusterEl[maxWeightSet].chromosome_name);
+	        listSelectedSV[numSV] = vh_new_conflict_item();
+		set_str( &(listSelectedSV[numSV]->chromosome_name), listClusterEl[maxWeightSet].chromosome_name);
 
-		listSelectedSV[numSV].posStart_SV = listClusterEl[maxWeightSet].posStartSV;
-		listSelectedSV[numSV].clusterId = maxWeightSet;
-		listSelectedSV[numSV].posEnd_SV = listClusterEl[maxWeightSet].posEndSV;
-		listSelectedSV[numSV].conflict_Next = NULL;
-		listSelectedSV[numSV].SVtype = listClusterEl[maxWeightSet].SVtype;
+		listSelectedSV[numSV]->posStart_SV = listClusterEl[maxWeightSet].posStartSV;
+		listSelectedSV[numSV]->clusterId = maxWeightSet;
+		listSelectedSV[numSV]->posEnd_SV = listClusterEl[maxWeightSet].posEndSV;
+		listSelectedSV[numSV]->conflict_Next = NULL;
+		listSelectedSV[numSV]->SVtype = listClusterEl[maxWeightSet].SVtype;
 
 		for( i = 0; i < multiIndCount; i++)
-			listSelectedSV[numSV].sup[i] = listClusterEl[maxWeightSet].indIdCount[i];
+			listSelectedSV[numSV]->sup[i] = listClusterEl[maxWeightSet].indIdCount[i];
 
 		for( i = 0; i < numSV; i++)
 		{
@@ -208,19 +209,23 @@ void addToConflict(int maxWeightSet, int *countReads)// adds the SV numSV to the
 
 		for( i = 0; i < sizeListClusterEl; i++)
 		{
-			ptrTmp = listSelectedSV[numSV].conflict_Next;
-			if( conflictsBetweenTwoSV_Cord( listSelectedSV[numSV].posStart_SV, listSelectedSV[numSV].posEnd_SV,
-					listSelectedSV[numSV].SVtype, listClusterEl[i].posStartSV, listClusterEl[i].posEndSV,
-					listClusterEl[i].SVtype) && (strcmp(listSelectedSV[numSV].chromosome_name, listClusterEl[i].chromosome_name) == 0))
+			ptrTmp = listSelectedSV[numSV]->conflict_Next;
+			if( conflictsBetweenTwoSV_Cord( listSelectedSV[numSV]->posStart_SV, listSelectedSV[numSV]->posEnd_SV,
+					listSelectedSV[numSV]->SVtype, listClusterEl[i].posStartSV, listClusterEl[i].posEndSV,
+					listClusterEl[i].SVtype) && (strcmp(listSelectedSV[numSV]->chromosome_name, listClusterEl[i].chromosome_name) == 0))
 			{
 				while( ptrTmp != NULL)
 				{
-					checkConflictNewSelected( &listSelectedSV[numSV], ptrTmp, i);
+					checkConflictNewSelected( listSelectedSV[numSV], ptrTmp, i);
 					ptrTmp = ptrTmp->conflict_Next;
 				}
 			}
 		}
 		numSV++;
+		if (numSV >= current_conflict_size){
+		  vh_enlarge_conflict_list(current_conflict_size, current_conflict_size+maxNumSV);
+		  current_conflict_size += maxNumSV; 
+		}
 	}
 	else
 	{
@@ -233,18 +238,18 @@ void addToConflict(int maxWeightSet, int *countReads)// adds the SV numSV to the
 			}
 		}
 		for( i = 0; i < multiIndCount; i++)
-			listSelectedSV[idSV2Add].sup[i] = listSelectedSV[idSV2Add].sup[i] + countReads[i];
+			listSelectedSV[idSV2Add]->sup[i] = listSelectedSV[idSV2Add]->sup[i] + countReads[i];
 
 		for( i = 0; i < sizeListClusterEl; i++)
 		{
-			ptrTmp = listSelectedSV[idSV2Add].conflict_Next;
-			if( conflictsBetweenTwoSV_Cord( listSelectedSV[idSV2Add].posStart_SV, listSelectedSV[idSV2Add].posEnd_SV,
-					listSelectedSV[idSV2Add].SVtype, listClusterEl[i].posStartSV, listClusterEl[i].posEndSV,
-					listClusterEl[i].SVtype) && (strcmp(listSelectedSV[idSV2Add].chromosome_name, listClusterEl[i].chromosome_name)==0))
+			ptrTmp = listSelectedSV[idSV2Add]->conflict_Next;
+			if( conflictsBetweenTwoSV_Cord( listSelectedSV[idSV2Add]->posStart_SV, listSelectedSV[idSV2Add]->posEnd_SV,
+					listSelectedSV[idSV2Add]->SVtype, listClusterEl[i].posStartSV, listClusterEl[i].posEndSV,
+					listClusterEl[i].SVtype) && (strcmp(listSelectedSV[idSV2Add]->chromosome_name, listClusterEl[i].chromosome_name)==0))
 			{
 				while( ptrTmp != NULL)
 				{
-					checkConflictNewSelected( &listSelectedSV[numSV], ptrTmp, i);
+					checkConflictNewSelected( listSelectedSV[numSV], ptrTmp, i);
 					ptrTmp = ptrTmp->conflict_Next;
 				}
 			}
@@ -252,4 +257,53 @@ void addToConflict(int maxWeightSet, int *countReads)// adds the SV numSV to the
 	}
 }
 
+void vh_new_conflict_list(int current_conflict_size)
+{
+  int i;
+  listSelectedSV = (struct SV_selected **) getMem(sizeof(struct SV_selected *) * current_conflict_size);
+  for (i=0; i<current_conflict_size; i++)
+    listSelectedSV[i] = NULL;
+}
 
+void vh_enlarge_conflict_list(int old_conflict_size, int current_conflict_size)
+{
+  int i;
+  struct SV_selected **tmp;
+  tmp = (struct SV_selected **) getMem(sizeof(struct SV_selected *) * current_conflict_size);
+  for (i=0; i<old_conflict_size; i++){
+    memcpy(tmp[i], listSelectedSV[i], sizeof (struct SV_selected *));
+    freeMem(listSelectedSV[i], sizeof (listSelectedSV[i]));
+  } 
+  for (i=old_conflict_size; i<current_conflict_size; i++)
+    tmp[i] = NULL;
+
+  listSelectedSV = tmp;
+}
+
+SV_selected *vh_new_conflict_item(void)
+{
+  SV_selected *tmp;
+  tmp =  (struct SV_selected *) getMem(sizeof(struct SV_selected ));
+  tmp->chromosome_name = NULL;
+  tmp->conflict_Next = NULL;
+  return tmp;
+}
+
+  
+void vh_free_conflict_list(int current_conflict_size)
+{
+  int i;
+  struct SV_selected *tmp_conflict;
+  for (i=0;i<current_conflict_size;i++){
+    if (listSelectedSV[i] != NULL){
+      freeMem (listSelectedSV[i]->chromosome_name, strlen(listSelectedSV[i]->chromosome_name));
+      while (listSelectedSV[i]->conflict_Next != NULL){
+	tmp_conflict = listSelectedSV[i]->conflict_Next;
+	listSelectedSV[i]->conflict_Next = listSelectedSV[i]->conflict_Next->conflict_Next;
+	freeMem (tmp_conflict->chromosome_name, strlen(tmp_conflict->chromosome_name));
+	freeMem (tmp_conflict, sizeof(tmp_conflict));
+      }
+      freeMem (listSelectedSV[i], sizeof(listSelectedSV[i]));
+    }
+  }
+}

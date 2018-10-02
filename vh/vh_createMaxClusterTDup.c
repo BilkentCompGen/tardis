@@ -62,7 +62,6 @@ void vh_initializeReadMapping_TDup( sonic *this_sonic, int chr_index)
 
 	//g_intersectInterval = (Heap *) getMem (sizeof (Heap));
 	g_intersectInterval = vh_newHeap();
-	g_intersectInterval->heapSize = 0;
 
 	while (libInfoPtr != NULL)
 	{
