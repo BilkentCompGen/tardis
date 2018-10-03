@@ -718,8 +718,9 @@ int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, LibraryI
 		}
 		ptrSoftClip = ptrSoftClip->next;
 	}
+
 	//fprintf(stderr, "\nThere are %li sc in divets;%d FFAB, %d FFBA, %d FRAB, %d FRBA, %d RFAB, %d RFBA\n",
-	//	sr_cnt_div, scffab, scffba, scfrab,scfrba, scrfab, scrfba);
+		//sr_cnt_div, scffab, scffba, scfrab,scfrba, scrfab, scrfba);
 	return divet_row_count;
 }
 
@@ -825,6 +826,7 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 		}
 	}
 	fprintf( logFile, "%li Alternative Mapping, ", alt_cnt_div);
+
 	if( !params->no_soft_clip)
 	{
 		for( bam_index = 0; bam_index < params->num_bams; bam_index++)

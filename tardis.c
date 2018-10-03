@@ -81,7 +81,7 @@ int main( int argc, char** argv)
 	{
 		in_bams[i] = ( bam_info*) getMem( sizeof( bam_info));
 		in_bams[i]->sample_name = NULL;
-		load_bam( in_bams[i], params->bam_file_list[i], params->alt_mapping, i);
+		load_bam( in_bams[i], params->bam_file_list[i], params->alt_mapping, i, params->ref_genome);
 	}
 
 	/* Passing the flags to VH */
