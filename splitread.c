@@ -17,7 +17,7 @@
 //lociInRef *hash_table_SR[SR_HASH_SIZE];
 
 lociInRef **hash_table_SR;
-char *ref_seq_per_chr;
+char *ref_seq_per_chr = NULL;
 
 /* Read the reference genome */
 void readReferenceSeq( parameters *params, int chr_index)
@@ -29,7 +29,14 @@ void readReferenceSeq( parameters *params, int chr_index)
 
 	min = 0, max = 999;
 	ref_fai = fai_load( params->ref_genome);
-	ref_seq_per_chr = ( char *) calloc( (params->this_sonic->chromosome_lengths[chr_index] + 1), sizeof( char));
+
+	/*
+	if (ref_seq_per_chr != NULL)
+	  freeMem(ref_seq_per_chr, strlen(ref_seq_per_chr));
+	*/
+	
+	ref_seq_per_chr = ( char *) getMem( (params->this_sonic->chromosome_lengths[chr_index] + 1) * sizeof( char));
+	//	ref_seq_per_chr = ( char *) calloc( (params->this_sonic->chromosome_lengths[chr_index] + 1), sizeof( char));
 
 	while ( max < params->this_sonic->chromosome_lengths[chr_index])
 	{
@@ -89,10 +96,17 @@ int hash_function_ref( char *str)
 }
 
 int is_kmer_valid (char *str){
-	if (strlen(str) < HASHKMERLEN)
+
+        int i = 0, l = 0;
+	l = strlen(str);
+
+	if (l < HASHKMERLEN)
 		return 0;
-	if (strchr( str, 'N') != NULL || strchr( str, 'M') != NULL || strchr( str, 'R') != NULL || strchr( str, 'Y') != NULL)
-		return 0;
+
+	for (i=0; i<l; i++)
+	  if (str[i] != 'A' && str[i] != 'C' && str[i] != 'G' && str[i] != 'T')
+	    return 0;
+
 	return 1;
 }
 
@@ -156,7 +170,7 @@ void free_HashIndex()
 		free( hash_table_SR);
 	//hash_table_SR = NULL;
 
-	free( ref_seq_per_chr);
+	freeMem( ref_seq_per_chr, strlen(ref_seq_per_chr));
 }
 
 posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
@@ -170,7 +184,8 @@ posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 	posMapSoftClip *tmpSoftClipMap, *returnPtr;
 	returnPtr = NULL;
 
-	if (strchr(str, 'N') != NULL)
+	//	if (strchr(str, 'N')
+	if ( !is_kmer_valid (str) )
 	  return NULL;
 	
 	strncpy( seed, str, HASHKMERLEN);

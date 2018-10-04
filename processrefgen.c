@@ -35,6 +35,8 @@ void init_rd( bam_info* in_bam, parameters* param)
 	in_bam->read_depth = ( short**) getMem( param->this_sonic->number_of_chromosomes * sizeof( short*));
 	in_bam->read_count = 0;
 
+	/* Do we need to hold the GC values for all chromosomes simultaneously? Can we do this chr by chr? */
+	/* isn't init_rd_per_chr doing this already? */
 	for( chr = param->first_chr; chr <= param->last_chr; chr++)
 	{
 		in_bam->read_depth[chr] = ( short*) getMem( sizeof( short) * ( param->this_sonic->chromosome_lengths[chr]));
@@ -51,12 +53,21 @@ void init_rd( bam_info* in_bam, parameters* param)
 
 void init_rd_per_chr( bam_info* in_bam, parameters* param, int chr_index)
 {
-	int i, lib_index;
+  //	int i, lib_index;
 
 	in_bam->read_count = 0;
 	in_bam->read_depth_per_chr = ( short*) getMem( sizeof( short) * ( param->this_sonic->chromosome_lengths[chr_index]));
 
 	memset (in_bam->read_depth_per_chr, 0, (param->this_sonic->chromosome_lengths[chr_index] * sizeof(short)));
+}
+
+void free_rd_per_chr( bam_info* in_bam, parameters* param, int chr_index)
+{
+  //	int i, lib_index;
+
+  //in_bam->read_count = 0;
+        freeMem (in_bam->read_depth_per_chr,  sizeof( short) *  param->this_sonic->chromosome_lengths[chr_index]);
+	in_bam->read_depth_per_chr = NULL;
 }
 
 

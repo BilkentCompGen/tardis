@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "vh/vh_hash.h"
 #include "free.h"
+#include "processrefgen.h"
 #include "vh/vh_divethandler.h"
 
 void free_alignments( bam_alignment_region** bam_align)
