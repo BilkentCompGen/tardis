@@ -105,8 +105,10 @@ int is_kmer_valid (char *str){
 
 	for (i=0; i<l; i++)
 	  if (str[i] != 'A' && str[i] != 'C' && str[i] != 'G' && str[i] != 'T')
-	    return 0;
-
+	    {
+	      return 0;
+	    }
+	
 	return 1;
 }
 
@@ -130,7 +132,8 @@ void create_HashIndex( parameters* params, int chr_index)
 			break;
 
 		strncpy( str, &( ref_seq_per_chr[i]), HASHKMERLEN);
-
+		str[HASHKMERLEN] = '\0';
+		
 		if( is_kmer_valid(str))
 		{
 			ind = hash_function_ref( str);
@@ -184,12 +187,13 @@ posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 	posMapSoftClip *tmpSoftClipMap, *returnPtr;
 	returnPtr = NULL;
 
-	//	if (strchr(str, 'N')
-	if ( !is_kmer_valid (str) )
-	  return NULL;
 	
 	strncpy( seed, str, HASHKMERLEN);
 	seed[HASHKMERLEN] = '\0';
+	
+	if ( !is_kmer_valid (seed) )
+	  return NULL;
+	
 	index = hash_function_ref( seed);
 	ptr = hash_table_SR[index];
 
@@ -274,6 +278,7 @@ posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 			returnPtr = tmpSoftClipMap;
 		}
 	}
+
 	return returnPtr;
 }
 
@@ -336,6 +341,7 @@ void mapSoftClipToRef( bam_info* in_bam, parameters* params, int chr_index)
 	int i;
 	char *str;
 	softClip *ptrSoftClip;
+
 
 	for( i = 0; i < in_bam->num_libraries; i++)
 	{
