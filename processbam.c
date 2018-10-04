@@ -13,7 +13,7 @@
 
 bool isRGAvailable = true;
 
-void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt)
+void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt, char* ref_genome_path)
 {
 	/* Variables */
 	htsFile* bam_file;
@@ -28,6 +28,7 @@ void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt)
 	float* variance;
 	char* library_name = NULL;
 	int i, j, library_index, diff, return_value;
+	char fai_file[MAX_SEQ];
 
 	fprintf( stderr, "Processing BAM file %s.\n", path);
 
@@ -37,7 +38,8 @@ void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt)
 	bam_file = safe_hts_open( path, "r");
 
 	/* Read in BAM header information */
-	bam_header = bam_hdr_read( ( bam_file->fp).bgzf);
+	//bam_header = bam_hdr_read( ( bam_file->fp).bgzf);
+	bam_header = sam_hdr_read(bam_file);
 
 	/* Extract the Sample Name from the header text */
 	get_sample_name( in_bam, bam_header->text);
@@ -102,9 +104,13 @@ void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt)
 		fragment_size[i] = ( int*) getMem( SAMPLEFRAG * sizeof( int));
 	}
 
+	sprintf( fai_file,"%s.fai", ref_genome_path);
+	hts_set_fai_filename( bam_file, fai_file);
+
 	/* Initial read */
 	bam_alignment = bam_init1();
-	return_value = bam_read1( ( bam_file->fp).bgzf, bam_alignment);
+	//return_value = bam_read1( ( bam_file->fp).bgzf, bam_alignment);
+	return_value = sam_read1( bam_file, bam_header, bam_alignment);
 
 	/* The remaining reads */
 	fragments_sampled = ( int*) getMem( in_bam->num_libraries * sizeof( int));
@@ -138,14 +144,12 @@ void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt)
 			{
 				fragment_size[library_index][fragments_sampled[library_index]] = bam_alignment_core.isize;
 				fragments_sampled[library_index] = fragments_sampled[library_index] + 1;
-
-				//if(bam_alignment_core.isize<1000)
-				//frags[bam_alignment_core.isize]++;
 			}
 		}
 
 		/* Read next alignment */
-		return_value = bam_read1( ( bam_file->fp).bgzf, bam_alignment);
+		//return_value = bam_read1( ( bam_file->fp).bgzf, bam_alignment);
+		return_value = sam_read1( bam_file, bam_header, bam_alignment);
 	}
 
 	fprintf( stderr, "Sampling finished. Now calculating library statistics.\n");
@@ -175,13 +179,8 @@ void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt)
 		second_test_pass[i] = 0;
 		fragment_size_total[i] = 0;
 	}
-/*
-	int frags[1000];
-	for( i = 0; i < 1000; i++)
-	{
-		frags[i] = 0;
-	}
-*/
+
+
 	for( i = 0; i < in_bam->num_libraries; i++)
 	{
 		for( j = 0; j < SAMPLEFRAG; j++)
@@ -191,19 +190,11 @@ void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt)
 				fragment_size_total[i] = fragment_size_total[i] + fragment_size[i][j];
 				second_pass_fragments[i][j] = fragment_size[i][j];
 				second_test_pass[i] = second_test_pass[i] + 1;
-
-				//frags[fragment_size[i][j]]++;
 			}
 		}
 
 	}
-/*
-	for( i = 0; i < 1000; i++)
-	{
-		fprintf(stderr,"%d\t%d\n", i, frags[i]);
-	}
 
-*/
 	for( i = 0; i < in_bam->num_libraries; i++)
 	{
 		/* Compute the averages */

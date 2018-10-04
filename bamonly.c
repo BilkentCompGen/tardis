@@ -540,6 +540,11 @@ int read_bam( bam_info* in_bam, parameters* params)
 	int i, chr_index_bam, return_type, ed, len, lib_index;
 	char *xa_str = NULL, *library_name = NULL;
 	int32_t bamToRefIndex[in_bam->bam_header->n_targets];
+	char fai_file[MAX_SEQ];
+
+	sprintf( fai_file,"%s.fai", params->ref_genome);
+	hts_set_fai_filename( in_bam->bam_file, fai_file);
+	//hts_set_fai_filename(in_bam->bam_file, "/home/tardis/tardis/human_g1k_v37.fasta.fai");
 
 	bam1_core_t bam_alignment_core;
 	bam1_t* bam_alignment = bam_init1();
@@ -548,7 +553,8 @@ int read_bam( bam_info* in_bam, parameters* params)
 	for( i = 0; i < in_bam->bam_header->n_targets; i++)
 		bamToRefIndex[i] = sonic_refind_chromosome_index( params->this_sonic, in_bam->bam_header->target_name[i]);
 
-	while( bam_itr_next( in_bam->bam_file, in_bam->iter, bam_alignment) > 0)
+	//while( bam_itr_next( in_bam->bam_file, in_bam->iter, bam_alignment) > 0)
+	while( sam_itr_next( in_bam->bam_file, in_bam->iter, bam_alignment) > 0)
 	{
 		bam_alignment_core = bam_alignment->core;
 
@@ -610,7 +616,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 	print_vcf_header( fpVcf, in_bams, params);
 
-	
+
 	for( chr_index = params->first_chr; chr_index <= params->last_chr; chr_index++)
 	{
 		if( strstr( params->this_sonic->chromosome_names[chr_index], "GL000220") != NULL)
@@ -625,7 +631,8 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			in_bams[bam_index]->bam_file = safe_hts_open( params->bam_file_list[bam_index], "r");
 
 			/* Read in BAM header information */
-			in_bams[bam_index]->bam_header = bam_hdr_read( ( in_bams[bam_index]->bam_file->fp).bgzf);
+			//in_bams[bam_index]->bam_header = bam_hdr_read( ( in_bams[bam_index]->bam_file->fp).bgzf);
+			in_bams[bam_index]->bam_header = sam_hdr_read(in_bams[bam_index]->bam_file);
 
 			/* Load the bam index file */
 			in_bams[bam_index]->bam_file_index = sam_index_load( in_bams[bam_index]->bam_file, params->bam_file_list[bam_index]);
@@ -644,7 +651,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 				continue;
 			}
 
-			in_bams[bam_index]->iter = bam_itr_queryi( in_bams[bam_index]->bam_file_index, chr_index_bam, 0, params->this_sonic->chromosome_lengths[chr_index]);
+			in_bams[bam_index]->iter = sam_itr_queryi( in_bams[bam_index]->bam_file_index, chr_index_bam, 0, params->this_sonic->chromosome_lengths[chr_index]);
 			if( in_bams[bam_index]->iter == NULL)
 			{
 				fprintf( stderr, "Error: Iterator cannot be loaded (bam_itr_queryi)\n");
@@ -675,7 +682,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 					exit( EXIT_BAM_CLOSE);
 				}
 				/* Free the bam related files */
-				bam_itr_destroy( in_bams[bam_index]->iter);
+				sam_itr_destroy( in_bams[bam_index]->iter);
 				bam_hdr_destroy( in_bams[bam_index]->bam_header);
 				hts_idx_destroy( in_bams[bam_index]->bam_file_index);
 				continue;
@@ -693,7 +700,6 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 				fprintf( stderr, "\nRunning split read mapping..");
 				countNumSoftClipInCluster( params, in_bams[bam_index], chr_index);
 				fprintf( stderr, "..");
-				//fprintf( stderr, "\nRemapping soft clipped reads");
 				mapSoftClipToRef( in_bams[bam_index], params, chr_index);
 				fprintf( stderr, "..");
 			}
@@ -709,7 +715,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 				exit( EXIT_BAM_CLOSE);
 			}
 			/* Free the bam related files */
-			bam_itr_destroy( in_bams[bam_index]->iter);
+			sam_itr_destroy( in_bams[bam_index]->iter);
 			bam_hdr_destroy( in_bams[bam_index]->bam_header);
 			hts_idx_destroy( in_bams[bam_index]->bam_file_index);
 

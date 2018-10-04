@@ -355,7 +355,6 @@ void mapSoftClipToRef( bam_info* in_bam, parameters* params, int chr_index)
 				else if( ptrSoftClip->op[ptrSoftClip->opCount - 1] == BAM_CSOFT_CLIP)
 				{
 					int tmp = in_bam->libraries[i]->read_length - ptrSoftClip->opl[ptrSoftClip->opCount - 1];
-					//fprintf(stderr,"%d - %d\n",in_bam->libraries[i]->read_length, ptrSoftClip->opl[ptrSoftClip->opCount - 1]);
 					strncpy( str, &( ptrSoftClip->softClipString[tmp]), tmp);
 					str[in_bam->libraries[i]->read_length - ptrSoftClip->opl[ptrSoftClip->opCount - 1]] = '\0';
 				}

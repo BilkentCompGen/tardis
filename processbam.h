@@ -57,7 +57,7 @@ typedef struct bam_alignment_region
 }bam_alignment_region;
 
 /* Function Prototypes */
-void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt);
+void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt, char* ref_genome_path);
 void create_fastq( bam_info* in_bam, char* bam_path, parameters *params);
 void print_bam( bam_info* in_bam);
 void print_libs( bam_info* in_bam);
