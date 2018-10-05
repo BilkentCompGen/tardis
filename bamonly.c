@@ -724,15 +724,15 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			del_cnt_bam = 0, ins_cnt_bam = 0, inv_cnt_bam = 0, mei_cnt_bam = 0, numt_cnt_bam = 0, tandup_cnt_bam = 0, sr_cnt_bam = 0, alt_cnt_bam = 0;
 		}
 
+		if( not_in_bam == 1 || total_read_count == 0)
+		        continue;
+		
 		if( !params->no_soft_clip)
 		{
 			/* Free the hash */
 			free_HashIndex();
 		}
 
-		if( not_in_bam == 1 || total_read_count == 0)
-		        continue;
-		
 
 
 		divet_row_count = load_Divet_bam( in_bams, params, chr_index);
