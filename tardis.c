@@ -50,8 +50,8 @@ int main( int argc, char** argv)
 	}
 
 	/* Keeping simple logs in tardis.log file */
-	log_file_path = (char *) getMem(sizeof(char) * (11+strlen(params->outdir)));
-	sprintf(log_file_path, "%s%s", params->outdir, "tardis.log");
+	log_file_path = (char *) getMem(sizeof(char) * (12+strlen(params->outprefix)));
+	sprintf(log_file_path, "%s-%s", params->outprefix, "tardis.log");
 	logFile = safe_fopen (log_file_path, "w");
 	fprintf( logFile, "#CreationDate=%d.%d.%d\n\n", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday);
 	free(log_file_path);

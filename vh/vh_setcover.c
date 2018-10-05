@@ -1332,13 +1332,13 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 	if( running_mode == SENSITIVE)
 		fprintf( logFile, "Total Cluster Count= %d\n", cluster_count);
 
-	outputscore_path = (char *) getMem(sizeof(char) * (1+strlen("output.score")+strlen(params->outprefix)));
-	sprintf(outputscore_path, "%s%s", params->outprefix, "output.score");
+	outputscore_path = (char *) getMem(sizeof(char) * (2+strlen("output.score")+strlen(params->outprefix)));
+	sprintf(outputscore_path, "%s-%s", params->outprefix, "output.score");
 	cnvscoreFile = safe_fopen(outputscore_path, "w");
 	free(outputscore_path);
 	
-	debugsr_path = (char *) getMem(sizeof(char) * (1+strlen("debug.sr")+strlen(params->outprefix)));
-	sprintf(debugsr_path, "%s%s", params->outprefix, "debug.sr");
+	debugsr_path = (char *) getMem(sizeof(char) * (2+strlen("debug.sr")+strlen(params->outprefix)));
+	sprintf(debugsr_path, "%s-%s", params->outprefix, "debug.sr");
 	debugSR = safe_fopen(debugsr_path, "w");
 	free(debugsr_path);
 	
