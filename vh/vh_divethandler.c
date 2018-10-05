@@ -736,8 +736,8 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 	g_libInfo = NULL;
 
 	
-	divetfile_path = (char *) getMem(sizeof(char) * (1+strlen("divv.vh")+strlen(params->outdir)));
-	sprintf(divetfile_path, "%s%s", params->outdir, "divv.vh");
+	divetfile_path = (char *) getMem(sizeof(char) * (1+strlen("divv.vh")+strlen(params->outprefix)));
+	sprintf(divetfile_path, "%s%s", params->outprefix, "divv.vh");
 
 	divet_file = safe_fopen (divetfile_path, "w");
 	free(divetfile_path);

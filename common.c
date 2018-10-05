@@ -512,21 +512,21 @@ void get_working_directory(parameters *params){
 void clean_up_temp_files(parameters *params){
   char *divetfile_path;
 
-  divetfile_path = (char *) getMem(sizeof(char) * (1+strlen("divv.vh")+strlen(params->outdir)));
+  divetfile_path = (char *) getMem(sizeof(char) * (1+strlen("divv.vh")+strlen(params->outprefix)));
 
-  sprintf(divetfile_path, "%s%s", params->outdir, "divv.vh");
+  sprintf(divetfile_path, "%s%s", params->outprefix, "divv.vh");
   remove(divetfile_path);
   free(divetfile_path);
  
   char *outputscore_path;
-  outputscore_path = (char *) getMem(sizeof(char) * (1+strlen("output.score")+strlen(params->outdir)));
-  sprintf(outputscore_path, "%s%s", params->outdir, "output.score");
+  outputscore_path = (char *) getMem(sizeof(char) * (1+strlen("output.score")+strlen(params->outprefix)));
+  sprintf(outputscore_path, "%s%s", params->outprefix, "output.score");
   remove(outputscore_path);
   free(outputscore_path);
   
   char *debugsr_path;
-  debugsr_path = (char *) getMem(sizeof(char) * (1+strlen("debug.sr")+strlen(params->outdir)));
-  sprintf(debugsr_path, "%s%s", params->outdir, "debug.sr");
+  debugsr_path = (char *) getMem(sizeof(char) * (1+strlen("debug.sr")+strlen(params->outprefix)));
+  sprintf(debugsr_path, "%s%s", params->outprefix, "debug.sr");
   remove(debugsr_path);
   free(debugsr_path);
 }
