@@ -18,6 +18,7 @@
 
 lociInRef **hash_table_SR;
 char *ref_seq_per_chr = NULL;
+int *hash_table_count;
 
 /* Read the reference genome */
 void readReferenceSeq( parameters *params, int chr_index)
@@ -30,13 +31,7 @@ void readReferenceSeq( parameters *params, int chr_index)
 	min = 0, max = 999;
 	ref_fai = fai_load( params->ref_genome);
 
-	/*
-	if (ref_seq_per_chr != NULL)
-	  freeMem(ref_seq_per_chr, strlen(ref_seq_per_chr));
-	*/
-	
 	ref_seq_per_chr = ( char *) getMem( (params->this_sonic->chromosome_lengths[chr_index] + 1) * sizeof( char));
-	//	ref_seq_per_chr = ( char *) calloc( (params->this_sonic->chromosome_lengths[chr_index] + 1), sizeof( char));
 
 	while ( max < params->this_sonic->chromosome_lengths[chr_index])
 	{
@@ -44,6 +39,7 @@ void readReferenceSeq( parameters *params, int chr_index)
 
 		for( i = 0; i < loc_length; i++)
 		{
+		  /* can we do this faster with memcpy? */
 			if( bp_cnt < params->this_sonic->chromosome_lengths[chr_index])
 				ref_seq_per_chr[bp_cnt] = toupper( ref_seq[i]);
 			bp_cnt++;
@@ -53,57 +49,53 @@ void readReferenceSeq( parameters *params, int chr_index)
 
 		min += loc_length;
 		max += loc_length;
+		free( ref_seq);
 	}
 	fai_destroy( ref_fai);
-	free( ref_seq);
 
 	ref_seq_per_chr[bp_cnt] = '\0';
+	build_kmer_count(ref_seq_per_chr, bp_cnt);
 	create_HashIndex( params, chr_index);
+}
+
+void build_kmer_count(char *ref, int len){
+  int i;
+  char seed[HASHKMERLEN + 1];
 }
 
 int hash_function_ref( char *str)
 {
 	/* this strictly assumes HASHKMERLEN < 16 */
 
-	int i;
-	long count = 0;
+	int i = 0;
 	int val = 0, numericVal = 0;
-
+	
 	while(i < HASHKMERLEN)
 	{
-		switch (str[i])
-		{
-		case 'A':
-			numericVal = 0;
-			break;
-		case 'C':
-			numericVal = 1;
-			break;
-		case 'G' :
-			numericVal = 2;
-			break;
-		case 'T':
-			numericVal = 3;
-			break;
-		default:
-			return -1;
-			break;
-		}
+	        numericVal = ((str[i++]) & 0x6) >> 1;       
 		val = (val << 2) | numericVal;
-		i++;
 	}
 	return val;
 }
 
+int hash_function_next( int prev_hash, char next_char)
+{
+
+	/* this strictly assumes HASHKMERLEN < 16 */
+
+	return ((prev_hash << 2) |  ((next_char & 0x6) >> 1));
+
+}
+
 int is_kmer_valid (char *str){
 
-        int i = 0, l = 0;
+        int i, l;
 	l = strlen(str);
 
 	if (l < HASHKMERLEN)
 		return 0;
 
-	for (i=0; i<l; i++)
+	for (i=0; i<HASHKMERLEN; i++)
 	  if (str[i] != 'A' && str[i] != 'C' && str[i] != 'G' && str[i] != 'T')
 	    {
 	      return 0;
@@ -115,13 +107,13 @@ int is_kmer_valid (char *str){
 void create_HashIndex( parameters* params, int chr_index)
 {
 	int i,k, ind;
-	char* str;
+	char str[HASHKMERLEN + 1];
 	lociInRef *ptr;
 
 	int SR_HASH_SIZE = pow (4, HASHKMERLEN);
 
 	hash_table_SR = ( lociInRef **) getMem( ( SR_HASH_SIZE + 1) * sizeof( lociInRef*));
-	str = ( char*) getMem ( sizeof(char) * (HASHKMERLEN + 1));
+
 
 	for( i = 0; i < SR_HASH_SIZE; i++)
 		hash_table_SR[i] = NULL;
@@ -147,7 +139,6 @@ void create_HashIndex( parameters* params, int chr_index)
 		}
 	}
 
-	free( str);
 }
 
 
@@ -171,7 +162,6 @@ void free_HashIndex()
 
 	if( hash_table_SR != NULL)
 		free( hash_table_SR);
-	//hash_table_SR = NULL;
 
 	freeMem( ref_seq_per_chr, strlen(ref_seq_per_chr));
 }

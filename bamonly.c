@@ -866,7 +866,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 		total_sv += sv_count;
 		total_sv_lowqual += sv_lowqual_count;
-
+		
 		free_the_rest( in_bams, params);
 	}
 	fprintf( stderr, "\n");
