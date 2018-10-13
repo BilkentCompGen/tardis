@@ -149,7 +149,8 @@ void qual_to_ascii( char* qual);
 /* String functions */
 void set_str( char **target, char *source); /* Even safer than strncpy */
 void reverse_string( char* str);
-
+int is_dna_letter( char base);
+  
 /* Misc. Utility */
 int compare_size_int( const void* p, const void* q);
 void print_quote( void);
