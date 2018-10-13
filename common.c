@@ -283,6 +283,19 @@ char complement_char( char base)
 	return 'X';
 }
 
+/* check if ACGT */
+int is_dna_letter( char base){
+  if (base == 'A')
+    return 1;
+  if (base == 'C')
+    return 1;
+  if (base == 'G')
+    return 1;
+  if (base == 'T')
+    return 1;
+  return 0;
+}
+
 /* Add 33 to the interger value of the qual characters to convert them to ASCII */
 void qual_to_ascii( char* qual)
 {
@@ -513,8 +526,8 @@ void clean_up_temp_files(parameters *params){
   char *divetfile_path;
 
   divetfile_path = (char *) getMem(sizeof(char) * (2+strlen("divv.vh")+strlen(params->outprefix)));
-
   sprintf(divetfile_path, "%s-%s", params->outprefix, "divv.vh");
+  printf("remove %s\n", divetfile_path);
   remove(divetfile_path);
   free(divetfile_path);
  

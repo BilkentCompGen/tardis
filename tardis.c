@@ -9,6 +9,7 @@
 #include "tardis.h"
 #include "bamonly.h"
 #include "variants.h"
+#include "splitread.h"
 #include "vh_main.h"
 #include "sonic/sonic.h"
 #include "processrefgen.h"
@@ -91,6 +92,9 @@ int main( int argc, char** argv)
 	print_quote();
 	fprintf( stderr, "\n\tRun. Run, you clever boy... And remember.\n");
 
+	if ( !params->no_soft_clip)
+	  init_hash_count();
+	
 	/* Sensitive Mode */
 	if( running_mode == SENSITIVE)
 	{
@@ -121,6 +125,7 @@ int main( int argc, char** argv)
 		if( return_value != RETURN_SUCCESS)
 			return EXIT_EXTERNAL_PROG_ERROR;
 
+		clean_up_temp_files(params);
 		free_sensitive( in_bams, params);
 	}
 	/* Quick Mode */
@@ -132,6 +137,7 @@ int main( int argc, char** argv)
 		if ( return_value != RETURN_SUCCESS)
 			return EXIT_EXTERNAL_PROG_ERROR;
 
+		clean_up_temp_files(params);
 		free_quick( in_bams, params);
 	}
 
@@ -139,7 +145,6 @@ int main( int argc, char** argv)
 	getlogin_r( username, (MAX_SEQ - 1));
 	fprintf( stderr, "\n%s, before I go, I just want to tell you: you were fantastic. Absolutely fantastic. And you know what? So was I.\n", username);
 
-	clean_up_temp_files(params);
 	fclose( logFile);
 
 	free( username);

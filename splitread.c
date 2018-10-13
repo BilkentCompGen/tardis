@@ -13,12 +13,24 @@
 #include <math.h>
 #include "vh/vh_common.h"
 #include <htslib/faidx.h>
+#include <time.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+
+#define HASH_COUNT 0
+#define HASH_BUILD 1
+
+#define SR_LOOKAHEAD 100000
 
 //lociInRef *hash_table_SR[SR_HASH_SIZE];
 
 lociInRef **hash_table_SR;
+int **hash_table_array;
 char *ref_seq_per_chr = NULL;
 int *hash_table_count;
+int *hash_table_iter;
+int hash_size;
+float total_hash_build_time = 0;
 
 /* Read the reference genome */
 void readReferenceSeq( parameters *params, int chr_index)
@@ -54,36 +66,163 @@ void readReferenceSeq( parameters *params, int chr_index)
 	fai_destroy( ref_fai);
 
 	ref_seq_per_chr[bp_cnt] = '\0';
-	build_kmer_count(ref_seq_per_chr, bp_cnt);
-	create_HashIndex( params, chr_index);
+	//printf("reflen: %ld - %d\n", bp_cnt, strlen(ref_seq_per_chr));
+
+	struct timeval start, end;
+	struct timezone tz;
+	float cpu_time_used;
+	
+	gettimeofday(&start, &tz);
+
+	//printf ("\nbuilding hash table .... "); fflush(stdout);
+	build_hash_table(ref_seq_per_chr, bp_cnt, HASH_COUNT);
+	//printf("reflen2: %ld - %d\n", bp_cnt, strlen(ref_seq_per_chr));
+
+	create_hash_table(ref_seq_per_chr, bp_cnt);
+	gettimeofday(&end, &tz);
+	cpu_time_used = ((int)(end.tv_sec*1000000+end.tv_usec)-(int)(start.tv_sec*1000000+start.tv_usec)) / 1000000;
+	total_hash_build_time += cpu_time_used;
+	//printf (" done in %f seconds. Cumulative %f seconds.\n", cpu_time_used, total_hash_build_time);
+
+	//create_HashIndex( params, chr_index);
+
+	//printf("reflen3: %ld - %d\n", bp_cnt, strlen(ref_seq_per_chr));
+	//exit(100);
 }
 
-void build_kmer_count(char *ref, int len){
+void init_hash_count(void){
+
+        hash_size = pow (4, HASHKMERLEN);
+	hash_table_count = (int *) getMem( hash_size * sizeof (int));
+	hash_table_iter = (int *) getMem( hash_size * sizeof (int));
+	
+}
+
+void init_hash_table(void){
   int i;
-  char seed[HASHKMERLEN + 1];
+  hash_table_array = (int **) getMem (hash_size * sizeof (int *));
+
+  for (i=0; i<hash_size; i++){
+    if ( hash_table_count[i] != 0 && hash_table_count[i] < MAX_SR_HIT)
+      hash_table_array[i] = (int *) getMem (hash_table_count[i] * sizeof (int));
+    else{
+      hash_table_count[i] = 0;
+      hash_table_array[i] = NULL;
+    }
+  }
 }
 
-int hash_function_ref( char *str)
+void free_hash_table(void){
+  int i;
+
+  for (i=0; i<hash_size; i++){
+    if ( hash_table_count[i] != 0)
+      freeMem (hash_table_array[i], (hash_table_count[i] * sizeof (int)));
+  }
+  freeMem (hash_table_array, ( hash_size * sizeof (int)));
+
+  freeMem( ref_seq_per_chr, strlen(ref_seq_per_chr));
+}
+
+void build_hash_table(const char *ref, int len, int mode){
+  int i = 0, j = 0;
+  char seed[HASHKMERLEN + 1];
+  // int phash_val;
+  int hash_val;
+  int mask;
+  int len_limit;
+  
+  mask = (hash_size - 1) >> 2;
+
+  if (mode == HASH_COUNT)
+    memset (hash_table_count, 0, hash_size * sizeof (int));
+  else
+    memset (hash_table_iter, 0, hash_size * sizeof (int));
+
+
+  len_limit = len - HASHKMERLEN + 1;
+
+  /* get first kmer */
+  while (!is_dna_letter(ref[i])) i++;
+
+  strncpy (seed, ref+i, HASHKMERLEN);
+  seed[HASHKMERLEN] = 0;
+  
+  while (!is_kmer_valid (seed)){
+    i++;
+    strncpy (seed, ref+i, HASHKMERLEN);
+    seed[HASHKMERLEN] = 0;
+  } 
+  
+  hash_val = hash_function_ref (seed);
+  if (mode == HASH_COUNT)
+    ( hash_table_count[hash_val])++;
+  else if (hash_table_count[hash_val] != 0) {
+    hash_table_array[hash_val][hash_table_iter[hash_val]] = i;
+    ( hash_table_iter[hash_val])++;
+  }
+
+  j = i + HASHKMERLEN;
+  
+  while (i < len_limit){
+    i++; //shift 
+    if (is_dna_letter(ref[j])){
+      hash_val = hash_function_next( hash_val, mask, ref[j++]);
+      if (mode == HASH_COUNT)
+	( hash_table_count[hash_val])++;
+      else if (hash_table_count[hash_val] != 0) {
+	hash_table_array[hash_val][hash_table_iter[hash_val]] = i;
+	( hash_table_iter[hash_val])++;
+      }
+    }
+    else{
+      /* recover from non-ACGT */
+      while (!is_dna_letter(ref[j]) && i < len_limit) { i++; j++; }
+      if (i >= len_limit)
+	break;
+
+      strncpy (seed, ref+i, HASHKMERLEN);
+      seed[HASHKMERLEN] = 0;
+
+      while (!is_kmer_valid (seed)){
+	i++;
+	strncpy (seed, ref+i, HASHKMERLEN);
+	seed[HASHKMERLEN] = 0;
+      } 
+
+      j = i + HASHKMERLEN;
+      hash_val = hash_function_ref (seed);
+
+      if (mode == HASH_COUNT)
+	( hash_table_count[hash_val])++;
+      else if (hash_table_count[hash_val] != 0) {
+	hash_table_array[hash_val][hash_table_iter[hash_val]] = i;
+	( hash_table_iter[hash_val])++;
+      }
+    }
+  }
+
+}
+
+unsigned int hash_function_ref( char *str)
 {
-	/* this strictly assumes HASHKMERLEN < 16 */
+	/* this strictly assumes HASHKMERLEN < 16 and is_kmer_valid is already called and retuned TRUE */
 
 	int i = 0;
-	int val = 0, numericVal = 0;
-	
+	unsigned int val = 0; unsigned int numericVal = 0;
 	while(i < HASHKMERLEN)
 	{
-	        numericVal = ((str[i++]) & 0x6) >> 1;       
+	        numericVal = (str[i++] & 0x6) >> 1;
 		val = (val << 2) | numericVal;
 	}
 	return val;
 }
 
-int hash_function_next( int prev_hash, char next_char)
+unsigned int hash_function_next( unsigned int prev_hash, unsigned int mask, const char next_char)
 {
 
 	/* this strictly assumes HASHKMERLEN < 16 */
-
-	return ((prev_hash << 2) |  ((next_char & 0x6) >> 1));
+        return (((prev_hash & mask) << 2) |  ((next_char & 0x6) >> 1));
 
 }
 
@@ -104,18 +243,24 @@ int is_kmer_valid (char *str){
 	return 1;
 }
 
+void create_hash_table( char *ref, int len){
+
+	
+        init_hash_table();
+	build_hash_table( ref, len, HASH_BUILD);
+
+}
+
 void create_HashIndex( parameters* params, int chr_index)
 {
 	int i,k, ind;
 	char str[HASHKMERLEN + 1];
 	lociInRef *ptr;
 
-	int SR_HASH_SIZE = pow (4, HASHKMERLEN);
-
-	hash_table_SR = ( lociInRef **) getMem( ( SR_HASH_SIZE + 1) * sizeof( lociInRef*));
+	hash_table_SR = ( lociInRef **) getMem( ( hash_size + 1) * sizeof( lociInRef*));
 
 
-	for( i = 0; i < SR_HASH_SIZE; i++)
+	for( i = 0; i < hash_size; i++)
 		hash_table_SR[i] = NULL;
 
 	for( i = 0; i < params->this_sonic->chromosome_lengths[chr_index] - HASHKMERLEN; i++)
@@ -129,8 +274,9 @@ void create_HashIndex( parameters* params, int chr_index)
 		if( is_kmer_valid(str))
 		{
 			ind = hash_function_ref( str);
+			/*
 			if( ind < 0)
-				continue;
+			continue;*/
 
 			ptr = ( lociInRef *) getMem( sizeof( lociInRef));
 			ptr->pos = i;
@@ -142,14 +288,13 @@ void create_HashIndex( parameters* params, int chr_index)
 }
 
 
-void free_HashIndex()
+void free_HashIndex(void)
 {
 	int i;
 	lociInRef *ptr, *ptrNext;
 
-	int SR_HASH_SIZE = pow (4, HASHKMERLEN);
 
-	for( i = 0; i < SR_HASH_SIZE; i++)
+	for( i = 0; i < hash_size; i++)
 	{
 		ptr = hash_table_SR[i];
 		while( ptr != NULL)
@@ -175,20 +320,69 @@ posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 	char seed[HASHKMERLEN + 1];
 	char *strRev;
 	posMapSoftClip *tmpSoftClipMap, *returnPtr;
+
+	int *hash_ptr;
+	int num_hits;
+	int cnt_hits;
+	int str_length;
+	int dist_max;
+	char refseq[1000];
+	
 	returnPtr = NULL;
 
+	str_length = strlen(str);
+	dist_max = 0.05 * str_length;
 	
 	strncpy( seed, str, HASHKMERLEN);
 	seed[HASHKMERLEN] = '\0';
 	
-	if ( !is_kmer_valid (seed) )
-	  return NULL;
+	if ( is_kmer_valid (seed) )
+	  {	
+	    index = hash_function_ref( seed);
+	    num_hits = hash_table_count[index];
+	    hash_ptr = hash_table_array[index];
+	  }
+	else{
+	  //printf("%s invalid.\n",seed);
+	  num_hits = 0;
+	  hash_ptr = NULL;
+	}
 	
-	index = hash_function_ref( seed);
-	ptr = hash_table_SR[index];
+	// ptr = hash_table_SR[index];
 
+	/*	if (num_hits == 0)
+	  printf("%s nohit1.\n",seed);
+	else
+	printf("%s hit1: %d.\n",seed, num_hits);*/
 	posMapSize = 0;
 
+	for (cnt_hits = 0; cnt_hits < num_hits; cnt_hits++)
+	  {
+	    if ( abs (hash_ptr[cnt_hits] - pos) < SR_LOOKAHEAD)
+	      {
+	                dist = hammingDistance( &( ref_seq_per_chr[hash_ptr[cnt_hits]]), str, str_length);
+			if( dist <= dist_max)
+			  {
+ 			        posMap[posMapSize] = hash_ptr[cnt_hits];
+				orient[posMapSize] = FORWARD;
+				hammingDisMap[posMapSize] = dist;
+				posMapSize = posMapSize + 1;
+				/*
+				strncpy(refseq, &( ref_seq_per_chr[hash_ptr[cnt_hits]]), str_length);
+				refseq[str_length] = 0;
+				printf("dist fine: %d len: %d dist_max: %d str: %s ref: %s \n", dist, str_length, dist_max, str, refseq);*/
+			  }
+			else{
+			  /*
+			  strncpy(refseq, &( ref_seq_per_chr[hash_ptr[cnt_hits]]), str_length);
+			  refseq[str_length] = 0;
+			  printf("dist too much: %d len: %d dist_max: %d str: %s ref: %s \n", dist, str_length, dist_max, str, refseq);*/
+			}
+	      }
+	  }
+	
+
+	/*
 	while( ptr != NULL)
 	{
 		if( abs( ptr->pos - pos) < 100000)
@@ -205,36 +399,112 @@ posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 		ptr = ptr->next;
 		if( posMapSize > 10)
 			ptr = NULL;
-	}
+			}*/
 
 	if( posMapSize < 11)
+	  {
+	         strRev = ( char *)getMem( (str_length + 1) * sizeof( char));
+		 for( i = 0; i < str_length; i++)
+		   {
+			if( str[i] == 'A')
+				strRev[str_length - i - 1] = 'T';
+			else if( str[i] == 'T')
+				strRev[str_length - i - 1] = 'A';
+			else if( str[i] == 'G')
+				strRev[str_length - i - 1] = 'C';
+			else if( str[i] == 'C')
+				strRev[str_length - i - 1] = 'G';
+			else if( str[i] == 'N')
+				strRev[str_length - i - 1] = 'N';
+		   }
+		
+		strRev[str_length] = '\0';
+		strncpy( seed, strRev, HASHKMERLEN);
+		seed[HASHKMERLEN] = '\0';
+		
+		if (is_kmer_valid( seed))
+		  {
+		    index = hash_function_ref( seed);
+		    num_hits = hash_table_count[index];
+		    hash_ptr = hash_table_array[index];
+		  }
+		else {
+		  hash_ptr = NULL;
+		  num_hits = 0;
+		  //printf("%s invalid2.\n",seed);
+		}
+		/*
+		if (num_hits == 0)
+		  printf("%s nohit2.\n",seed);
+		else
+		printf("%s hit1: %d.\n",seed, num_hits);*/
+		reverseMatch = 0;
+		for (cnt_hits = 0; cnt_hits < num_hits; cnt_hits++)
+		  {
+		        if ( abs (hash_ptr[cnt_hits] - pos) < SR_LOOKAHEAD)
+			  {
+				dist = hammingDistance( &( ref_seq_per_chr[hash_ptr[cnt_hits]]), strRev, str_length);
+				if( dist <= dist_max)
+				  {
+				        posMap[posMapSize] = hash_ptr[cnt_hits];
+					orient[posMapSize] = REVERSE;
+					hammingDisMap[posMapSize] = dist;
+					posMapSize = posMapSize + 1;
+					reverseMatch = 1;
+					/*
+					strncpy(refseq, &( ref_seq_per_chr[hash_ptr[cnt_hits]]), str_length);
+					printf("dist2 fine: %d len: %d dist_max: %d str: %s ref: %s \n", dist, str_length, dist_max, str, refseq);
+					refseq[str_length] = 0; */
+				  }
+				/*
+				else{
+				  strncpy(refseq, &( ref_seq_per_chr[hash_ptr[cnt_hits]]), str_length);
+				  refseq[str_length] = 0;
+				  printf("dist2 too much: %d len: %d dist_max: %d str: %s ref: %s \n", dist, str_length, dist_max, str, refseq);
+				  }*/
+			  }
+			if( posMapSize > 10)
+			  break;
+		  }
+
+		freeMem( strRev, str_length+1);
+	  }
+		
+		
+/*
+	if( posMapSize < 11)
 	{
-		strRev = ( char *)getMem( ( strlen( str) + 1) * sizeof( char));
+		strRev = ( char *)getMem( str_length + 1) * sizeof( char));
 		for( i = 0; i < strlen( str); i++)
 		{
 			if( str[i] == 'A')
-				strRev[strlen( str) - i - 1] = 'T';
-			if( str[i] == 'T')
-				strRev[strlen( str) - i - 1] = 'A';
-			if( str[i] == 'G')
-				strRev[strlen( str) - i - 1] = 'C';
-			if( str[i] == 'C')
-				strRev[strlen( str) - i - 1] = 'G';
-			if( str[i] == 'N')
-				strRev[strlen( str) - i - 1] = 'N';
+				strRev[str_length - i - 1] = 'T';
+			else if( str[i] == 'T')
+				strRev[str_length - i - 1] = 'A';
+			else if( str[i] == 'G')
+				strRev[str_length - i - 1] = 'C';
+			else if( str[i] == 'C')
+				strRev[str_length - i - 1] = 'G';
+			else if( str[i] == 'N')
+				strRev[str_length - i - 1] = 'N';
 		}
-		strRev[strlen( str)] = '\0';
+		strRev[str_length] = '\0';
 		strncpy( seed, strRev, HASHKMERLEN);
 		seed[HASHKMERLEN] = '\0';
-		index = hash_function_ref( seed);
-		ptr = hash_table_SR[index];
+		
+		if (is_kmer_valid( seed)){
+		  index = hash_function_ref( seed);
+		  ptr = hash_table_SR[index];
+		}
+		else
+		  ptr = NULL;
 
 		reverseMatch = 0;
 		while( ptr != NULL)
 		{
 			if( abs( ptr->pos - pos) < 100000)
 			{
-				dist = hammingDistance( &( ref_seq_per_chr[ptr->pos]), strRev, strlen( strRev));
+				dist = hammingDistance( &( ref_seq_per_chr[ptr->pos]), strRev, str_length);
 				if( dist <= ( 0.05 * strlen( strRev)))
 				{
 					posMap[posMapSize] = ptr->pos;
@@ -249,8 +519,9 @@ posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 				ptr = NULL;
 		}
 
-		free( strRev);
+		freeMem( strRev, str_length+1);
 	}
+*/
 
 	if( posMapSize < 12 && posMapSize > 0)
 	{
