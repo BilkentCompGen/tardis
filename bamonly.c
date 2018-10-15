@@ -616,7 +616,6 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 	print_vcf_header( fpVcf, in_bams, params);
 
-
 	for( chr_index = params->first_chr; chr_index <= params->last_chr; chr_index++)
 	{
 		if( strstr( params->this_sonic->chromosome_names[chr_index], "GL000220") != NULL)
@@ -663,7 +662,10 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			fprintf( stderr, "\nReading BAM [%s] - Chromosome: %s", in_bams[bam_index]->sample_name, in_bams[bam_index]->bam_header->target_name[chr_index_bam]);
 			fflush( stderr);
 
-			/* Initialize the read depth and read count */
+			/*
+			if ( chr_index != params->first_chr)
+			free_rd_per_chr(in_bams[bam_index], params, chr_index); */
+ 			/* Initialize the read depth and read count */
 			init_rd_per_chr( in_bams[bam_index], params, chr_index);
 
 			/* Read bam file for this chromosome */
@@ -690,11 +692,9 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			if( !params->no_soft_clip)
 			{
 				/* Count the number of softclip reads which are clustering for each read */
-				if( !params->no_soft_clip)
-				{
-					fprintf( stderr, "\nReading reference genome");
-					readReferenceSeq( params, chr_index);
-				}
+				//fprintf( stderr, "\nCollecting soft clipped read information");
+			        fprintf( stderr, "\nReading reference genome");
+				readReferenceSeq( params, chr_index);
 
 				fprintf( stderr, "\nRunning split read mapping..");
 				countNumSoftClipInCluster( params, in_bams[bam_index], chr_index);
@@ -724,13 +724,16 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 		}
 
 		if( not_in_bam == 1 || total_read_count == 0)
-			continue;
-
+		        continue;
+		
 		if( !params->no_soft_clip)
 		{
 			/* Free the hash */
-			free_HashIndex();
+		  // free_HashIndex();
+			free_hash_table();
 		}
+
+
 
 		divet_row_count = load_Divet_bam( in_bams, params, chr_index);
 
@@ -863,7 +866,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 		total_sv += sv_count;
 		total_sv_lowqual += sv_lowqual_count;
-
+		
 		free_the_rest( in_bams, params);
 	}
 	fprintf( stderr, "\n");

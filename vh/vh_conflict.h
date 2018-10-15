@@ -10,9 +10,7 @@
 
 #include "../variants.h"
 
-#define maxNumSV 10000000 /* maximum number of SV's allowed to be reported. */
-
-//int maxNumSV 50000 /* maximum number of SV's allowed to be reported. */
+#define maxNumSV 100000 /* maximum number of SV's allowed to be reported. */
 
 /* SVs which are selected for output are kept for conflict resolution */
 typedef struct SV_selected{

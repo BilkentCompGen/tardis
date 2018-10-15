@@ -17,6 +17,7 @@
 int run_rd( bam_info** in_bam, parameters* param);
 void init_rd( bam_info* in_bam, parameters* param);
 void init_rd_per_chr( bam_info* in_bam, parameters* param, int chr_index);
+void free_rd_per_chr( bam_info* in_bam, parameters* param, int chr_index);
 void calc_mean( parameters *, bam_info *);
 void calc_mean_per_chr( parameters *, bam_info *, int);
 
