@@ -527,7 +527,6 @@ void clean_up_temp_files(parameters *params){
 
   divetfile_path = (char *) getMem(sizeof(char) * (2+strlen("divv.vh")+strlen(params->outprefix)));
   sprintf(divetfile_path, "%s-%s", params->outprefix, "divv.vh");
-  printf("remove %s\n", divetfile_path);
   remove(divetfile_path);
   free(divetfile_path);
  
