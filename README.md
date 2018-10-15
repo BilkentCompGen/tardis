@@ -115,11 +115,6 @@ All parameters
 	--dups  [dups file]        : Segmental duplication coordinates in BED3 format.
 	--reps  [reps file]        : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.
 	
-	Additional parameters for 10X Genomics Linked Reads (under development):
-
-	--10x                      : Enable 10X Genomics Linked Reads mode.
-	--output-hs                : Output the selected clusters homogeneity scores to the VCF file.
-
 	Information:
 	--version                  : Print version and exit.
 	--help                     : Print this help screen and exit.
