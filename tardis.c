@@ -98,7 +98,7 @@ int main( int argc, char** argv)
 	/* Sensitive Mode */
 	if( running_mode == SENSITIVE)
 	{
-		fprintf( stderr, "\nTARDIS is running in Sensitive Mode - using mrFAST...\n\n");
+	  fprintf( stderr, "\nTARDIS (v%s) is running in Sensitive Mode - using mrFAST...\n\n", TARDIS_VERSION);
 		fprintf( logFile, "(Running in sensitive mode - using mrFAST)\n\n");
 
 		/* If you already have the correct divet file */
@@ -131,7 +131,7 @@ int main( int argc, char** argv)
 	/* Quick Mode */
 	else
 	{
-		fprintf( stderr, "\nTARDIS is running in Quick Mode\n\n");
+	        fprintf( stderr, "\nTARDIS (v%s) is running in Quick Mode\n\n", TARDIS_VERSION);
 		fprintf( logFile, "(Running in quick mode)\n\n");
 		return_value = bamonly_run( params, in_bams);
 		if ( return_value != RETURN_SUCCESS)
