@@ -13,7 +13,7 @@
 #include "bamonly.h"
 
 #define HASHKMERLEN 10
-#define MAX_SR_HIT 1000000
+#define MAX_SR_HIT 100000
 
 typedef struct lociInRef
 {
