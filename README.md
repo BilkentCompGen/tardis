@@ -128,3 +128,27 @@ Converting output VCF file to BED
 
 Alternatively, use VCFlib: https://github.com/vcflib/vcflib
 
+
+Docker Usage
+============
+
+To build a valor Docker image
+
+
+	cd docker
+	docker build . -t tardis:latest
+
+Your image named "tardis" should be ready. You can run tardis using this image by
+
+	docker run --user=$UID -v /path/to/inputs:/input -v /path/to/outputdir:/output ardis [args]
+
+- ```[args]``` are usual arguments you would pass to valor executable. Be careful about mapping. You need to specify folders respective to container directory structure.
+- You need to map host machine input and output directory to responding volume directories inside the container. These options are specified by '-v' argment.
+- Docker works with root user by default. "--user" option saves your outputs.
+
+Sample run:
+
+	docker run --user=$UID -v /home/projects/tardis:/input -v /home/projects/tardis:/output tardis -i /input/my.input.grch38.bam --sonic /input/GRCh38.sonic --ref /input/human_v38.fasta --out /output/mydockertest
+
+A pre-build docker image is also available at [Docker Hub](https://hub.docker.com/r/alkanlab/tardis/)
+
