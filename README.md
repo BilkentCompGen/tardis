@@ -150,5 +150,5 @@ Sample run:
 
 	docker run --user=$UID -v /home/projects/tardis:/input -v /home/projects/tardis:/output tardis -i /input/my.input.grch38.bam --sonic /input/GRCh38.sonic --ref /input/human_v38.fasta --out /output/mydockertest
 
-A pre-build docker image is also available at [Docker Hub](https://hub.docker.com/r/alkanlab/tardis/)
+A pre-built docker image is also available at [Docker Hub](https://hub.docker.com/r/alkanlab/tardis/).
 
