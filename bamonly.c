@@ -479,8 +479,8 @@ int read_mapping( library_properties *library, parameters* params, bam1_t* bam_a
 	insLen = abs( bam_align->pos_left - bam_align->pos_right);
 
 	/* Find the SVs */
-	if( !sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[left_end_id], bam_align->pos_left, bam_align->pos_left + library->read_length)
-			&& !sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[right_end_id], bam_align->pos_right, bam_align->pos_right + library->read_length)
+	if( sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[left_end_id], bam_align->pos_left, bam_align->pos_left + library->read_length) == 0.0
+	    && sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[right_end_id], bam_align->pos_right, bam_align->pos_right + library->read_length) == 0.0
 			&& insLen < (params->this_sonic->chromosome_lengths[left_end_id]) - (2 * library->conc_max) && bam_align->qual > params->mq_threshold
 			&& is_proper( bam_align->flag) && !( ( left_end_id == right_end_id) && ( insLen < MIN_INS_LEN)))
 		/* Remove the paired-ends that both end overlap each other */

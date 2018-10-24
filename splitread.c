@@ -570,7 +570,7 @@ void mapSoftClipToRef( bam_info* in_bam, parameters* params, int chr_index)
 		while( ptrSoftClip != NULL)
 		{
 			if( ptrSoftClip->avgPhredQualSoftClip > params->mq_threshold && ptrSoftClip->numSoftClipInConcordance > 1
-					&& ptrSoftClip->numSoftClipInConcordance < 100)
+			    && ptrSoftClip->numSoftClipInConcordance < 100 && ptrSoftClip->softClipString != NULL)
 			{
 				if( ptrSoftClip->op[0] == BAM_CSOFT_CLIP)
 				{

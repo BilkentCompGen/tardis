@@ -694,7 +694,7 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 	int i;
 	char mobileName[strSize];
 
-	int is_start_satellite, is_end_satellite, is_mid_satellite;
+	float is_start_satellite, is_end_satellite, is_mid_satellite;
 	sonic_repeat *mei_start, *mei_end, *mei_mid;
 	bool MEI_Filter = false;
 	struct strvar* var_example = NULL;

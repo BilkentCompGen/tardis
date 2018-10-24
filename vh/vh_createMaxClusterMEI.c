@@ -17,7 +17,7 @@ int addToGenomeIndex_MEI (bam_info** in_bams, parameters *params, char *chromoso
 	discordantMappingMEI *discordantReadPtr;
 	softClip *softClipPtr;
 	int numSample, count, mei_count = 0, tmp;
-	int is_satellite;
+	float is_satellite;
 
 	sonic_repeat *mei;
 	int libId = 0;

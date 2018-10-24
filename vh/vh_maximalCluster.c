@@ -2,6 +2,8 @@
 #include "vh_common.h"
 #include "vh_setcover.h"
 
+#define MAXCLUSTERLIST 5000000
+
 MappingOnGenome **g_genomeIndexStart;
 RightBrkPointInterval *g_listRightBrkPointIntr;
 RightBrkPointInterval *g_tempListRightBrkPointIntr;
@@ -300,7 +302,8 @@ void vh_addToPotentialOutput (int leftBreakPoint, Heap *heapName, char SVtype)
 
 int vh_outputCluster (ClustersFound * cluster, char SVtype)
 {
-	int listOfReadsOutputed[300000][3];	// [0]:locMapLeftEnd, [1]: locMapRightStart, [2]: edit distance. This is used to remove the duplicated reads (clonal) as a result of PCR duplication from each cluster.
+	int listOfReadsOutputed[MAXCLUSTERLIST][3];
+	// [0]:locMapLeftEnd, [1]: locMapRightStart, [2]: edit distance. This is used to remove the duplicated reads (clonal) as a result of PCR duplication from each cluster.
 	int totalAddedToList = 0;
 	int clonalRead = 0;
 	int readMapCount;

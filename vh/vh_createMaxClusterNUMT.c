@@ -342,7 +342,7 @@ int addToGenomeIndex_NUMT (bam_info** in_bams, parameters *params, int chr_index
 	numt_Reads *tmpNUMT_Reads;
 	discordantMappingNUMT *discordantReadPtr;
 	int numSample, count, numt_count = 0, tmp;
-	int is_satellite;
+	float is_satellite;
 
 	int libId = 0;
 
