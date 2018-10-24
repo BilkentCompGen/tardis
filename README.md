@@ -35,6 +35,18 @@ Type:
 	make
 	cp tardis /path/to/your/favorite/binaries
 
+Testing installation
+====================
+
+We provide a simple shell script in this repository (test_tardis.sh) to demonstrate a basic use case of TARDIS. This script downloads a single chromosome BAM file from the 1000 Genomes Project, and its associated reference genome and SONIC files. Note that these downloads may take some time to complete. The script then runs TARDIS with basic settings on this BAM file.
+
+*Warning*: the downloaded files may be corrupted during transfer. This script does not check if the files are downloaded without problems.
+
+To test, simply type:
+
+	cd tardis
+	sh ./test_tardis.sh
+
 
 SONIC file (annotations container)
 ==================================
@@ -87,19 +99,23 @@ DIVET files should be inside the TARDIS directory or under the divet/ folder
 All parameters
 ==============
 
+        Basic Parameters:
 	--bamlist   [bamlist file] : A text file that lists input BAM files one file per line.
 	--input [BAM files]        : Input files in sorted and indexed BAM format. You can pass multiple BAMs using multiple --input parameters.
 	--out   [output prefix]    : Prefix for the output file names.
 	--ref   [reference genome] : Reference genome in FASTA format.
 	--sonic [sonic file]       : SONIC file that contains assembly annotations.
+
+        Advanced Parameters:
 	--read-count [int]         : # of clusters that a specific read can be involved in (Default is 10).
+        --rp   [int]               : Minimum number of supporting read pairs in initial clustering (Default is 5).
 	--mei   ["Alu:L1:SVA"]     : List of mobile element names.
 	--no-soft-clip             : Skip soft clip remapping.
 	--no-interdup              : Skip interspersed duplication clustering.
 	--resolved                 : Output sequence resolved vcf calls.
 	--xa                       : Look for the alternative mapping locations in BWA.
-	--first-chr [chr_index]	   : Start running from a specific chromosome [index in ref]
-	--last-chr  [chr_index]	   : Run up to a specific chromosome [index in ref]
+	--first-chr [chr_index]	   : Start running from a specific chromosome [0-based index in reference file]
+	--last-chr  [chr_index]	   : Run up to a specific chromosome [0-based index in reference file]
 
 	Additional parameters for sensitive mode:
 

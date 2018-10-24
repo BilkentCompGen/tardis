@@ -99,8 +99,10 @@ void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt, char*
 	/* For SAMPLEFRAG number of alignments, store the template length field.
 	 Performed for each different library */
 	fragment_size = ( int**) getMem( in_bam->num_libraries * sizeof( int*));
+	
 	for( i = 0; i < in_bam->num_libraries; i++)
 	{
+	        fragment_size[i] = NULL;
 		fragment_size[i] = ( int*) getMem( SAMPLEFRAG * sizeof( int));
 	}
 

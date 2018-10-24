@@ -726,13 +726,6 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 		if( not_in_bam == 1 || total_read_count == 0)
 		        continue;
 		
-		if( !params->no_soft_clip)
-		{
-			/* Free the hash */
-		  // free_HashIndex();
-			free_hash_table();
-		}
-
 
 
 		divet_row_count = load_Divet_bam( in_bams, params, chr_index);
@@ -866,7 +859,15 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 		total_sv += sv_count;
 		total_sv_lowqual += sv_lowqual_count;
-		
+
+		if( !params->no_soft_clip)
+		{
+			/* Free the hash */
+		  // free_HashIndex();
+			free_hash_table( params);
+		}
+
+
 		free_the_rest( in_bams, params);
 	}
 	fprintf( stderr, "\n");

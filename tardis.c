@@ -77,7 +77,7 @@ int main( int argc, char** argv)
 	print_quote();
 
 	/* Read BAM files and calculate the median/avg/std of fragment sizes per library */
-	in_bams = ( bam_info**) getMem( sizeof( bam_info*));
+	in_bams = ( bam_info**) getMem( (params->num_bams) * sizeof( bam_info*));
 	for( i = 0; i < params->num_bams; i++)
 	{
 		in_bams[i] = ( bam_info*) getMem( sizeof( bam_info));
@@ -93,7 +93,7 @@ int main( int argc, char** argv)
 	fprintf( stderr, "\n\tRun. Run, you clever boy... And remember.\n");
 
 	if ( !params->no_soft_clip)
-	  init_hash_count();
+	  init_hash_count( params);
 	
 	/* Sensitive Mode */
 	if( running_mode == SENSITIVE)

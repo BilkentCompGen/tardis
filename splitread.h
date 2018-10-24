@@ -24,11 +24,11 @@ typedef struct lociInRef
 extern char *ref_seq_per_chr;
 
 void addSoftClip( library_properties * library, bam_alignment_region* bam_align, bam1_t* bam_alignment, char* chromosome_nameD);
-void init_hash_count(void);
-void build_hash_table( const char *ref, int len, int mode);
-void create_hash_table( char *ref, int len);
-void free_hash_table( void);
-void init_hash_table( void);
+void init_hash_count( parameters *params);
+void build_hash_table( const char *ref, int len, int hash_size, int mode);
+void create_hash_table( parameters *params, int len);
+void free_hash_table( parameters *params);
+void init_hash_table( parameters *params);
 void create_HashIndex( parameters* params, int chr_index);
 void free_HashIndex(void);
 void countNumSoftClipInCluster( parameters *params, bam_info* in_bam, int chr_index);

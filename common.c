@@ -49,11 +49,14 @@ void init_params( parameters** params)
 	( *params)->sonic_info = NULL;
 	( *params)->number_of_different_mei_types = 0;
 	( *params)->quick = 1;
+	( *params)->ref_seq = NULL;
+	( *params)->hash_size = 0;
 
 	for( i = 0; i < MAX_BAMS; i++)
 	{
 		(*params)->bam_file_list[i] = NULL;
 	}
+
 }
 
 

@@ -126,6 +126,8 @@ typedef struct _params
 	int cluster_of_read; /* Number of clusters that a read can be involved. 10 by default */
 	char *sonic_file; /* SONIC file name */
 	sonic *this_sonic; /* SONIC */
+        char *ref_seq; /* reference sequence per chromosome */
+        int hash_size; /* size of the hash table for split read mapping */
 } parameters;
 
 /* Parameter related TARDIS functions */

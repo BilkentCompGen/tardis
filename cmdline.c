@@ -50,7 +50,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"threads", required_argument,   0, 't'},
 			{"help"   , no_argument,         0, 'h'},
 			{"version", no_argument,         0, 'v'},
-			{"bamlist",               no_argument,	 0, 'b'},
+			{"bamlist",               required_argument,	 0, 'b'},
 			{"force-read-length"    , required_argument,	 0, 'l'},
 			{"out"    , required_argument,	 0, 'o'},
 			{"make-sonic"    , required_argument,	 0, 'c'},
@@ -88,7 +88,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		{
 		case 'b':
 			set_str( &( params->bam_list_path), optarg);
-			parse_bam_list( &params);
+			//parse_bam_list( &params);
 			break;
 
 		case 'i':
@@ -189,17 +189,6 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		quick = 0;
 	}
 
-	/* check if outprefix is given */
-	if( params->outprefix == NULL && !make_sonic)
-	{
-		fprintf( stderr, "[TARDIS CMDLINE ERROR] Please enter the output file name prefix using the --out option.\n");
-		char *tmp_output_prefix = (char *) malloc(sizeof (char) * (strlen(params->bam_file_list[0]) + strlen("-output") + 2));
-		sprintf( tmp_output_prefix, "%s-output", params->bam_file_list[0]);
-		set_str( &( params->outprefix), tmp_output_prefix);
-		free( tmp_output_prefix);
-		//return EXIT_PARAM_ERROR;
-	}
-
 	/* check if --num-bams > 0 */
 	if( params->num_bams <= 0 && params->bam_list_path == NULL && !make_sonic)
 	{
@@ -272,6 +261,22 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		return EXIT_PARAM_ERROR;	        
 	}
 
+	if ( params->bam_list_path != NULL)
+	  params->num_bams = parse_bam_list( &params);
+
+	/* check if outprefix is given */
+	if( params->outprefix == NULL && !make_sonic)
+	  {
+		fprintf( stderr, "[TARDIS CMDLINE ERROR] Please enter the output file name prefix using the --out option.\n");
+		char *tmp_output_prefix = (char *) malloc(sizeof (char) * (strlen(params->bam_file_list[0]) + strlen("-output") + 2));
+		sprintf( tmp_output_prefix, "%s-output", params->bam_file_list[0]);
+		set_str( &( params->outprefix), tmp_output_prefix);
+		free( tmp_output_prefix);
+		//return EXIT_PARAM_ERROR;
+	}
+
+
+
 	/* check forced read length to be a positive integer or zero */
 	if( params->force_read_length < 0)
 	{
@@ -319,6 +324,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 
 	debug_mode = debug;
 
+
 	if( debug_mode)
 		fprintf(stderr, "\n\n*** DEBUG MODE is on, you can check .NAME and .CLUSTER files ***\n\n");
 
@@ -349,20 +355,22 @@ void print_help( void)
 {  
 	fprintf( stdout, "\nTARDIS: Toolkit for Automated and Rapid DIscovery of Structural variants.\n");
 	fprintf( stdout, "Version %s\n\tLast update: %s, build date: %s\n\n", TARDIS_VERSION, TARDIS_UPDATE, BUILD_DATE);
-	fprintf( stdout, "\tParameters:\n\n");
+	fprintf( stdout, "\tBasic Parameters:\n\n");
 	fprintf( stdout, "\t--bamlist   [bamlist file] : A text file that lists input BAM files one file per line.\n");
 	fprintf( stdout, "\t--input [BAM files]        : Input files in sorted and indexed BAM format. You can pass multiple BAMs using multiple --input parameters.\n");
 	fprintf( stdout, "\t--out   [output prefix]    : Prefix for the output file names.\n");
 	fprintf( stdout, "\t--ref   [reference genome] : Reference genome in FASTA format.\n");
-	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n");	
+	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n\n");
+	fprintf( stdout, "\tAdvanced Parameters:\n\n");
 	fprintf( stdout, "\t--read-count [int]         : # of clusters that a specific read can be involved in (Default is 10).\n");
+	fprintf( stdout, "\t--rp   [int]               : Minimum number of supporting read pairs in initial clustering (Default is 5).\n");
 	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]     : List of mobile element names.\n");
 	fprintf( stdout, "\t--no-soft-clip             : Skip soft clip remapping.\n");
 	fprintf( stdout, "\t--no-interdup              : Skip interspersed duplication clustering.\n");
 	fprintf( stdout, "\t--resolved                 : Output sequence resolved vcf calls.\n");
 	fprintf( stdout, "\t--xa                       : Look for the alternative mapping locations in BWA.\n");
-	fprintf( stdout, "\t--first-chr [chr_index]	   : Start running from a specific chromosome [index in reference file].\n");
-	fprintf( stdout, "\t--last-chr [chr_index]	   : Run up to a specific chromosome [index in reference file].\n");
+	fprintf( stdout, "\t--first-chr [chr_index]	   : Start running from a specific chromosome [0-based index in reference file].\n");
+	fprintf( stdout, "\t--last-chr [chr_index]	   : Run up to a specific chromosome [0-based index in reference file].\n");
 
 	fprintf( stdout, "\n\tAdditional parameters for sensitive mode:\n\n");
 	fprintf( stdout, "\t--sensitive                : Sensitive mode that uses all map locations. Requires mrFAST remapping.\n");
@@ -388,12 +396,14 @@ void print_help( void)
 	fprintf( stdout, "It is bigger on the inside!\n\n");
 }
 
-void parse_bam_list( parameters** params)
+int parse_bam_list( parameters** params)
 {
 	FILE* bam_list;
 	char next_path[1024];
 	int i;
 
+	fprintf( stderr, "Parsing BAM/CRAM list file: %s ", ( *params)->bam_list_path);
+	fflush( stderr);
 	bam_list = safe_fopen( ( *params)->bam_list_path, "r");
 
 	i = 0;
@@ -404,4 +414,6 @@ void parse_bam_list( parameters** params)
 	}
 
 	fclose( bam_list);
+	fprintf( stderr, " %d input files found.\n", i);
+	return i;
 }

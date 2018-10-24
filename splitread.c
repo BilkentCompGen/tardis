@@ -24,10 +24,10 @@
 
 
 int **hash_table_array;
-char *ref_seq_per_chr = NULL;
+//char *ref_seq_per_chr = NULL;
 int *hash_table_count;
 int *hash_table_iter;
-int hash_size;
+//int hash_size;
 float total_hash_build_time = 0;
 
 /* Read the reference genome */
@@ -38,10 +38,16 @@ void readReferenceSeq( parameters *params, int chr_index)
 	long bp_cnt = 0;
 	faidx_t* ref_fai;
 
+	if (params->ref_seq != NULL)
+	  {
+	    fprintf (stderr, ". Reference genome is already loaded.\n");
+	    return;
+	  }
+	
 	min = 0, max = 999;
 	ref_fai = fai_load( params->ref_genome);
 
-	ref_seq_per_chr = ( char *) getMem( (params->this_sonic->chromosome_lengths[chr_index] + 1) * sizeof( char));
+	params->ref_seq = ( char *) getMem( (params->this_sonic->chromosome_lengths[chr_index] + 1) * sizeof( char));
 
 	while ( max < params->this_sonic->chromosome_lengths[chr_index])
 	{
@@ -51,7 +57,7 @@ void readReferenceSeq( parameters *params, int chr_index)
 		{
 		  /* can we do this faster with memcpy? */
 			if( bp_cnt < params->this_sonic->chromosome_lengths[chr_index])
-				ref_seq_per_chr[bp_cnt] = toupper( ref_seq[i]);
+				params->ref_seq[bp_cnt] = toupper( ref_seq[i]);
 			bp_cnt++;
 		}
 		if( bp_cnt >= params->this_sonic->chromosome_lengths[chr_index])
@@ -63,23 +69,24 @@ void readReferenceSeq( parameters *params, int chr_index)
 	}
 	fai_destroy( ref_fai);
 
-	ref_seq_per_chr[bp_cnt] = '\0';
+	params->ref_seq[bp_cnt] = '\0';
 
-	build_hash_table(ref_seq_per_chr, bp_cnt, HASH_COUNT);
+	build_hash_table(params->ref_seq, bp_cnt, params->hash_size, HASH_COUNT);
 
-	create_hash_table(ref_seq_per_chr, bp_cnt);
+	create_hash_table(params, bp_cnt);
 }
 
-void init_hash_count(void){
+void init_hash_count(parameters *params){
 
-        hash_size = pow (4, HASHKMERLEN);
-	hash_table_count = (int *) getMem( hash_size * sizeof (int));
-	hash_table_iter = (int *) getMem( hash_size * sizeof (int));
-	
+        params->hash_size = pow (4, HASHKMERLEN);
+	hash_table_count = (int *) getMem( params->hash_size * sizeof (int));
+	hash_table_iter = (int *) getMem( params->hash_size * sizeof (int));
+	params->ref_seq = NULL;
 }
 
-void init_hash_table(void){
+void init_hash_table(parameters *params){
   int i;
+  int hash_size = params->hash_size;
   hash_table_array = (int **) getMem (hash_size * sizeof (int *));
 
   for (i=0; i<hash_size; i++){
@@ -92,19 +99,21 @@ void init_hash_table(void){
   }
 }
 
-void free_hash_table(void){
+void free_hash_table(parameters *params){
   int i;
-
+  int hash_size = params->hash_size;
+  
   for (i=0; i<hash_size; i++){
     if ( hash_table_count[i] != 0)
       freeMem (hash_table_array[i], (hash_table_count[i] * sizeof (int)));
   }
   freeMem (hash_table_array, ( hash_size * sizeof (int)));
 
-  freeMem( ref_seq_per_chr, strlen(ref_seq_per_chr));
+  freeMem( params->ref_seq, strlen(params->ref_seq));
+  params->ref_seq = NULL;
 }
 
-void build_hash_table(const char *ref, int len, int mode){
+void build_hash_table(const char *ref, int len, int hash_size, int mode){
   int i = 0, j = 0;
   char seed[HASHKMERLEN + 1];
   int hash_val;
@@ -222,11 +231,11 @@ int is_kmer_valid (char *str){
 	return 1;
 }
 
-void create_hash_table( char *ref, int len){
+void create_hash_table( parameters *params, int len){
 
 	
-        init_hash_table();
-	build_hash_table( ref, len, HASH_BUILD);
+        init_hash_table( params);
+	build_hash_table( params->ref_seq, len, params->hash_size, HASH_BUILD);
 
 }
 
@@ -293,7 +302,7 @@ void free_HashIndex(void)
 
 */
 
-posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
+posMapSoftClip *almostPerfect_match_seq_ref( parameters *params, int chr_index, char *str, int pos)
 {
 	int i, index, posMapSize, posMap[10000], hammingDisMap[10000];
 	char orient[10000];// orient of the mapping
@@ -334,7 +343,7 @@ posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 	  {
 	    if ( abs (hash_ptr[cnt_hits] - pos) < SR_LOOKAHEAD)
 	      {
-	                dist = hammingDistance( &( ref_seq_per_chr[hash_ptr[cnt_hits]]), str, str_length);
+	                dist = hammingDistance( &( params->ref_seq[hash_ptr[cnt_hits]]), str, str_length);
 			if( dist <= dist_max)
 			  {
  			        posMap[posMapSize] = hash_ptr[cnt_hits];
@@ -351,7 +360,7 @@ posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 	{
 		if( abs( ptr->pos - pos) < 100000)
 		{
-			dist = hammingDistance( &( ref_seq_per_chr[ptr->pos]), str, strlen( str));
+			dist = hammingDistance( &( params->ref_seq[ptr->pos]), str, strlen( str));
 			if( dist <= ( 0.05 * strlen( str)))
 			{
 				posMap[posMapSize] = ptr->pos;
@@ -402,7 +411,7 @@ posMapSoftClip *almostPerfect_match_seq_ref( int chr_index, char *str, int pos)
 		  {
 		        if ( abs (hash_ptr[cnt_hits] - pos) < SR_LOOKAHEAD)
 			  {
-				dist = hammingDistance( &( ref_seq_per_chr[hash_ptr[cnt_hits]]), strRev, str_length);
+				dist = hammingDistance( &( params->ref_seq[hash_ptr[cnt_hits]]), strRev, str_length);
 				if( dist <= dist_max)
 				  {
 				        posMap[posMapSize] = hash_ptr[cnt_hits];
@@ -574,7 +583,7 @@ void mapSoftClipToRef( bam_info* in_bam, parameters* params, int chr_index)
 					strncpy( str, &( ptrSoftClip->softClipString[tmp]), tmp);
 					str[in_bam->libraries[i]->read_length - ptrSoftClip->opl[ptrSoftClip->opCount - 1]] = '\0';
 				}
-				ptrSoftClip->ptrPosMapSoftClip = almostPerfect_match_seq_ref( chr_index, str, ptrSoftClip->pos);
+				ptrSoftClip->ptrPosMapSoftClip = almostPerfect_match_seq_ref( params, chr_index, str, ptrSoftClip->pos);
 			}
 			ptrSoftClip = ptrSoftClip->next;
 		}

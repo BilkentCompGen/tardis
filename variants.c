@@ -365,6 +365,10 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	if( sv->inner_start != sv->inner_end)
 		fprintf( fpOut, "CIEND=0,%d;CIPOS=-%d,0;IMPRECISE;", ( sv->outer_end - sv->inner_end), ( sv->inner_start - sv->outer_start));
 
+	/* print TARDIS version info */
+	fprintf( fpOut, "SVALG=TARDIS_v%s;", TARDIS_VERSION);
+
+	/* print SV type */
 	if( ( sv->svtype == DELETION) && ( sv->mei_del == true))
 		fprintf( fpOut, "SVTYPE=DEL:ME:%s\t", sv->mei_type);
 	else if( sv->svtype == DELETION)
@@ -424,25 +428,20 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 	char header_info[]="##INFO=<ID=BKPTID,Number=.,Type=String,Description=\"ID of the assembled alternate allele in the assembly file\">\n"
 			"##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">\n"
 			"##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">\n"
-			"##INFO=<ID=DBRIPID,Number=1,Type=String,Description=\"ID of this element in DBRIP\">\n"
-			"##INFO=<ID=DBVARID,Number=1,Type=String,Description=\"ID of this element in DBVAR\">\n"
 			"##INFO=<ID=SAMPLE,Number=1,Type=String,Description=\"Sample ID\">\n"
 			"##INFO=<ID=SVALG,Number=1,Type=String,Description=\"SV discovery algorithm\">\n"
 			"##INFO=<ID=RPSUP,Number=1,Type=Integer,Description=\"Number of supporting read pairs\">\n"
 			"##INFO=<ID=SRSUP,Number=1,Type=Integer,Description=\"Number of supporting split reads\">\n"
-			"##INFO=<ID=DGVID,Number=1,Type=String,Description=\"ID of this element in Database of Genomic Variation\">\n"
 			"##INFO=<ID=END,Number=1,Type=Integer,Description=\"End coordinate of this variant\">\n"
-			"##INFO=<ID=HOMLEN,Number=.,Type=Integer,Description=\"Length of base pair identical micro-homology at event breakpoints\">\n"
-			"##INFO=<ID=HOMSEQ,Number=.,Type=String,Description=\"Sequence of base pair identical micro-homology at event breakpoints\">\n"
 			"##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description=\"Imprecise structural variation\">\n"
 			"##INFO=<ID=MEINFO,Number=4,Type=String,Description=\"Mobile element info of the form NAME\">\n"
 			"##INFO=<ID=METRANS,Number=4,Type=String,Description=\"Mobile element transduction info of the form CHR\">\n"
 			"##INFO=<ID=NOVEL,Number=0,Type=Flag,Description=\"Indicates a novel structural variation\">\n"
 			"##INFO=<ID=SVLEN,Number=.,Type=Integer,Description=\"Difference in length between REF and ALT alleles\">\n"
 			"##INFO=<ID=SVMETHOD,Number=.,Type=String,Description=\"Type of approach used to detect SV: RP (read pair), RD (read depth), SR (split read), or AS (assembly)\">\n"
-			"##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">\n"
-			"##INFO=<ID=VALIDATED,Number=0,Type=Flag,Description=\"Validated by PCR, Assembly or Microarray\">\n"
-			"##INFO=<ID=VALMETHOD,Number=.,Type=String,Description=\"Type of validation: CGH, PCR, SAV (superarray), CAP (capture-array), or ASM (assembly)\">\n";
+	                "##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">\n";
+
+
 
 	char header_filter[]="##FILTER=<ID=LowQual,Description=\"Genotype call confidence below LOD 1.3\">\n"
 			"##FILTER=<ID=dpr5,Description=\"Read Depth probability below 5%\">\n";
