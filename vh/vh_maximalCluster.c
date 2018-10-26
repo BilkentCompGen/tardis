@@ -2,7 +2,7 @@
 #include "vh_common.h"
 #include "vh_setcover.h"
 
-#define MAXCLUSTERLIST 5000000
+#define MAXCLUSTERLIST 100000
 
 MappingOnGenome **g_genomeIndexStart;
 RightBrkPointInterval *g_listRightBrkPointIntr;
@@ -300,9 +300,50 @@ void vh_addToPotentialOutput (int leftBreakPoint, Heap *heapName, char SVtype)
 	vh_flushOut ( leftBreakPoint, SVtype);
 }
 
+int **create_list_of_reads(int list_size)
+{
+  int **ret;
+  int i;
+
+  ret = (int **) getMem(list_size * sizeof (int *));
+
+  for (i=0; i<list_size; i++){
+    ret[i] = (int *) getMem(3 * sizeof (int));
+  }
+
+  return ret;
+  
+}
+
+int **recreate_list_of_reads(int **old_list, int list_size, int new_list_size)
+{
+  int **ret;
+  int i;
+
+  ret = (int **) getMem(new_list_size * sizeof (int *));
+
+  for (i=0; i<list_size; i++){
+    ret[i] = (int *) getMem(3 * sizeof (int));
+    ret[i][0] = old_list[i][0];
+    ret[i][1] = old_list[i][1];
+    ret[i][2] = old_list[i][2];
+    freeMem (old_list[i], (3 * sizeof(int *)));
+  }
+  
+  for (i=list_size; i<new_list_size; i++){
+    ret[i] = (int *) getMem(3 * sizeof (int));
+  }
+  
+
+  freeMem (old_list, list_size * sizeof (int *));
+  
+  return ret;
+  
+}
+
 int vh_outputCluster (ClustersFound * cluster, char SVtype)
 {
-	int listOfReadsOutputed[MAXCLUSTERLIST][3];
+        int **list_of_written_reads;//[MAXCLUSTERLIST][3];
 	// [0]:locMapLeftEnd, [1]: locMapRightStart, [2]: edit distance. This is used to remove the duplicated reads (clonal) as a result of PCR duplication from each cluster.
 	int totalAddedToList = 0;
 	int clonalRead = 0;
@@ -313,7 +354,9 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 	clusters_final *cluster_new, *tmp, *prev;
 
 	int cnt = 0;
-
+	int list_size = MAXCLUSTERLIST;
+	
+	
 	/* Count number of read-pairs inside the clusters excluding the ones >= cluster_of_reads */
 	for (readMapCount = 0; readMapCount < cluster->clusterSize; readMapCount++)
 	{
@@ -326,6 +369,8 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 
 	//if (cluster->clusterSize < 2 || (SVtype == INVERSION && vh_notBothDirections (cluster)))
 	//return 0;
+
+	list_of_written_reads = create_list_of_reads(list_size);
 
 	clusters_all[cluster_count] = NULL;
 
@@ -345,9 +390,9 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 		{
 			for (countListOutputed = 0; countListOutputed < totalAddedToList; countListOutputed++)
 			{
-				if ((cluster->readMappingPtrArray[readMapCount]->locMapLeftEnd == listOfReadsOutputed[countListOutputed][0])
-						&& (cluster->readMappingPtrArray[readMapCount]->locMapRightStart == listOfReadsOutputed[countListOutputed][1])
-						&& (cluster->readMappingPtrArray[readMapCount]->editDistance == listOfReadsOutputed[countListOutputed][2]))
+				if ((cluster->readMappingPtrArray[readMapCount]->locMapLeftEnd == list_of_written_reads[countListOutputed][0])
+						&& (cluster->readMappingPtrArray[readMapCount]->locMapRightStart == list_of_written_reads[countListOutputed][1])
+						&& (cluster->readMappingPtrArray[readMapCount]->editDistance == list_of_written_reads[countListOutputed][2]))
 					clonalRead = 1;
 			}
 			if (clonalRead == 0)
@@ -464,10 +509,16 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 				/* Keep the number of clusters that a read is involved in */
 				cluster->readMappingPtrArray[readMapCount]->in_cluster_count++;
 
-				listOfReadsOutputed[totalAddedToList][0] = cluster->readMappingPtrArray[readMapCount]->locMapLeftEnd;
-				listOfReadsOutputed[totalAddedToList][1] = cluster->readMappingPtrArray[readMapCount]->locMapRightStart;
-				listOfReadsOutputed[totalAddedToList][2] = (int) cluster->readMappingPtrArray[readMapCount]->editDistance;
+				list_of_written_reads[totalAddedToList][0] = cluster->readMappingPtrArray[readMapCount]->locMapLeftEnd;
+				list_of_written_reads[totalAddedToList][1] = cluster->readMappingPtrArray[readMapCount]->locMapRightStart;
+				list_of_written_reads[totalAddedToList][2] = (int) cluster->readMappingPtrArray[readMapCount]->editDistance;
 				totalAddedToList++;
+				if (totalAddedToList >= list_size) {
+				  fprintf( stderr, "totaladdedto list: %d\n", totalAddedToList);
+				  list_of_written_reads = recreate_list_of_reads(list_of_written_reads, list_size, list_size+MAXCLUSTERLIST);
+				  list_size+=MAXCLUSTERLIST;
+				}
+				/* ARDA: there is no control here to check if totalAddedToList < MAXCLUSTERLIST. What happens if it exceeds? */
 			}
 		}
 	}
@@ -477,6 +528,13 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 			fprintf (fileOutput, "END\n");
 		cluster_count++;
 	}
+
+	for (cnt=0; cnt<list_size; cnt++){
+	  freeMem (list_of_written_reads[cnt], (3 * sizeof(int *)));
+	}
+	
+	freeMem (list_of_written_reads, list_size * sizeof (int *));
+	
 }
 
 void vh_createIntersectingIntervals (int leftBreakPoint, char SVtype)

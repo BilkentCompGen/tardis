@@ -13,30 +13,46 @@
 
 TARDIS_EXE=`which tardis`
 WGET_EXE=`which wget`
+SAMTOOLS_EXE=`which samtools`
 
-# Download Na11930 chromosome 20 BAM
-${WGET_EXE} ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/phase3/data/NA11930/alignment/NA11930.chrom20.ILLUMINA.bwa.CEU.low_coverage.20130415.bam
-# Download Na11930 chromosome 20 BAI
-${WGET_EXE} ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/phase3/data/NA11930/alignment/NA11930.chrom20.ILLUMINA.bwa.CEU.low_coverage.20130415.bam.bai
+# Download NA11930 chromosome 20 BAM
+${WGET_EXE} -c ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/phase3/data/NA11930/alignment/NA11930.chrom20.ILLUMINA.bwa.CEU.low_coverage.20130415.bam
+# Download NA11930 chromosome 20 BAI
+${WGET_EXE} -c ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/phase3/data/NA11930/alignment/NA11930.chrom20.ILLUMINA.bwa.CEU.low_coverage.20130415.bam.bai
 
 # Download reference
-${WGET_EXE} ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.gz
-${WGET_EXE} ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.fai
+${WGET_EXE} -c ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.gz
+${WGET_EXE} -c ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/human_g1k_v37.fasta.fai
 
 # unzip reference
 
 gunzip human_g1k_v37.fasta.gz
+if [ $? -eq 0 ] 
+then
+	echo "Reference genome seems to be downloaded correctly.";
+else
+	echo "Reference genome seems NOT to be downloaded correctly. Please rerun this script.";
+	exit 1;
+fi
 
 
 # Download SONIC file for the same reference
-${WGET_EXE} https://github.com/BilkentCompGen/sonic-prebuilt/raw/master/human_g1k_v37.sonic
+${WGET_EXE} -c https://github.com/BilkentCompGen/sonic-prebuilt/raw/master/human_g1k_v37.sonic
 
 # these are the parameters. Commend out the WGET lines aboove if they are predownloaded
 INPUTBAM=NA11930.chrom20.ILLUMINA.bwa.CEU.low_coverage.20130415.bam
 REF=human_g1k_v37.fasta
 SONIC=human_g1k_v37.sonic
 
+${SAMTOOLS_EXE} quickcheck $INPUTBAM
+if [ $? -eq 0 ] 
+then
+	echo $INPUTBAM " seems to be downloaded correctly according to samtools quickcheck";
+else
+	echo $INPUTBAM " seems NOT to be downloaded correctly according to samtools quickcheck. Please rerun this script.";
+	exit 1;
+fi
 
 # ready to call TARDIS 
 
-${TARDIS_EXE} -i $INPUTBAM --ref $RF --sonic $SONIC --out NA11930-chrom20-demo
+${TARDIS_EXE} -i $INPUTBAM --ref $REF --sonic $SONIC --out NA11930-chrom20-demo

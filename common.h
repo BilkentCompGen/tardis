@@ -62,7 +62,8 @@
 #define RETURN_ERROR 0
 
 #define MAX_BAMS 256
-#define MAXLISTBRKPOINTINTR 10000000;
+#define MAXLISTBRKPOINTINTR 10000000
+#define MAX_SAMPLES 256
 
 /* Maximum filename length */
 #define MAX_LENGTH 1024
@@ -111,6 +112,9 @@ typedef struct _params
 	char skip_mrfast; /* boolean stand-in to skip mrFast mapping (If you already have the divet file created) */
 	int threads; /* number of threads to use for parallel mrFAST, and maybe future parallelization of TARDIS */
 	int num_bams; /* number of input BAM files */
+	int num_samples; /* number of samples */
+        char **sample_names; /* sample names -- maybe first count through a linked list, then convert to this array */
+        int size_samples_array; /* current size of the samples array */
 	int quick; /* boolean stand-in to work in bam-only mode (no divet) */
 	int sensitive; /* boolean stand-in to work in sensitive mode (divet) */
 	int ten_x; /*boolean for whether we're using 10x data*/
@@ -129,6 +133,7 @@ typedef struct _params
         char *ref_seq; /* reference sequence per chromosome */
         int hash_size; /* size of the hash table for split read mapping */
 } parameters;
+
 
 /* Parameter related TARDIS functions */
 void init_params( parameters**);

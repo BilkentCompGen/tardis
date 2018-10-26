@@ -1,9 +1,9 @@
 #ifndef VH_COMMON_H__
 #define VH_COMMON_H__
 
-#ifndef NULL
-#define NULL 0
-#endif
+//#ifndef NULL
+//#define NULL 0
+//#endif
 
 //This define lines selects the main function that should be run
 //#define MAIN_HASH     //For testing the hash file

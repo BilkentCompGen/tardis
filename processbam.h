@@ -24,7 +24,7 @@ typedef struct _bam_info
 	float mean;
 	float mean_x;
 	float mean_y;
-	float mean_rd_per_gc[101]; /* GC percentages, i.e., GC[13]=323 means 343 windows have GC of 13% */
+	float mean_rd_per_gc[101]; /* GC percentages, i.e., GC[13]=323 means 323 windows have GC of 13% */
 
 	htsFile* bam_file; /* file pointer to the BAM file */
 	hts_idx_t* bam_file_index;
@@ -57,7 +57,7 @@ typedef struct bam_alignment_region
 }bam_alignment_region;
 
 /* Function Prototypes */
-void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt, char* ref_genome_path);
+void load_bam( parameters *, bam_info* in_bam, char* path, int alternative, int bam_cnt, char* ref_genome_path);
 void create_fastq( bam_info* in_bam, char* bam_path, parameters *params);
 void print_bam( bam_info* in_bam);
 void print_libs( bam_info* in_bam);

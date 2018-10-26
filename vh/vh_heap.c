@@ -370,3 +370,12 @@ void push_heap_numt(HeapNUMT *heapName, HeapElNUMT *newEl)
 		heapIndex = (heapIndex + 1) / 2 - 1;
 	}
 }
+
+int *resize_int_array (int *old_array, int old_size, int new_size){
+  int *ret;
+  ret = (int *) getMem(new_size * sizeof(int));
+  memcpy(ret, old_array, old_size * sizeof(int));
+  freeMem (old_array, old_size * sizeof(int));
+  memset(ret + (old_size*sizeof(int)), 0, (new_size-old_size) * sizeof(int));
+  return ret;
+}

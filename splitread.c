@@ -560,7 +560,7 @@ void mapSoftClipToRef( bam_info* in_bam, parameters* params, int chr_index)
 	int i;
 	char *str;
 	softClip *ptrSoftClip;
-
+	int tmp;
 
 	for( i = 0; i < in_bam->num_libraries; i++)
 	{
@@ -578,8 +578,10 @@ void mapSoftClipToRef( bam_info* in_bam, parameters* params, int chr_index)
 					str[ptrSoftClip->opl[0]] = '\0';
 				}
 				else if( ptrSoftClip->op[ptrSoftClip->opCount - 1] == BAM_CSOFT_CLIP)
-				{
-					int tmp = in_bam->libraries[i]->read_length - ptrSoftClip->opl[ptrSoftClip->opCount - 1];
+				  {
+				        tmp = in_bam->libraries[i]->read_length - ptrSoftClip->opl[ptrSoftClip->opCount - 1];
+					if (tmp <= 0)
+					  tmp = in_bam->libraries[i]->read_length;
 					strncpy( str, &( ptrSoftClip->softClipString[tmp]), tmp);
 					str[in_bam->libraries[i]->read_length - ptrSoftClip->opl[ptrSoftClip->opCount - 1]] = '\0';
 				}

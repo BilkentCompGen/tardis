@@ -479,8 +479,8 @@ int read_mapping( library_properties *library, parameters* params, bam1_t* bam_a
 	insLen = abs( bam_align->pos_left - bam_align->pos_right);
 
 	/* Find the SVs */
-	if( sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[left_end_id], bam_align->pos_left, bam_align->pos_left + library->read_length) == 0.0
-	    && sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[right_end_id], bam_align->pos_right, bam_align->pos_right + library->read_length) == 0.0
+	if( sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[left_end_id], bam_align->pos_left, bam_align->pos_left + library->read_length) == 0
+	    && sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[right_end_id], bam_align->pos_right, bam_align->pos_right + library->read_length) == 0
 			&& insLen < (params->this_sonic->chromosome_lengths[left_end_id]) - (2 * library->conc_max) && bam_align->qual > params->mq_threshold
 			&& is_proper( bam_align->flag) && !( ( left_end_id == right_end_id) && ( insLen < MIN_INS_LEN)))
 		/* Remove the paired-ends that both end overlap each other */
@@ -586,10 +586,10 @@ int read_bam( bam_info* in_bam, parameters* params)
 		}
 	}
 	bam_destroy1( bam_alignment);
-	fprintf( stderr, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li NUMT, %li Split Read and %li XA regions found in BAM.\n",
-			del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, numt_cnt_bam, sr_cnt_bam, alt_cnt_bam);
-	fprintf( logFile, "\n%li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li Split Read and %li XA regions found in BAM.\n",
-			del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam, alt_cnt_bam);
+	fprintf( stderr, "\n[%s] %li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li NUMT, %li Split Read and %li XA regions found in BAM/CRAM.\n",
+		 in_bam->sample_name, del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, numt_cnt_bam, sr_cnt_bam, alt_cnt_bam);
+	fprintf( logFile, "\n[%s] %li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li Split Read and %li XA regions found in BAM/CRAM.\n",
+		 in_bam->sample_name, del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam, alt_cnt_bam);
 
 	if (del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + numt_cnt_bam + sr_cnt_bam + alt_cnt_bam == 0)
 		return 1;

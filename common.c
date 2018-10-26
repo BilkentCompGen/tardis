@@ -39,6 +39,9 @@ void init_params( parameters** params)
 	( *params)->force_read_length = 0;
 	( *params)->threads = 1;
 	( *params)->num_bams = 0;
+	( *params)->num_samples = 0;
+	( *params)->sample_names = NULL;
+	( *params)->size_samples_array = MAX_SAMPLES;
 	( *params)->skip_mrfast = 0;
 	( *params)->ten_x = 0;
 	( *params)->output_hs = 0;

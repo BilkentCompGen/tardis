@@ -9,7 +9,7 @@
 
 #define hashtable_size 10000
 
-int multiIndCount;//total number of individual <= totalNumInd
+int multiIndCount;//total number of individual <= MAX_SAMPLES
 int sizeListClusterEl; // total number of clusters
 int conflictResFlag = 1;
 int weightedHeuristicFlag = 0;
@@ -19,7 +19,7 @@ int multiLibsCount;
 int cluster_count = 0;
 int minimumSupNeeded;
 float mismatchPenalty = 0;
-char multiInd[totalNumInd][strSize]; //Name of each individual
+char multiInd[MAX_SAMPLES][strSize]; //Name of each individual
 struct barcode_list_element* hashtable[hashtable_size];
 
 struct clusters_final* clusters_all[MaxClusterCount];
@@ -633,7 +633,7 @@ float avgEditDistIndReadSupportCluster(readMappingEl *list, int countInd)
 void markReadsCovered( int clusterId, int *countReads)
 {
 	int minDelLength = 1000000000, maxDelLength = 1000000000, totalReadRemove = 0, count;
-	int readsToMark[totalNumInd];
+	int readsToMark[MAX_SAMPLES];
 
 	listClusterEl[clusterId].weight_without_homogeniety_score_at_read_covering = listClusterEl[clusterId].weight_without_homogeniety_score;
 	readMappingEl *ptrRead;
@@ -811,9 +811,9 @@ void outputPickedCluster( bam_info** in_bams, parameters* params, FILE *fpVcf)
 float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *countBestSetPicked)
 {
 	//int idIndCanBePicked = 0; // the id of individuals which we are considering to have this SV in this round
-	//int editDistanceSum[totalNumInd]; // the total sum of edit distance for paired-end reads considered till now
-	int supOfIndSeen[totalNumInd]; //the number of paired-end read supports for each individual seen in this round
-	//double weightedSupOfIndSeen[totalNumInd];// a normalized number of paired-end read supports for each individual seen
+	//int editDistanceSum[MAX_SAMPLES]; // the total sum of edit distance for paired-end reads considered till now
+	int supOfIndSeen[MAX_SAMPLES]; //the number of paired-end read supports for each individual seen in this round
+	//double weightedSupOfIndSeen[MAX_SAMPLES];// a normalized number of paired-end read supports for each individual seen
 	//int totalEditDist = 0; // total of edit distance of all paired-end reads for individuals which we are considering
 	float bestScore, weightNew, normalizedWeightedSup = 0;
 	int numReadCanBeCovered = 0, indCount, count, i, k;
@@ -827,12 +827,12 @@ float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *cou
 
 	if( listClusterEl[clusterId].oldBestIsGood == 1)
 	{
-		for( count = 0; count < totalNumInd; count++)
+		for( count = 0; count < MAX_SAMPLES; count++)
 			countBestSetPicked[count] = listClusterEl[clusterId].bestReadToRemove[count];
 		return listClusterEl[clusterId].oldBestScore;
 	}
 
-	for( indCount = 0; indCount < totalNumInd; indCount++)
+	for( indCount = 0; indCount < MAX_SAMPLES; indCount++)
 	{
 		supOfIndSeen[indCount] = 0;
 		//editDistanceSum[indCount] = 0;
@@ -920,7 +920,7 @@ float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *cou
 	listClusterEl[clusterId].oldBestIsGood = 1;
 	listClusterEl[clusterId].oldBestScore = bestScore;
 
-	for( count = 0; count < totalNumInd; count++)
+	for( count = 0; count < MAX_SAMPLES; count++)
 		listClusterEl[clusterId].bestReadToRemove[count] = countBestSetPicked[count];
 	return bestScore;
 }
@@ -952,8 +952,8 @@ int pickSet(bam_info **in_bams, parameters *params)
 {
 	float bestWeight;
 	float newWeight;
-	int countReads[totalNumInd];
-	int bestReads[totalNumInd];
+	int countReads[MAX_SAMPLES];
+	int bestReads[MAX_SAMPLES];
 	int bestWeightCluster;
 	int count, clusterCounter;
 	maxScoreInBuffer = inf - 1;
@@ -1185,13 +1185,15 @@ void init(bam_info **in_bams, parameters *params)
 	clusterIdEl *clusterIdElNew;
 	readMappingEl *ptrMapping;
 	clusters_final *tmp_cluster;
-
+	int multilib_array_size;
 	multiIndCount = 0;
 
 	for( i = 0; i < params->num_bams; i++)
 		multiLibsCount += in_bams[i]->num_libraries;
 
 	multiLibs = ( multiLib *) getMem( sizeof( multiLib) * ( multiLibsCount + params->num_bams + 1));
+	multilib_array_size = multiLibsCount + params->num_bams + 1;
+	fprintf(stderr, "MultiLib size: %d\n", multilib_array_size);
 	multiLibsCount = 0;
 
 	for( j = 0; j < params->num_bams; j++)

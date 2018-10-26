@@ -156,7 +156,15 @@ To build a valor Docker image
 
 Your image named "tardis" should be ready. You can run tardis using this image by
 
-	docker run --user=$UID -v /path/to/inputs:/input -v /path/to/outputdir:/output ardis [args]
+	docker run --user=$UID -v /path/to/inputs:/input -v /path/to/outputdir:/output tardis [args]
+
+Alternatively, you can pull from DockerHub:
+
+	docker pull alkanlab/tardis
+
+We also provide a test shell script for Docker usage based on DockerHub pull. This test is similar to the command line sample provided above, it first downloads test files.
+
+	sh ./test_tardis_docker.sh
 
 - ```[args]``` are usual arguments you would pass to valor executable. Be careful about mapping. You need to specify folders respective to container directory structure.
 - You need to map host machine input and output directory to responding volume directories inside the container. These options are specified by '-v' argment.

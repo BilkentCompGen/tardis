@@ -33,8 +33,8 @@ void fastq_match( char* filename1, char* filename2, int num_seq, int read_length
 	ofilename1 = ( char*) getMem ( sizeof( char) * ( strlen( filename1) + 10));
 	ofilename2 = ( char*) getMem ( sizeof( char) * ( strlen( filename2) + 10));
 
-	sprintf( ofilename1, "%s.sorted.gz", filename1);
-	sprintf( ofilename2, "%s.sorted.gz", filename2);
+	sprintf( ofilename1, "%s.sorted.gz",  filename1);
+	sprintf( ofilename2, "%s.sorted.gz",  filename2);
 
 	of1 = safe_fopen_gz( ofilename1, "w");
 	of2 = safe_fopen_gz( ofilename2, "w");
@@ -285,8 +285,9 @@ void create_fastq_library( struct library_properties* in_lib, char* sample_name,
 	int skip_read; // skip outputting this read since it is shorter than forced read length
 
 	/* Set FASTQ file names */
-	sprintf( filename, "%s_%s_remap_1.fastq.gz", sample_name, in_lib->libname);
-	sprintf( filename2, "%s_%s_remap_2.fastq.gz", sample_name, in_lib->libname);
+
+	sprintf( filename, "%s-%s_%s_remap_1.fastq.gz", params->outprefix, sample_name, in_lib->libname);
+	sprintf( filename2, "%s-%s_%s_remap_2.fastq.gz", params->outprefix, sample_name, in_lib->libname);
 
 	set_str( &( in_lib->fastq1), filename);
 	set_str( &( in_lib->fastq2), filename2);

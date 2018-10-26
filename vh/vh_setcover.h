@@ -124,7 +124,7 @@ typedef struct clusterEl{
 	int *sr_support;
 	int oldBestIsGood; // is the last best score computed for this SV still the best or things have changes
 	float oldBestScore; // Whats is the best old score
-	int bestReadToRemove[totalNumInd]; // the support for each individual for the best old score(if oldBestIsGood is true then this array is still the best selection from this cluster).
+	int bestReadToRemove[MAX_SAMPLES]; // the support for each individual for the best old score(if oldBestIsGood is true then this array is still the best selection from this cluster).
 	char *mobileName; //MEI Subclass
 	char *mei_type; //MEI Class
 	struct readMappingEl *next; //a array of number of individuals for each list of read mappings (i.e. for each individual we have a different list of read mappings and they should be sorted).

@@ -12,15 +12,16 @@
 #include "vh_maximalCluster.h"
 #include "vh_setcover.h"
 
+#define BRKPOINTCLUSTERS 100000
 MappingOnGenome **g_genomeIndexStartFR;
 MappingOnGenome **g_genomeIndexStartRF;
 
 PEAlistEls **leftSidePEAPicked;//This is an array the size of chrN which keep all the cluster created for a particular breakpoint when the paired-end read is FR
 int sizeOfLeftSidePEAPicked;
 
-int posOfBrkPointOfFR_Cluster[100000];
+int *posOfBrkPointOfFR_Cluster;//[100000];
 int countPosBrkPointFR_Clusters = 0;
-
+int size_of_brkpoint_clusters;
 
 void vh_finalizeReadMapping_InterDup (char *chromosome_name, int chroSize)
 {
@@ -69,6 +70,8 @@ void vh_finalizeReadMapping_InterDup (char *chromosome_name, int chroSize)
 	//Free g_intersectInterval -> Heap AND set the heapsize
 	vh_free_heap (g_intersectInterval);
 	g_intersectInterval = NULL;
+
+	freeMem( posOfBrkPointOfFR_Cluster, (size_of_brkpoint_clusters * sizeof(int)));
 }
 
 
@@ -176,11 +179,15 @@ int addToOneSideInitOutputInterDup( Heap *heapName, int breakPointEnd, int brkPo
 
 		posOfBrkPointOfFR_Cluster[countPosBrkPointFR_Clusters] = breakPointEnd;
 		countPosBrkPointFR_Clusters++;
+		if (countPosBrkPointFR_Clusters > size_of_brkpoint_clusters){
+		  posOfBrkPointOfFR_Cluster = resize_int_array ( posOfBrkPointOfFR_Cluster, size_of_brkpoint_clusters, size_of_brkpoint_clusters+BRKPOINTCLUSTERS);
+		  size_of_brkpoint_clusters += BRKPOINTCLUSTERS;
+		}
 	}
 	else if (heapName->heapArray[0].readMappingPtr->orientationLeft == REVERSE
 			&& heapName->heapArray[0].readMappingPtr->orientationRight == FORWARD)
 	{
-		//fprintf(stderr, "%d ", countPosBrkPointFR_Clusters);
+		//fprintf(stderr, "%d ", countPosOBBrkPointFR_Clusters);
 		if (countPosBrkPointFR_Clusters > 0)
 		{
 			for (count = 0; count < countPosBrkPointFR_Clusters; count++)
@@ -465,6 +472,9 @@ void vh_initializeReadMapping_InterDup (sonic *this_sonic, int chr_index, int in
 
 	leftSidePEAPicked = (PEAlistEls **) getMem( ( max_chromosome_size + 1000) * sizeof(PEAlistEls **));
 
+	size_of_brkpoint_clusters = BRKPOINTCLUSTERS;
+	posOfBrkPointOfFR_Cluster = (int *) getMem(size_of_brkpoint_clusters * sizeof(int));
+	
 	countPosBrkPointFR_Clusters = 0;
 
 	for (i = 0; i < max_chromosome_size + 1000; i++)

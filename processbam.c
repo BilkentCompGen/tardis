@@ -13,7 +13,7 @@
 
 bool isRGAvailable = true;
 
-void load_bam( bam_info* in_bam, char* path, int alternative, int bam_cnt, char* ref_genome_path)
+void load_bam( parameters *params, bam_info* in_bam, char* path, int alternative, int bam_cnt, char* ref_genome_path)
 {
 	/* Variables */
 	htsFile* bam_file;

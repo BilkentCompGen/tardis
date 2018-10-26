@@ -7,7 +7,7 @@
 #include "processrefgen.h"
 
 #define add_to_beginning 0
-#define  totalNumInd 20
+//#define  totalNumInd MAX_SAMPLES
 #define  strSize 200 //maximum size of a constant string, such as readName length
 
 
@@ -22,9 +22,9 @@ typedef struct strvar {
 	char *mei_type; /* the name of the mobile element */
 	bool filtered; /* True if the variation is filtered in the filtering stage */
 	bool mei_del;
-	int rp[totalNumInd]; /* RP Support for each individual */
-	int sr[totalNumInd]; /* SR Support for each individual */
-	double cnv_score[totalNumInd]; // likelihood score
+	int rp[MAX_SAMPLES]; /* RP Support for each individual */
+	int sr[MAX_SAMPLES]; /* SR Support for each individual */
+	double cnv_score[MAX_SAMPLES]; // likelihood score
 	bool low_qual;
 	double homogeneity_score;
 	float weight;

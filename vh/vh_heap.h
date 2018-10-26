@@ -84,5 +84,7 @@ void freeHeapMEI( HeapMEI *heapName);
 int minValue_heapMEI(HeapMEI *heapName);
 int minValue_heapNUMT(HeapNUMT *heapName);
 int remove_Heap(Heap * heapName, int position);
+int *resize_int_array (int *old_array, int old_size, int new_size);
+
 
 #endif

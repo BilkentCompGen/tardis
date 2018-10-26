@@ -20,7 +20,7 @@ typedef struct SV_selected{
 	char SVtype;// D: deletion, V: Inversion, I: insertion, E: tandam duplication, M: mobile element
 	int posStart_SV, posEnd_SV;// The inside coordinates
 	int posStart_SV_Outer, posEnd_SV_Outer;//The outside coordinates
-	int sup[totalNumInd]; // support for the SV picked for each individual
+	int sup[MAX_SAMPLES]; // support for the SV picked for each individual
 	struct SV_selected* conflict_Next; // keep a link list of all other SVs selected which are in conlift with this SV (in hapolid genome)
 } SV_selected;
 
