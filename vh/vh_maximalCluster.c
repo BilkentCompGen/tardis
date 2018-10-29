@@ -514,11 +514,9 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 				list_of_written_reads[totalAddedToList][2] = (int) cluster->readMappingPtrArray[readMapCount]->editDistance;
 				totalAddedToList++;
 				if (totalAddedToList >= list_size) {
-				  fprintf( stderr, "totaladdedto list: %d\n", totalAddedToList);
 				  list_of_written_reads = recreate_list_of_reads(list_of_written_reads, list_size, list_size+MAXCLUSTERLIST);
 				  list_size+=MAXCLUSTERLIST;
 				}
-				/* ARDA: there is no control here to check if totalAddedToList < MAXCLUSTERLIST. What happens if it exceeds? */
 			}
 		}
 	}

@@ -61,9 +61,9 @@
 #define RETURN_SUCCESS 1
 #define RETURN_ERROR 0
 
-#define MAX_BAMS 256
+#define MAX_BAMS 100
 #define MAXLISTBRKPOINTINTR 10000000
-#define MAX_SAMPLES 256
+#define MAX_SAMPLES 100
 
 /* Maximum filename length */
 #define MAX_LENGTH 1024

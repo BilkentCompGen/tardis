@@ -96,12 +96,32 @@ This command first runs mrFAST and creates the DIVET file that contains all poss
 DIVET files should be inside the TARDIS directory or under the divet/ folder
 
 
+Running TARDIS - Multiple BAM/CRAM files
+========================================
+
+You can run TARDIS on multiple input files to generate calls from a collection of samples. Note that we tested TARDIS with up to 25 input files, although hard limit is set to 100. 
+
+There are three different ways of passing multiple input files to TARDIS:
+
+* Use --bamlist with a text file. The text file should include paths to input BAM/CRAM files; one file per line:
+	tardis --bamlist myinputs.txt --ref human_g1k_v37.fasta --sonic human_g1k_v37.sonic
+		--out multiplesamples
+
+* Use -i (or --input) multiple times:
+        tardis -i myinput1.bam -i myinput2.bam -i myinput3.bam --ref human_g1k_v37.fasta --sonic human_g1k_v37.sonic
+                --out multiplesamples
+
+* Use -i (or --input) with comma-separated BAM/CRAM list:
+        tardis -i myinput1.bam,myinput2.bam,myinput3.bam --ref human_g1k_v37.fasta --sonic human_g1k_v37.sonic
+                --out multiplesamples
+
+
 All parameters
 ==============
 
         Basic Parameters:
 	--bamlist   [bamlist file] : A text file that lists input BAM files one file per line.
-	--input [BAM files]        : Input files in sorted and indexed BAM format. You can pass multiple BAMs using multiple --input parameters.
+	--input/-i [BAM files]     : Input files in sorted and indexed BAM format. You can pass multiple BAMs using multiple --input parameters.
 	--out   [output prefix]    : Prefix for the output file names.
 	--ref   [reference genome] : Reference genome in FASTA format.
 	--sonic [sonic file]       : SONIC file that contains assembly annotations.

@@ -355,25 +355,6 @@ posMapSoftClip *almostPerfect_match_seq_ref( parameters *params, int chr_index, 
 	  }
 	
 
-	/*  deprecated
-	while( ptr != NULL)
-	{
-		if( abs( ptr->pos - pos) < 100000)
-		{
-			dist = hammingDistance( &( params->ref_seq[ptr->pos]), str, strlen( str));
-			if( dist <= ( 0.05 * strlen( str)))
-			{
-				posMap[posMapSize] = ptr->pos;
-				orient[posMapSize] = FORWARD;
-				hammingDisMap[posMapSize] = dist;
-				posMapSize = posMapSize + 1;
-			}
-		}
-		ptr = ptr->next;
-		if( posMapSize > 10)
-			ptr = NULL;
-			}*/
-
 	if( posMapSize < 11)
 	  {
 	         strRev = ( char *)getMem( (str_length + 1) * sizeof( char));
@@ -429,58 +410,6 @@ posMapSoftClip *almostPerfect_match_seq_ref( parameters *params, int chr_index, 
 	  }
 		
 		
-/*  deprecated
-	if( posMapSize < 11)
-	{
-		strRev = ( char *)getMem( str_length + 1) * sizeof( char));
-		for( i = 0; i < strlen( str); i++)
-		{
-			if( str[i] == 'A')
-				strRev[str_length - i - 1] = 'T';
-			else if( str[i] == 'T')
-				strRev[str_length - i - 1] = 'A';
-			else if( str[i] == 'G')
-				strRev[str_length - i - 1] = 'C';
-			else if( str[i] == 'C')
-				strRev[str_length - i - 1] = 'G';
-			else if( str[i] == 'N')
-				strRev[str_length - i - 1] = 'N';
-		}
-		strRev[str_length] = '\0';
-		strncpy( seed, strRev, HASHKMERLEN);
-		seed[HASHKMERLEN] = '\0';
-		
-		if (is_kmer_valid( seed)){
-		  index = hash_function_ref( seed);
-		  ptr = hash_table_SR[index];
-		}
-		else
-		  ptr = NULL;
-
-		reverseMatch = 0;
-		while( ptr != NULL)
-		{
-			if( abs( ptr->pos - pos) < 100000)
-			{
-				dist = hammingDistance( &( ref_seq_per_chr[ptr->pos]), strRev, str_length);
-				if( dist <= ( 0.05 * strlen( strRev)))
-				{
-					posMap[posMapSize] = ptr->pos;
-					orient[posMapSize] = REVERSE;
-					hammingDisMap[posMapSize] = dist;
-					posMapSize = posMapSize + 1;
-					reverseMatch = 1;
-				}
-			}
-			ptr = ptr->next;
-			if( posMapSize > 10)
-				ptr = NULL;
-		}
-
-		freeMem( strRev, str_length+1);
-	}
-*/
-
 	if( posMapSize < 12 && posMapSize > 0)
 	{
 		for( i = 0; i < posMapSize; i++)

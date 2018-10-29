@@ -97,7 +97,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 				fprintf( stderr, "Number of input BAMs exceeded the maximum value (%d). Exiting.\n", MAX_BAMS);
 				exit( EXIT_MAXBAMS);
 			}
-			set_str( &( params->bam_file_list[( params->num_bams)++]), optarg);
+			params->num_bams = parse_bam_array(params, optarg);
+			//			set_str( &( params->bam_file_list[( params->num_bams)++]), optarg);
 			break;
 
 		case 'f':
@@ -357,7 +358,7 @@ void print_help( void)
 	fprintf( stdout, "Version %s\n\tLast update: %s, build date: %s\n\n", TARDIS_VERSION, TARDIS_UPDATE, BUILD_DATE);
 	fprintf( stdout, "\tBasic Parameters:\n\n");
 	fprintf( stdout, "\t--bamlist   [bamlist file] : A text file that lists input BAM files one file per line.\n");
-	fprintf( stdout, "\t--input [BAM files]        : Input files in sorted and indexed BAM format. You can pass multiple BAMs using multiple --input parameters.\n");
+	fprintf( stdout, "\t--input/-i [BAM files]     : Input files in sorted and indexed BAM format. You can pass multiple BAMs using multiple --input parameters.\n");
 	fprintf( stdout, "\t--out   [output prefix]    : Prefix for the output file names.\n");
 	fprintf( stdout, "\t--ref   [reference genome] : Reference genome in FASTA format.\n");
 	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n\n");
@@ -409,11 +410,41 @@ int parse_bam_list( parameters** params)
 	i = 0;
 	while( fscanf( bam_list, "%s\n", next_path) == 1)
 	{
+		if ( i == MAX_BAMS){		  
+		  fprintf( stderr, "Number of input BAMs exceeded the maximum value (%d). Exiting.\n", MAX_BAMS);
+		  exit( EXIT_MAXBAMS);
+		}
 		set_str( &( ( *params)->bam_file_list)[i], next_path);
 		i = i + 1;
 	}
 
 	fclose( bam_list);
+	fprintf( stderr, " %d input files found.\n", i);
+	return i;
+
+}
+
+int parse_bam_array( parameters* params, char *optarg)
+{
+  /* when the BAM/CRAM list is comma separated */
+	char *next_bam;
+	int i;
+
+	i = params->num_bams;
+
+	next_bam = strtok(optarg, ",");
+	while( next_bam != NULL)
+	{
+	  printf ("Input file %s\n", next_bam);
+	        if ( i == MAX_BAMS){		  
+		  fprintf( stderr, "Number of input BAMs exceeded the maximum value (%d). Exiting.\n", MAX_BAMS);
+		  exit( EXIT_MAXBAMS);
+		}
+		set_str( &( params->bam_file_list[i]), next_bam);
+		i = i + 1;
+		next_bam = strtok(NULL, ",");
+	}
+
 	fprintf( stderr, " %d input files found.\n", i);
 	return i;
 }

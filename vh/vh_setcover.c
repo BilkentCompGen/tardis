@@ -1193,7 +1193,7 @@ void init(bam_info **in_bams, parameters *params)
 
 	multiLibs = ( multiLib *) getMem( sizeof( multiLib) * ( multiLibsCount + params->num_bams + 1));
 	multilib_array_size = multiLibsCount + params->num_bams + 1;
-	fprintf(stderr, "MultiLib size: %d\n", multilib_array_size);
+
 	multiLibsCount = 0;
 
 	for( j = 0; j < params->num_bams; j++)
