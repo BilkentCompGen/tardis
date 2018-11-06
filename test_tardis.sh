@@ -29,10 +29,10 @@ ${WGET_EXE} -c ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/
 gunzip human_g1k_v37.fasta.gz
 if [ $? -eq 0 ] 
 then
-	echo "Reference genome seems to be downloaded correctly.";
-else
 	echo "Reference genome seems NOT to be downloaded correctly. Please rerun this script.";
 	exit 1;
+else
+	echo "Reference genome seems to be downloaded correctly.";
 fi
 
 
