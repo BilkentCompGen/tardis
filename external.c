@@ -103,7 +103,6 @@ void plot_histogram  ( parameters *params, configuration *cfg, char *sample_name
 
   sprintf(cmdline, "%s %s", cfg->path_gnuplot, plot_file_name);
 
-  fprintf( stderr, "[GNUPLOT COMMAND LINE] %s\n", cmdline);
       
   if ( TARDIS_DEBUG == 1)
     {
