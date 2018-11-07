@@ -132,6 +132,7 @@ typedef struct _params
 	sonic *this_sonic; /* SONIC */
         char *ref_seq; /* reference sequence per chromosome */
         int hash_size; /* size of the hash table for split read mapping */
+        char histogram_only; /* boolean for generating histogram only */
 } parameters;
 
 

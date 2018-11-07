@@ -82,7 +82,7 @@ int main( int argc, char** argv)
 	{
 		in_bams[i] = ( bam_info*) getMem( sizeof( bam_info));
 		in_bams[i]->sample_name = NULL;
-		load_bam( params, in_bams[i], params->bam_file_list[i], params->alt_mapping, i, params->ref_genome);
+		load_bam( params, cfg, in_bams[i], params->bam_file_list[i], params->alt_mapping, i, params->ref_genome);
 	}
 
 	/* Passing the flags to VH */
@@ -95,10 +95,13 @@ int main( int argc, char** argv)
 	if ( !params->no_soft_clip)
 	  init_hash_count( params);
 	
-	/* Sensitive Mode */
-	if( running_mode == SENSITIVE)
-	{
-	  fprintf( stderr, "\nTARDIS (v%s) is running in Sensitive Mode - using mrFAST...\n\n", TARDIS_VERSION);
+
+	if ( !params->histogram_only)
+	  {	  
+	    /* Sensitive Mode */
+	    if( running_mode == SENSITIVE)
+	      {
+		fprintf( stderr, "\nTARDIS (v%s) is running in Sensitive Mode - using mrFAST...\n\n", TARDIS_VERSION);
 		fprintf( logFile, "(Running in sensitive mode - using mrFAST)\n\n");
 
 		/* If you already have the correct divet file */
@@ -127,10 +130,10 @@ int main( int argc, char** argv)
 
 		clean_up_temp_files(params);
 		free_sensitive( in_bams, params);
-	}
-	/* Quick Mode */
-	else
-	{
+	      }
+	    /* Quick Mode */
+	    else
+	      {
 	        fprintf( stderr, "\nTARDIS (v%s) is running in Quick Mode\n\n", TARDIS_VERSION);
 		fprintf( logFile, "(Running in quick mode)\n\n");
 		return_value = bamonly_run( params, in_bams);
@@ -139,7 +142,8 @@ int main( int argc, char** argv)
 
 		clean_up_temp_files(params);
 		free_quick( in_bams, params);
-	}
+	      }
+	  }
 
 	username = ( char*) getMem( MAX_SEQ * sizeof( char));
 	getlogin_r( username, (MAX_SEQ - 1));

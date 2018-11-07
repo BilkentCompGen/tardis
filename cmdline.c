@@ -37,6 +37,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	static int make_sonic = 0;
 	static int load_sonic = 0;
 	static int do_remap = 0;
+	static int histogram_only = 0;
 	char *mapping_qual = NULL, *rp_support = NULL, *cluster_of_read = NULL;
 
 	static struct option long_options[] = 
@@ -49,6 +50,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"mei"    , required_argument,   0, 'm'},
 			{"threads", required_argument,   0, 't'},
 			{"help"   , no_argument,         0, 'h'},
+			{"hist-only"   , no_argument,    &histogram_only, 'p'},
 			{"version", no_argument,         0, 'v'},
 			{"bamlist",               required_argument,	 0, 'b'},
 			{"force-read-length"    , required_argument,	 0, 'l'},
@@ -182,14 +184,18 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	}
 
 	/* check quick vs remap mode */
-	if (quick && do_remap){
+	if ( quick && do_remap){
 		fprintf(stderr, "Cannot run both in quick and remap mode. Resetting to default (quick mode).\n");
 		do_remap = 0;
 	}
-	else if (do_remap){
+	else if ( do_remap){
 		quick = 0;
 	}
 
+	/* histogram only mode */
+	if ( histogram_only)
+	  params->histogram_only = 1;
+	  
 	/* check if --num-bams > 0 */
 	if( params->num_bams <= 0 && params->bam_list_path == NULL && !make_sonic)
 	{
@@ -361,7 +367,8 @@ void print_help( void)
 	fprintf( stdout, "\t--input/-i [BAM files]     : Input files in sorted and indexed BAM format. You can pass multiple BAMs using multiple --input parameters.\n");
 	fprintf( stdout, "\t--out   [output prefix]    : Prefix for the output file names.\n");
 	fprintf( stdout, "\t--ref   [reference genome] : Reference genome in FASTA format.\n");
-	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n\n");
+	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n");
+	fprintf( stdout, "\t--hist-only                : Generate fragment size histograms only, then quit.\n\n");
 	fprintf( stdout, "\tAdvanced Parameters:\n\n");
 	fprintf( stdout, "\t--read-count [int]         : # of clusters that a specific read can be involved in (Default is 10).\n");
 	fprintf( stdout, "\t--rp   [int]               : Minimum number of supporting read pairs in initial clustering (Default is 5).\n");

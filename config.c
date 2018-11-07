@@ -29,6 +29,7 @@ void load_config( configuration* cfg, parameters* params)
 
 	/* pre-deprecation code */
 
+	/* get mrfast path */
 	pipe = popen( "which mrfast 2>/dev/null", "r");
 	if( pipe == NULL)
 	{
@@ -38,11 +39,36 @@ void load_config( configuration* cfg, parameters* params)
 	{
 		if( fgets( executable_path, MAX_LENGTH, pipe) == NULL)
 		{
-			fprintf( stderr, "mrfast not found in PATH. Install it or manually configure the %s file.\n", config_filename);
+			fprintf( stderr, "mrfast not found in PATH. Sensitive mode will not work.\n");
+			params->quick = 1;
+			params->sensitive = 0;			
 		}
 		else
 		{
+		        if(executable_path[strlen(executable_path)-1] == '\n'|| executable_path[strlen(executable_path)-1] == '\r')
+			      executable_path[strlen(executable_path)-1] = 0;
 			set_str( &( cfg->path_mrfast), executable_path);
+		}
+		pclose( pipe);
+	}
+
+	/* get gnuplot path */
+	pipe = popen( "which gnuplot 2>/dev/null", "r");
+	if( pipe == NULL)
+	{
+		fprintf( stderr, "Error opening pipe\n");
+	}
+	else
+	{
+		if( fgets( executable_path, MAX_LENGTH, pipe) == NULL)
+		{
+			fprintf( stderr, "gnuplot not found in PATH. Histogram of fragment size will not be generated.\n");
+		}
+		else
+		{
+		        if(executable_path[strlen(executable_path)-1] == '\n'|| executable_path[strlen(executable_path)-1] == '\r')
+			      executable_path[strlen(executable_path)-1] = 0;
+			set_str( &( cfg->path_gnuplot), executable_path);
 		}
 		pclose( pipe);
 	}

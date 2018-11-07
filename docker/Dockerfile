@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
 RUN apt-get update -y --fix-missing
-RUN apt-get install git make gcc zlib1g-dev libbz2-dev liblzma-dev -y
+RUN apt-get install git make gcc zlib1g-dev libbz2-dev liblzma-dev gnuplot-nox -y
 
 RUN mkdir /tardis
 RUN mkdir /input

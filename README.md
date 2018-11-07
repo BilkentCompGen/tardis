@@ -7,11 +7,13 @@ Soylev, A., Kockan, C., Hormozdiari, F., & Alkan, C. (2017). Toolkit for automat
 
 Soylev, A., Le, T., Amini, H., Alkan, C., & Hormozdiari, F. (2018). Discovery of tandem and interspersed segmental duplications using high throughput sequencing. bioRxiv, posted August 16, 2018. https://doi.org/10.1101/393694
 
+TARDIS is developed and tested using Linux operating system (mostly Ubuntu flavors), and gcc versions 5.4 and 7.3. If it does not run as intended in other operating systems, we recommend to use the Docker container available at https://hub.docker.com/r/alkanlab/tardis/. We provide a sample script for Docker usage in this repository.
+
 Requirements
 ============
 
+ * gcc (version > 5)
  * zlib   (http://www.zlib.net)
- * mrfast (https://github.com/BilkentCompGen/mrfast)
  * htslib (included as submodule; http://htslib.org/)
  * sonic  (included as submodule; https://github.com/calkan/sonic)
 
@@ -20,6 +22,10 @@ htslib also requires:
  * libbz2
  * liblzma
 
+Optional dependencies
+=====================
+ * mrFAST (https://github.com/BilkentCompGen/mrfast) - sensitive mode only.
+ * gnuplot http://www.gnuplot.info) - for plotting fragment size distributions.
 
 Fetching TARDIS
 ===============
@@ -54,7 +60,7 @@ SONIC file (annotations container)
 SONIC files for some human genome reference versions are available at external repo: https://github.com/BilkentCompGen/sonic-prebuilt
 
  * human_g1k_v37.sonic: SONIC file for Human Reference Genome GRCh37 (1000 Genomes Project version)
- 	* Also download the reference genome at: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz. 
+	* Also download the reference genome at: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz. 
  * ucsc_hg19.sonic: SONIC file for the human reference genome, UCSC version build hg19.
 	* Also download the reference genome at: http://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz. Deflate the tar archive and concatenate all chromosomes into a single FASTA file.
  * ucsc_hg38.sonic: SONIC file for the human reference genome build 38.
@@ -125,6 +131,7 @@ All parameters
 	--out   [output prefix]    : Prefix for the output file names.
 	--ref   [reference genome] : Reference genome in FASTA format.
 	--sonic [sonic file]       : SONIC file that contains assembly annotations.
+	--hist-only                : Generate fragment size histograms only, then quit.
 
         Advanced Parameters:
 	--read-count [int]         : # of clusters that a specific read can be involved in (Default is 10).
@@ -178,7 +185,7 @@ Your image named "tardis" should be ready. You can run tardis using this image b
 
 	docker run --user=$UID -v /path/to/inputs:/input -v /path/to/outputdir:/output tardis [args]
 
-Alternatively, you can pull from DockerHub:
+Alternatively, you can pull from Docker Hub:
 
 	docker pull alkanlab/tardis
 

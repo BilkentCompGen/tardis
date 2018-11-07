@@ -6,6 +6,7 @@
 #include <htslib/hts.h>
 #include <stdbool.h>
 #include "common.h"
+#include "config.h"
 
 /* Sample this many fragments to calculate avg/median/std per library */
 #define SAMPLEFRAG 1000000 
@@ -57,7 +58,7 @@ typedef struct bam_alignment_region
 }bam_alignment_region;
 
 /* Function Prototypes */
-void load_bam( parameters *, bam_info* in_bam, char* path, int alternative, int bam_cnt, char* ref_genome_path);
+void load_bam( parameters *, configuration *, bam_info* in_bam, char* path, int alternative, int bam_cnt, char* ref_genome_path);
 void create_fastq( bam_info* in_bam, char* bam_path, parameters *params);
 void print_bam( bam_info* in_bam);
 void print_libs( bam_info* in_bam);

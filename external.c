@@ -53,3 +53,72 @@ int remap_mrfast( parameters *params, bam_info ** in_bams, configuration *cfg)
 
 	return RETURN_SUCCESS;
 }
+
+
+void plot_histogram  ( parameters *params, configuration *cfg, char *sample_name, char *libname, int sample_size, int *fragment_lengths, float average, float stdev)
+{
+  FILE *hist;
+  char histogram_file_name[MAX_LENGTH];
+  char plot_file_name[MAX_LENGTH];
+  int i, current;
+  int cnt;
+  char cmdline[4096];
+  int return_value;
+  
+  if (cfg->path_gnuplot == NULL)
+    return;
+
+  sprintf(histogram_file_name, "%s%s-%s.hist", params->outprefix, sample_name, libname);
+  hist = fopen(histogram_file_name, "w");
+
+  current = -1819289; /* magic number */
+  cnt = 1;
+
+  for (i = 0; i < sample_size; i++){
+    if (fragment_lengths[i] == current)
+      cnt++;
+    else{
+      if (current != -1819289)
+	fprintf( hist, "%d\t%d\n", current, cnt);
+      cnt = 1;
+      current = fragment_lengths[i];
+    }
+  }
+  fclose(hist);
+
+  sprintf(plot_file_name, "%s%s-%s.plot", params->outprefix, sample_name, libname);
+  hist = fopen(plot_file_name, "w");
+  
+  fprintf(hist, "set xlabel \"Fragment size\"\n");
+  fprintf(hist, "set ylabel \"Number of pairs\"\n");
+  fprintf(hist, "set title \'Sample: %s - Library: %s - Average: %.2f - Stdev: %.2f\' font \"Arial,10\"\n", sample_name, libname, average, stdev);
+
+  fprintf(hist, "set xrange [0:%d]\n", (int)(average+3*stdev));
+  fprintf(hist, "set terminal pdf enhanced color\n");
+  fprintf(hist, "set output \"%s-%s-%s.pdf\"\n", params->outprefix, sample_name, libname);
+  
+  fprintf(hist, "plot \"%s\" with boxes ti \"fragment\"\n", histogram_file_name);
+
+  fclose(hist);
+
+  sprintf(cmdline, "%s %s", cfg->path_gnuplot, plot_file_name);
+
+  fprintf( stderr, "[GNUPLOT COMMAND LINE] %s\n", cmdline);
+      
+  if ( TARDIS_DEBUG == 1)
+    {
+      fprintf( stderr, "[GNUPLOT COMMAND LINE] %s\n", cmdline);
+    }
+  
+  return_value = system( cmdline);
+  
+  if (WIFSIGNALED(return_value) && (WTERMSIG(return_value) == SIGINT || WTERMSIG(return_value) == SIGQUIT))
+    {
+      fprintf( stderr, "Histogram plotting failed.\n");
+      return;
+    }
+
+  remove(plot_file_name);
+  remove(histogram_file_name);
+
+}

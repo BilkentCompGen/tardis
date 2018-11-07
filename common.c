@@ -54,6 +54,7 @@ void init_params( parameters** params)
 	( *params)->quick = 1;
 	( *params)->ref_seq = NULL;
 	( *params)->hash_size = 0;
+	( *params)->histogram_only = 0;
 
 	for( i = 0; i < MAX_BAMS; i++)
 	{
