@@ -12,8 +12,32 @@
 # 	gzip
 
 TARDIS_EXE=`which tardis`
+
+if [ -z ${TARDIS_EXE} ]
+then
+	echo "TARDIS binary is not in your PATH. Either move the TARDIS binary to your PATH, or add its location to the PATH environment variable."
+else
+	echo "Found TARDIS at " ${TARDIS_EXE}.
+fi
+
+
 WGET_EXE=`which wget`
+
+if [ -z ${WGET_EXE} ]
+then
+	echo "WGET binary is not in your PATH. Either move the WGET binary to your PATH, or add its location to the PATH environment variable."
+else
+	echo "Found WGET at " ${WGET_EXE}.
+fi
+
 SAMTOOLS_EXE=`which samtools`
+
+if [ -z ${SAMTOOLS_EXE} ]
+then
+	echo "SAMTOOLS binary is not in your PATH. Either move the SAMTOOLS binary to your PATH, or add its location to the PATH environment variable."
+else
+	echo "Found SAMTOOLS at " ${SAMTOOLS_EXE}.
+fi
 
 # Download NA11930 chromosome 20 BAM
 ${WGET_EXE} -c ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/phase3/data/NA11930/alignment/NA11930.chrom20.ILLUMINA.bwa.CEU.low_coverage.20130415.bam
@@ -56,3 +80,5 @@ fi
 # ready to call TARDIS 
 
 ${TARDIS_EXE} -i $INPUTBAM --ref $REF --sonic $SONIC --out NA11930-chrom20-demo
+
+
