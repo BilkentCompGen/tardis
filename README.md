@@ -40,6 +40,11 @@ Fetching TARDIS
 
 	git clone https://github.com/BilkentCompGen/tardis.git --recursive
 
+Installing development libraries in Ubuntu (requires sudo access)
+======================================================
+
+	sudo apt-get install zlib1g-dev liblzma-dev libbz2-dev
+
 Compilation
 ===========
 
