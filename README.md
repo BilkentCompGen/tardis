@@ -15,7 +15,9 @@ Requirements
  * gcc (version > 5)
  * zlib   (development libraries; http://www.zlib.net)
 	* Ubuntu example:
-		sudo apt-get install zlib1g-dev
+
+	sudo apt-get install zlib1g-dev
+
  * htslib (included as submodule; http://htslib.org/)
  * sonic  (included as submodule; https://github.com/calkan/sonic)
 
@@ -23,10 +25,13 @@ htslib also requires:
 
  * libbz2 (development libraries; http://www.bzip.org/)
 	* Ubuntu example:
-		sudo apt-get install libbz2-dev
+
+	sudo apt-get install libbz2-dev
+
  * liblzma (development libraries; https://tukaani.org/xz/)
 	* Ubuntu example:
-		sudo apt-get install liblzma-dev
+
+	sudo apt-get install liblzma-dev
 
 Optional dependencies
 =====================
