@@ -319,10 +319,10 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	{
 		if( params->seq_resolved != 0)
 		{
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		invdup_cnt++;
 		total_invdup_length += sv_len;
@@ -343,10 +343,10 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	{
 		if( params->seq_resolved != 0)
 		{
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		interdup_cnt++;
 		total_interdup_length += sv_len;

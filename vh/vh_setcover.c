@@ -817,6 +817,7 @@ float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *cou
 	//int totalEditDist = 0; // total of edit distance of all paired-end reads for individuals which we are considering
 	float bestScore, weightNew, normalizedWeightedSup = 0;
 	int numReadCanBeCovered = 0, indCount, count, i, k;
+	int mei_length = 0, sv_length = 0;
 
 	bool passMinSup;
 	float bestScoreRD = 0;
@@ -883,6 +884,12 @@ float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *cou
 				listClusterEl[clusterId].posEndSV + 20, params->mei);
 
 		if( mei != NULL)
+		{
+			mei_length = abs( mei->repeat_end - mei->repeat_start);
+			sv_length = abs( ( listClusterEl[clusterId].posEndSV - listClusterEl[clusterId].posStartSV + 1));
+		}
+
+		if( ( mei != NULL) && ( sv_length > 0.8 * mei_length) && ( sv_length < 1.2 * mei_length))
 		{
 			calculateCNVScore(in_bams, params, clusterId, listClusterEl[clusterId].SVtype, true, listClusterEl[clusterId].CNV_Score);
 			bestScore = listClusterEl[clusterId].CNV_Score[0];
