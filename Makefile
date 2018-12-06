@@ -25,6 +25,11 @@ clean:
 	make clean -C vh
 	rm -f $(EXECUTABLE) *.o *~
 
+nocram:
+	cd htslib && autoheader && autoconf && ./configure --disable-lzma --disable-bz2 && make && cd ..
+	make -C vh
+	make -C sonic
+
 libs:
 	make -C htslib
 	make -C vh
