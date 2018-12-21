@@ -70,7 +70,7 @@ void plot_histogram  ( parameters *params, configuration *cfg, char *sample_name
     return;
   }
 
-  sprintf(histogram_file_name, "%s%s-%s.hist", params->outprefix, sample_name, libname);
+  sprintf(histogram_file_name, "%s%s-%s.hist", params->outdir, sample_name, libname);
   hist = fopen(histogram_file_name, "w");
 
   current = -1819289; /* magic number */
@@ -88,8 +88,7 @@ void plot_histogram  ( parameters *params, configuration *cfg, char *sample_name
   }
   fclose(hist);
 
-  sprintf(plot_file_name, "%s%s-%s.plot", params->outprefix, sample_name, libname);
-  fprintf( stderr, "Plotting %s\n", histogram_file_name);
+  sprintf(plot_file_name, "%s%s-%s.plot", params->outdir, sample_name, libname);
   hist = fopen(plot_file_name, "w");
   
   fprintf(hist, "set xlabel \"Fragment size\"\n");
@@ -98,7 +97,8 @@ void plot_histogram  ( parameters *params, configuration *cfg, char *sample_name
 
   fprintf(hist, "set xrange [0:%d]\n", (int)(average+3*stdev));
   fprintf(hist, "set terminal pdf enhanced color\n");
-  fprintf(hist, "set output \"%s-%s-%s.pdf\"\n", params->outprefix, sample_name, libname);
+  fprintf(hist, "set output \"%s-%s-%s.pdf\"\n", params->outdir, sample_name, libname);
+  fprintf( stderr, "Plotting %s\nFilename: %s-%s-%s.pdf", histogram_file_name, params->outdir, sample_name, libname);
   
   fprintf(hist, "plot \"%s\" with boxes ti \"fragment\"\n", histogram_file_name);
 
