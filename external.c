@@ -97,8 +97,8 @@ void plot_histogram  ( parameters *params, configuration *cfg, char *sample_name
 
   fprintf(hist, "set xrange [0:%d]\n", (int)(average+3*stdev));
   fprintf(hist, "set terminal pdf enhanced color\n");
-  fprintf(hist, "set output \"%s-%s-%s.pdf\"\n", params->outdir, sample_name, libname);
-  fprintf( stderr, "Plotting %s\nFilename: %s-%s-%s.pdf", histogram_file_name, params->outdir, sample_name, libname);
+  fprintf(hist, "set output \"%s%s-%s.pdf\"\n", params->outdir, sample_name, libname);
+  fprintf( stderr, "Plotting %s\nFilename: %s%s-%s.pdf\n", histogram_file_name, params->outdir, sample_name, libname);
   
   fprintf(hist, "plot \"%s\" with boxes ti \"fragment\"\n", histogram_file_name);
 
