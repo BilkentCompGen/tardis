@@ -89,6 +89,7 @@ void plot_histogram  ( parameters *params, configuration *cfg, char *sample_name
   fclose(hist);
 
   sprintf(plot_file_name, "%s%s-%s.plot", params->outprefix, sample_name, libname);
+  fprintf( stderr, "Plotting %s\n", histogram_file_name);
   hist = fopen(plot_file_name, "w");
   
   fprintf(hist, "set xlabel \"Fragment size\"\n");
@@ -106,10 +107,7 @@ void plot_histogram  ( parameters *params, configuration *cfg, char *sample_name
   sprintf(cmdline, "%s %s", cfg->path_gnuplot, plot_file_name);
 
       
-  if ( TARDIS_DEBUG == 1)
-    {
-      fprintf( stderr, "[GNUPLOT COMMAND LINE] %s\n", cmdline);
-    }
+  fprintf( stderr, "[TARDIS EXTERNAL] Running %s\n", cmdline);
   
   return_value = system( cmdline);
   
