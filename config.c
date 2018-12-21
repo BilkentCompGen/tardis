@@ -48,6 +48,7 @@ void load_config( configuration* cfg, parameters* params)
 		        if(executable_path[strlen(executable_path)-1] == '\n'|| executable_path[strlen(executable_path)-1] == '\r')
 			      executable_path[strlen(executable_path)-1] = 0;
 			set_str( &( cfg->path_mrfast), executable_path);
+			fprintf(stderr, "[TARDIS EXTERNAL] mrFAST found at %s\n", executable_path);
 		}
 		pclose( pipe);
 	}
@@ -69,6 +70,7 @@ void load_config( configuration* cfg, parameters* params)
 		        if(executable_path[strlen(executable_path)-1] == '\n'|| executable_path[strlen(executable_path)-1] == '\r')
 			      executable_path[strlen(executable_path)-1] = 0;
 			set_str( &( cfg->path_gnuplot), executable_path);
+			fprintf(stderr, "[TARDIS EXTERNAL] gnuplot found at %s\n", executable_path);
 		}
 		pclose( pipe);
 	}

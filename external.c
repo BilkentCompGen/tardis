@@ -65,8 +65,10 @@ void plot_histogram  ( parameters *params, configuration *cfg, char *sample_name
   char cmdline[4096];
   int return_value;
   
-  if (cfg->path_gnuplot == NULL)
+  if (cfg->path_gnuplot == NULL){
+    fprintf(stderr, "[TARDIS EXTERNAL] Cannot plot because gnuplot is missing.\n");
     return;
+  }
 
   sprintf(histogram_file_name, "%s%s-%s.hist", params->outprefix, sample_name, libname);
   hist = fopen(histogram_file_name, "w");
