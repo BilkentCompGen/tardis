@@ -480,7 +480,7 @@ int read_mapping( library_properties *library, parameters* params, bam1_t* bam_a
 
 	/* Find the SVs */
 	if( sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[left_end_id], bam_align->pos_left, bam_align->pos_left + library->read_length) == 0
-	    && sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[right_end_id], bam_align->pos_right, bam_align->pos_right + library->read_length) == 0
+			&& sonic_is_satellite( params->this_sonic, params->this_sonic->chromosome_names[right_end_id], bam_align->pos_right, bam_align->pos_right + library->read_length) == 0
 			&& insLen < (params->this_sonic->chromosome_lengths[left_end_id]) - (2 * library->conc_max) && bam_align->qual > params->mq_threshold
 			&& is_proper( bam_align->flag) && !( ( left_end_id == right_end_id) && ( insLen < MIN_INS_LEN)))
 		/* Remove the paired-ends that both end overlap each other */
@@ -587,9 +587,9 @@ int read_bam( bam_info* in_bam, parameters* params)
 	}
 	bam_destroy1( bam_alignment);
 	fprintf( stderr, "\n[%s] %li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li NUMT, %li Split Read and %li XA regions found in BAM/CRAM.\n",
-		 in_bam->sample_name, del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, numt_cnt_bam, sr_cnt_bam, alt_cnt_bam);
+			in_bam->sample_name, del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, numt_cnt_bam, sr_cnt_bam, alt_cnt_bam);
 	fprintf( logFile, "\n[%s] %li DEL, %li INV, %li INS, %li TANDUP, %li MEI, %li Split Read and %li XA regions found in BAM/CRAM.\n",
-		 in_bam->sample_name, del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam, alt_cnt_bam);
+			in_bam->sample_name, del_cnt_bam, inv_cnt_bam, ins_cnt_bam, tandup_cnt_bam, mei_cnt_bam, sr_cnt_bam, alt_cnt_bam);
 
 	if (del_cnt_bam + inv_cnt_bam + ins_cnt_bam + tandup_cnt_bam + mei_cnt_bam + numt_cnt_bam + sr_cnt_bam + alt_cnt_bam == 0)
 		return 1;
@@ -665,7 +665,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			/*
 			if ( chr_index != params->first_chr)
 			free_rd_per_chr(in_bams[bam_index], params, chr_index); */
- 			/* Initialize the read depth and read count */
+			/* Initialize the read depth and read count */
 			init_rd_per_chr( in_bams[bam_index], params, chr_index);
 
 			/* Read bam file for this chromosome */
@@ -693,7 +693,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			{
 				/* Count the number of softclip reads which are clustering for each read */
 				//fprintf( stderr, "\nCollecting soft clipped read information");
-			        fprintf( stderr, "\nReading reference genome");
+				fprintf( stderr, "\nReading reference genome");
 				readReferenceSeq( params, chr_index);
 
 				fprintf( stderr, "\nRunning split read mapping..");
@@ -724,8 +724,8 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 		}
 
 		if( not_in_bam == 1 || total_read_count == 0)
-		        continue;
-		
+			continue;
+
 
 
 		divet_row_count = load_Divet_bam( in_bams, params, chr_index);
@@ -863,7 +863,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 		if( !params->no_soft_clip)
 		{
 			/* Free the hash */
-		  // free_HashIndex();
+			// free_HashIndex();
 			free_hash_table( params);
 		}
 
