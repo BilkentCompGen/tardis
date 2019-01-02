@@ -33,7 +33,7 @@ int indCount;
 // create a new structure and return address
 struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, char svtype,
 		bool filtered, bool mei_del, char *mei_name, char *mei_type, double cnv_score[], int rp[], int sr[],
-		double homogeneity_score, float weight)
+		double homogeneity_score, float weight, int zygosity[])
 {
 	int i;
 	struct strvar* a_strvar = getMem( sizeof( struct strvar));
@@ -56,6 +56,14 @@ struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int o
 		a_strvar->cnv_score[i] = cnv_score[i];
 		a_strvar->rp[i] = rp[i];
 		a_strvar->sr[i] = sr[i];
+		if( zygosity[i] == 0)
+			a_strvar->zygosity[i] = "0/0";
+		else if( zygosity[i] == 1)
+			a_strvar->zygosity[i] = "0/1";
+		else if( zygosity[i] == 2)
+			a_strvar->zygosity[i] = "1/0";
+		else if( zygosity[i] == 3)
+			a_strvar->zygosity[i] = "1/1";
 	}
 
 	return a_strvar;
@@ -428,9 +436,9 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		else
 		{
 			if (params->ten_x || params->output_hs)
-				fprintf( fpOut, "0/1:%2.6lf:%d:%d:%8.6f:%8.10f\t", sv->cnv_score[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
+				fprintf( fpOut, "%s:%2.6lf:%d:%d:%8.6f:%8.10f\t", sv->zygosity[j], sv->cnv_score[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
 			else
-				fprintf( fpOut, "0/1:%2.6f:%d:%d\t", sv->cnv_score[j], sv->rp[j], sv->sr[j]);
+				fprintf( fpOut, "%s:%2.6f:%d:%d\t", sv->zygosity[j], sv->cnv_score[j], sv->rp[j], sv->sr[j]);
 		}
 	}
 	fprintf( fpOut, "\n");

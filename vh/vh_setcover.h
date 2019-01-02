@@ -131,7 +131,7 @@ typedef struct clusterEl{
 	struct readMappingEl *readMappingSelected; // The link list of all the read mappings which have been selected by set cover for this SV.
 
 	double *CNV_Score;
-
+	int* zygosity;// 0: 0/0, 1: 0/1, 2: 1/0, 3: 1/1
     double weight_without_homogeniety_score;
 	double homogeneity_score;
 	bool MEI_Del;
