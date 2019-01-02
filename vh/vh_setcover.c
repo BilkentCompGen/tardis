@@ -190,7 +190,8 @@ double lpoisson(int d, double lambda, int type) {
 	else
 		penalty = 0.01;
 	if  (lambda == 0.0)
-		return log(penalty) * d;
+		lambda = penalty;
+	//return log(penalty) * d;
 	return d*log(lambda) - lambda - lgamma(d+1);
 }
 
@@ -1322,7 +1323,7 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 	int i;
 	char *debugsr_path;
 	char *outputscore_path;
-	
+
 	numCallsRequested = maxNumSV;
 
 	/* create conflict array */
@@ -1331,7 +1332,7 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 
 	//listSelectedSV = (struct SV_selected *) getMem(sizeof(struct SV_selected) * maxNumSV);
 	numSV = 0;
-	
+
 	sv_count = 0;
 	sv_lowqual_count = 0;
 	minimumSupNeeded = params->rp_threshold;
@@ -1345,12 +1346,12 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 	sprintf(outputscore_path, "%s-%s", params->outprefix, "output.score");
 	cnvscoreFile = safe_fopen(outputscore_path, "w");
 	free(outputscore_path);
-	
+
 	debugsr_path = (char *) getMem(sizeof(char) * (2+strlen("debug.sr")+strlen(params->outprefix)));
 	sprintf(debugsr_path, "%s-%s", params->outprefix, "debug.sr");
 	debugSR = safe_fopen(debugsr_path, "w");
 	free(debugsr_path);
-	
+
 	init( in_bams, params);
 	fprintf( stderr, ".");
 	fflush( stderr);
