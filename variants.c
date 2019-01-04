@@ -33,7 +33,7 @@ int indCount;
 // create a new structure and return address
 struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, char svtype,
 		bool filtered, bool mei_del, char *mei_name, char *mei_type, double cnv_score[], int rp[], int sr[],
-		double homogeneity_score, float weight)
+		double homogeneity_score, float weight, int zygosity[])
 {
 	int i;
 	struct strvar* a_strvar = getMem( sizeof( struct strvar));
@@ -56,6 +56,14 @@ struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int o
 		a_strvar->cnv_score[i] = cnv_score[i];
 		a_strvar->rp[i] = rp[i];
 		a_strvar->sr[i] = sr[i];
+		if( zygosity[i] == 0)
+			a_strvar->zygosity[i] = "0/0";
+		else if( zygosity[i] == 1)
+			a_strvar->zygosity[i] = "0/1";
+		else if( zygosity[i] == 2)
+			a_strvar->zygosity[i] = "1/0";
+		else if( zygosity[i] == 3)
+			a_strvar->zygosity[i] = "1/1";
 	}
 
 	return a_strvar;
@@ -172,67 +180,69 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	sv_len = abs( ( sv->inner_end - sv->inner_start + 1));
 	if( sv->svtype == DELETION)
 	{
+		/* Find ref and alt sequences */
+		seq = readRefAltSeq( params, sv->chr_name, sv->inner_start, sv->inner_end);
+
 		if( params->seq_resolved != 0)
 		{
-			/* Find ref and alt sequences */
-			seq = readRefAltSeq( params, sv->chr_name, sv->inner_start, sv->inner_end);
-
 			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%c\t255\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_del_", ++del_cnt, seq, seq[0], ( sv->filtered == false) ? "PASS" : "LowQual");
-
-			if( seq != NULL)
-				free( seq);
 		}
 		else
 		{
 			if(sv->mei_del == true)
-				fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s%s\t255\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_del_", ++del_cnt, ".", "<", "DEL:ME:", sv->mei_type, ">",( sv->filtered == false) ? "PASS" : "LowQual");
+				fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s%s%s%s\t255\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_del_", ++del_cnt, seq[0], "<", "DEL:ME:", sv->mei_type, ">",( sv->filtered == false) ? "PASS" : "LowQual");
 			else
-				fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t255\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_del_", ++del_cnt, ".", "<", "DEL", ">",( sv->filtered == false) ? "PASS" : "LowQual");
+				fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s%s%s\t255\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_del_", ++del_cnt, seq[0], "<", "DEL", ">",( sv->filtered == false) ? "PASS" : "LowQual");
 		}
+		if( seq != NULL)
+			free( seq);
+
 		total_del_length += sv_len;
 	}
 	else if( sv->svtype == INSERTION)
 	{
+		/* Find ref and alt sequences */
+		seq = readRefAltSeq( params, sv->chr_name, sv->inner_start, sv->inner_end);
+
 		if( params->seq_resolved != 0)
 		{
-			/* Find ref and alt sequences */
-			seq = readRefAltSeq( params, sv->chr_name, sv->inner_start, sv->inner_end);
-
 			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_ins_", ++ins_cnt, seq[0], ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
-
-			if( seq != NULL)
-				free( seq);
 		}
 		else
-			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_ins_", ++ins_cnt, ".", "<", "INS", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_ins_", ++ins_cnt, seq[0], "<", "INS", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+
+		if( seq != NULL)
+			free( seq);
 
 		total_ins_length += sv_len;
 	}
 	else if( sv->svtype == INVERSION)
 	{
+		seq = readRefAltSeq( params, sv->chr_name, sv->outer_start, sv->outer_end);
+
 		if( params->seq_resolved != 0)
 		{
 			/* Find ref and alt sequences */
-			seq = readRefAltSeq( params, sv->chr_name, sv->outer_start, sv->outer_end);
 			seq_rev = reverseComplement( seq);
 
 			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_inv_", ++inv_cnt, seq, seq_rev, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
-			if( seq != NULL)
-				free( seq);
 			if( seq_rev != NULL)
 				free( seq_rev);
 		}
 		else
-			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_inv_", ++inv_cnt, ".", "<", "INV", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_inv_", ++inv_cnt, seq[0], "<", "INV", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+
+		if( seq != NULL)
+			free( seq);
 
 		total_inv_length += sv_len;
 	}
 	else if( sv->svtype == MEIFORWARD)
 	{
+		seq = readRefAltSeqMEI( params, sv->chr_name, sv->mei_name);
 		if( params->seq_resolved != 0)
 		{
-			seq = readRefAltSeqMEI( params, sv->chr_name, sv->mei_name);
 			if( seq != NULL)
 				fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_mei_", ++mei_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "mfilt");
 			else
@@ -240,20 +250,22 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 
 			if( sv->filtered)
 				mei_cnt_filtered++;
-
-			if( seq != NULL)
-				free( seq);
 		}
+		else if( seq != NULL)
+			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_mei_", ++mei_cnt, seq[0], "<", "INS:ME:", sv->mei_name, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
 		else
 			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_mei_", ++mei_cnt, ".", "<", "INS:ME:", sv->mei_name, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
+
+		if( seq != NULL)
+			free( seq);
 
 		total_mei_length += sv_len;
 	}
 	else if( sv->svtype == MEIREVERSE)
 	{
+		seq = readRefAltSeqMEI( params, sv->chr_name, sv->mei_name);
 		if( params->seq_resolved != 0)
 		{
-			seq = readRefAltSeqMEI( params, sv->chr_name, sv->mei_name);
 			if( seq != NULL)
 			{
 				seq_rev = reverseComplement( seq);
@@ -267,13 +279,16 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 			if( sv->filtered)
 				mei_cnt_filtered++;
 
-			if( seq != NULL)
-				free( seq);
 			if( seq_rev != NULL)
 				free( seq_rev);
 		}
+		else if( seq != NULL)
+			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_mei_", ++mei_cnt, seq[0], "<", "INS:ME:", sv->mei_name, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
 		else
 			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1, "vh_mei_", ++mei_cnt, ".", "<", "INS:ME:", sv->mei_name, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
+
+		if( seq != NULL)
+			free( seq);
 
 		total_mei_length += sv_len;
 	}
@@ -289,16 +304,17 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	}
 	else if( sv->svtype == TANDEMDUP)
 	{
+		seq = readRefAltSeq( params, sv->chr_name, sv->inner_start, sv->inner_end);
+
 		if( params->seq_resolved != 0)
 		{
-			seq = readRefAltSeq( params, sv->chr_name, sv->inner_start, sv->inner_end);
-
 			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
-			if( seq != NULL)
-				free( seq);
 		}
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:TANDEM", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, seq[0], "<", "DUP:TANDEM", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+
+		if( seq != NULL)
+			free( seq);
 
 		tandup_cnt++;
 		total_tandup_length += sv_len;
@@ -307,10 +323,10 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	{
 		if( params->seq_resolved != 0)
 		{
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		invdup_cnt++;
 		total_invdup_length += sv_len;
@@ -319,10 +335,10 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	{
 		if( params->seq_resolved != 0)
 		{
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		invdup_cnt++;
 		total_invdup_length += sv_len;
@@ -331,10 +347,10 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	{
 		if( params->seq_resolved != 0)
 		{
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		interdup_cnt++;
 		total_interdup_length += sv_len;
@@ -343,10 +359,10 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 	{
 		if( params->seq_resolved != 0)
 		{
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		interdup_cnt++;
 		total_interdup_length += sv_len;
@@ -358,12 +374,24 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		fprintf( fpOut, "END=%d;SVLEN=%d;MEINFO=%s;RPSUP=%d;SRSUP=%d;", (sv->inner_end) + 1, sv_len, sv->mei_name, rp_total, sr_total);
 	else if( sv->svtype == INVERSION)
 		fprintf( fpOut, "END=%d;SVLEN=%d;RPSUP=%d;SRSUP=%d;", (sv->outer_end) + 1, sv_len, rp_total, sr_total);
+	else if( sv->svtype == INVDUPLEFT || sv->svtype == INTERDUPLEFT)
+	{
+		sv_len = abs( ( sv->outer_end - sv->inner_end + 1));
+		fprintf( fpOut, "END=%d;SVLEN=%d;POS2=%d;RPSUP=%d;SRSUP=%d;", (sv->outer_end) + 1, sv_len, (sv->outer_start), rp_total, sr_total);
+	}
+	else if( sv->svtype == INVDUPRIGHT || sv->svtype == INTERDUPRIGHT)
+	{
+		sv_len = abs( ( sv->inner_start - sv->outer_start + 1));
+		fprintf( fpOut, "END=%d;SVLEN=%d;POS2=%d;RPSUP=%d;SRSUP=%d;", (sv->inner_start) + 1, sv_len, (sv->outer_end), rp_total, sr_total);
+	}
 	else
 		fprintf( fpOut, "END=%d;SVLEN=%d;RPSUP=%d;SRSUP=%d;", (sv->inner_end) + 1, sv_len, rp_total, sr_total);
 
 	/* If SV is imprecise */
 	if( sv->inner_start != sv->inner_end)
+	{
 		fprintf( fpOut, "CIEND=0,%d;CIPOS=-%d,0;IMPRECISE;", ( sv->outer_end - sv->inner_end), ( sv->inner_start - sv->outer_start));
+	}
 
 	/* print TARDIS version info */
 	fprintf( fpOut, "SVALG=TARDIS_v%s;", TARDIS_VERSION);
@@ -408,9 +436,9 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		else
 		{
 			if (params->ten_x || params->output_hs)
-				fprintf( fpOut, "0/1:%2.6lf:%d:%d:%8.6f:%8.10f\t", sv->cnv_score[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
+				fprintf( fpOut, "%s:%2.6lf:%d:%d:%8.6f:%8.10f\t", sv->zygosity[j], sv->cnv_score[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
 			else
-				fprintf( fpOut, "0/1:%2.6f:%d:%d\t", sv->cnv_score[j], sv->rp[j], sv->sr[j]);
+				fprintf( fpOut, "%s:%2.6f:%d:%d\t", sv->zygosity[j], sv->cnv_score[j], sv->rp[j], sv->sr[j]);
 		}
 	}
 	fprintf( fpOut, "\n");
@@ -439,7 +467,7 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 			"##INFO=<ID=NOVEL,Number=0,Type=Flag,Description=\"Indicates a novel structural variation\">\n"
 			"##INFO=<ID=SVLEN,Number=.,Type=Integer,Description=\"Difference in length between REF and ALT alleles\">\n"
 			"##INFO=<ID=SVMETHOD,Number=.,Type=String,Description=\"Type of approach used to detect SV: RP (read pair), RD (read depth), SR (split read), or AS (assembly)\">\n"
-	                "##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">\n";
+			"##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">\n";
 
 
 

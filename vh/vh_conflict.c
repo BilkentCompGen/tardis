@@ -21,7 +21,7 @@ void removeInd( int ind, int j)
 	listClusterEl[j].oldBestIsGood = 0;
 }
 
-int conflictsBetweenTwoSV_Cord( int startCoord1, int stopCoord1,char SVtype1, int startCoord2, int stopCoord2, char SVtype2)
+int conflictsBetweenTwoSV_Cord( int startCoord1, int stopCoord1, char SVtype1, int startCoord2, int stopCoord2, char SVtype2)
 {
 	if( ( startCoord1 > stopCoord2 || stopCoord1 < startCoord2))
 		return 0;
@@ -77,7 +77,10 @@ int conflictsAny(int i, int *supInd) // return the individual that SV_i is in co
 			}
 		}
 	}
-	if (conflict==1) return 1;
+	if (conflict==1)
+	{
+		return 1;
+	}
 	else return -1;
 }
 
@@ -186,7 +189,7 @@ void addToConflict(int maxWeightSet, int *countReads)// adds the SV numSV to the
 	}
 	if( idSV2Add == -1)
 	{
-	        listSelectedSV[numSV] = vh_new_conflict_item();
+		listSelectedSV[numSV] = vh_new_conflict_item();
 		set_str( &(listSelectedSV[numSV]->chromosome_name), listClusterEl[maxWeightSet].chromosome_name);
 
 		listSelectedSV[numSV]->posStart_SV = listClusterEl[maxWeightSet].posStartSV;
@@ -223,8 +226,8 @@ void addToConflict(int maxWeightSet, int *countReads)// adds the SV numSV to the
 		}
 		numSV++;
 		if (numSV >= current_conflict_size){
-		  vh_enlarge_conflict_list(current_conflict_size, current_conflict_size+maxNumSV);
-		  current_conflict_size += maxNumSV; 
+			vh_enlarge_conflict_list(current_conflict_size, current_conflict_size+maxNumSV);
+			current_conflict_size += maxNumSV;
 		}
 	}
 	else
@@ -259,51 +262,51 @@ void addToConflict(int maxWeightSet, int *countReads)// adds the SV numSV to the
 
 void vh_new_conflict_list(int current_conflict_size)
 {
-  int i;
-  listSelectedSV = (struct SV_selected **) getMem(sizeof(struct SV_selected *) * current_conflict_size);
-  for (i=0; i<current_conflict_size; i++)
-    listSelectedSV[i] = NULL;
+	int i;
+	listSelectedSV = (struct SV_selected **) getMem(sizeof(struct SV_selected *) * current_conflict_size);
+	for (i=0; i<current_conflict_size; i++)
+		listSelectedSV[i] = NULL;
 }
 
 void vh_enlarge_conflict_list(int old_conflict_size, int current_conflict_size)
 {
-  int i;
-  struct SV_selected **tmp;
-  tmp = (struct SV_selected **) getMem(sizeof(struct SV_selected *) * current_conflict_size);
-  for (i=0; i<old_conflict_size; i++){
-    memcpy(tmp[i], listSelectedSV[i], sizeof (struct SV_selected *));
-    freeMem(listSelectedSV[i], sizeof (listSelectedSV[i]));
-  } 
-  for (i=old_conflict_size; i<current_conflict_size; i++)
-    tmp[i] = NULL;
+	int i;
+	struct SV_selected **tmp;
+	tmp = (struct SV_selected **) getMem(sizeof(struct SV_selected *) * current_conflict_size);
+	for (i=0; i<old_conflict_size; i++){
+		memcpy(tmp[i], listSelectedSV[i], sizeof (struct SV_selected *));
+		freeMem(listSelectedSV[i], sizeof (listSelectedSV[i]));
+	}
+	for (i=old_conflict_size; i<current_conflict_size; i++)
+		tmp[i] = NULL;
 
-  listSelectedSV = tmp;
+	listSelectedSV = tmp;
 }
 
 SV_selected *vh_new_conflict_item(void)
 {
-  SV_selected *tmp;
-  tmp =  (struct SV_selected *) getMem(sizeof(struct SV_selected ));
-  tmp->chromosome_name = NULL;
-  tmp->conflict_Next = NULL;
-  return tmp;
+	SV_selected *tmp;
+	tmp =  (struct SV_selected *) getMem(sizeof(struct SV_selected ));
+	tmp->chromosome_name = NULL;
+	tmp->conflict_Next = NULL;
+	return tmp;
 }
 
-  
+
 void vh_free_conflict_list(int current_conflict_size)
 {
-  int i;
-  struct SV_selected *tmp_conflict;
-  for (i=0;i<current_conflict_size;i++){
-    if (listSelectedSV[i] != NULL){
-      freeMem (listSelectedSV[i]->chromosome_name, strlen(listSelectedSV[i]->chromosome_name));
-      while (listSelectedSV[i]->conflict_Next != NULL){
-	tmp_conflict = listSelectedSV[i]->conflict_Next;
-	listSelectedSV[i]->conflict_Next = listSelectedSV[i]->conflict_Next->conflict_Next;
-	freeMem (tmp_conflict->chromosome_name, strlen(tmp_conflict->chromosome_name));
-	freeMem (tmp_conflict, sizeof(tmp_conflict));
-      }
-      freeMem (listSelectedSV[i], sizeof(listSelectedSV[i]));
-    }
-  }
+	int i;
+	struct SV_selected *tmp_conflict;
+	for (i=0;i<current_conflict_size;i++){
+		if (listSelectedSV[i] != NULL){
+			freeMem (listSelectedSV[i]->chromosome_name, strlen(listSelectedSV[i]->chromosome_name));
+			while (listSelectedSV[i]->conflict_Next != NULL){
+				tmp_conflict = listSelectedSV[i]->conflict_Next;
+				listSelectedSV[i]->conflict_Next = listSelectedSV[i]->conflict_Next->conflict_Next;
+				freeMem (tmp_conflict->chromosome_name, strlen(tmp_conflict->chromosome_name));
+				freeMem (tmp_conflict, sizeof(tmp_conflict));
+			}
+			freeMem (listSelectedSV[i], sizeof(listSelectedSV[i]));
+		}
+	}
 }

@@ -308,7 +308,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	}
 
 	if( cluster_of_read == NULL)
-		params->cluster_of_read = 10;
+		params->cluster_of_read = 100;
 	else
 	{
 		params->cluster_of_read = atoi(cluster_of_read);
@@ -370,7 +370,7 @@ void print_help( void)
 	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n");
 	fprintf( stdout, "\t--hist-only                : Generate fragment size histograms only, then quit.\n\n");
 	fprintf( stdout, "\tAdvanced Parameters:\n\n");
-	fprintf( stdout, "\t--read-cluster [int]       : # of clusters that a specific read can be involved in (Default is 10).\n");
+	fprintf( stdout, "\t--read-cluster [int]       : # of clusters that a specific read can be involved in (Default is 100).\n");
 	fprintf( stdout, "\t--rp   [int]		       : Minimum number of supporting read pairs in initial clustering (Default is 5).\n");
 	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]     : List of mobile element names.\n");
 	fprintf( stdout, "\t--no-soft-clip             : Skip soft clip remapping.\n");

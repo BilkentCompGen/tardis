@@ -190,7 +190,8 @@ double lpoisson(int d, double lambda, int type) {
 	else
 		penalty = 0.01;
 	if  (lambda == 0.0)
-		return log(penalty) * d;
+		lambda = penalty;
+	//return log(penalty) * d;
 	return d*log(lambda) - lambda - lgamma(d+1);
 }
 
@@ -317,6 +318,10 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 			lhete = lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
 			lnone = lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
+			if(lhomo > lhete)
+				listClusterEl[clusterId].zygosity[count] = 3; /* 1/1 */
+			else
+				listClusterEl[clusterId].zygosity[count] = 1; /* 0/1 */
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= DELETION MEI lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
 		else if (SV_type == DELETION && isMEI == false) {
@@ -324,6 +329,10 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 			lhete = lpoisson(observedReadDepth, 0.5 * expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
 			lnone = lpoisson(observedReadDepth, expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
+			if(lhomo > lhete)
+				listClusterEl[clusterId].zygosity[count] = 3; /* 1/1 */
+			else
+				listClusterEl[clusterId].zygosity[count] = 1; /* 0/1 */
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= DELETION lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
 		else if (SV_type == INVERSION) {
@@ -331,6 +340,10 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 			lhete = lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
 			lnone = lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
+			if(lhomo > lhete)
+				listClusterEl[clusterId].zygosity[count] = 3; /* 1/1 */
+			else
+				listClusterEl[clusterId].zygosity[count] = 1; /* 0/1 */
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= INVERSION lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
 		else if (SV_type == INVDUPLEFT || SV_type == INVDUPRIGHT) {
@@ -338,6 +351,10 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 			lhete = lpoisson(observedReadDepth, 1.5 * expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
 			lnone = lpoisson(observedReadDepth, expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
+			if(lhomo > lhete)
+				listClusterEl[clusterId].zygosity[count] = 3; /* 1/1 */
+			else
+				listClusterEl[clusterId].zygosity[count] = 1; /* 0/1 */
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= INVDUP lhomo= %lf lhete= %lf lnone=%lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
 		else if (SV_type == INTERDUPLEFT || SV_type == INTERDUPRIGHT) {
@@ -345,6 +362,10 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 			lhete = lpoisson(observedReadDepth, 1.5 * expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
 			lnone = lpoisson(observedReadDepth, expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
+			if(lhomo > lhete)
+				listClusterEl[clusterId].zygosity[count] = 3; /* 1/1 */
+			else
+				listClusterEl[clusterId].zygosity[count] = 1; /* 0/1 */
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= INTERDUP lhomo= %lf lhete= %lf lnone=%lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
 		else if (SV_type == TANDEMDUP) {
@@ -352,6 +373,10 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 			lhete = lpoisson(observedReadDepth, 1.5 * expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
 			lnone = lpoisson(observedReadDepth, expectedReadDepth, READDEPTH) + lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
+			if(lhomo > lhete)
+				listClusterEl[clusterId].zygosity[count] = 3; /* 1/1 */
+			else
+				listClusterEl[clusterId].zygosity[count] = 1; /* 0/1 */
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= TANDEMDUP lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
 		else if (SV_type == MEIFORWARD || SV_type == MEIREVERSE) {
@@ -359,6 +384,10 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 			lhete = lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
 			lnone = lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
+			if(lhomo > lhete)
+				listClusterEl[clusterId].zygosity[count] = 3; /* 1/1 */
+			else
+				listClusterEl[clusterId].zygosity[count] = 1; /* 0/1 */
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= MEI lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
 		else if (SV_type == NUMTFORWARD || SV_type == NUMTREVERSE) {
@@ -366,6 +395,10 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 			lhete = lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
 			lnone = lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
+			if(lhomo > lhete)
+				listClusterEl[clusterId].zygosity[count] = 3; /* 1/1 */
+			else
+				listClusterEl[clusterId].zygosity[count] = 1; /* 0/1 */
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= NUMT lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
 		else if (SV_type == INSERTION) {
@@ -373,6 +406,10 @@ void calculateCNVScore(bam_info ** in_bam, parameters *params, int clusterId, ch
 			lhete = lpoisson(observedDiscordantRead, 0.5 * expectedDiscordantRead, READPAIR);
 			lnone = lpoisson(observedDiscordantRead, 0.0, READPAIR);
 			score[count] = max(lhomo, lhete) / lnone;
+			if(lhomo > lhete)
+				listClusterEl[clusterId].zygosity[count] = 3; /* 1/1 */
+			else
+				listClusterEl[clusterId].zygosity[count] = 1; /* 0/1 */
 			fprintf(cnvscoreFile,"Id= %d BAM= %d SV_type= Insertion lhomo= %lf lhete= %lf lnone= %lf score= %lf\n", clusterId, count, lhomo, lhete, lnone, score[count]);
 		}
 		else {
@@ -757,7 +794,7 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
 				MEI_Filter, false, listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].mei_type, listClusterEl[cluster_id].CNV_Score,
 				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support, listClusterEl[cluster_id].homogeneity_score,
-				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering);
+				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering, listClusterEl[cluster_id].zygosity);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
@@ -767,7 +804,7 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
 				MEI_Filter, false, listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].mei_type, listClusterEl[cluster_id].CNV_Score,
 				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support, listClusterEl[cluster_id].homogeneity_score,
-				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering);
+				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering, listClusterEl[cluster_id].zygosity);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
@@ -778,7 +815,7 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 				listClusterEl[cluster_id].LowQual, listClusterEl[cluster_id].MEI_Del,
 				listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].mei_type, listClusterEl[cluster_id].CNV_Score,
 				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support,
-				listClusterEl[cluster_id].homogeneity_score, listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering);
+				listClusterEl[cluster_id].homogeneity_score, listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering, listClusterEl[cluster_id].zygosity);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
@@ -1069,12 +1106,14 @@ void processTheSV( bam_info **in_bams, parameters *params, int listClusterId, in
 	listClusterEl[listClusterId].CNV_Score = (double *) getMem( multiIndCount * sizeof( double));
 	listClusterEl[listClusterId].indIdCount = (int *) getMem( multiIndCount * sizeof( int));
 	listClusterEl[listClusterId].sr_support = (int *) getMem( multiIndCount * sizeof( int));
+	listClusterEl[listClusterId].zygosity = (int *) getMem( multiIndCount * sizeof( int));
 
 	for( count = 0; count < multiIndCount; count++)
 	{
 		listClusterEl[listClusterId].CNV_Score[count] = 0;
 		listClusterEl[listClusterId].indIdCount[count] = 0;
 		listClusterEl[listClusterId].sr_support[count] = 0;
+		listClusterEl[listClusterId].zygosity[count] = 0;
 	}
 
 	if( listClusterEl[listClusterId].SVtype == MEIFORWARD || listClusterEl[listClusterId].SVtype == MEIREVERSE)
@@ -1322,7 +1361,7 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 	int i;
 	char *debugsr_path;
 	char *outputscore_path;
-	
+
 	numCallsRequested = maxNumSV;
 
 	/* create conflict array */
@@ -1331,7 +1370,7 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 
 	//listSelectedSV = (struct SV_selected *) getMem(sizeof(struct SV_selected) * maxNumSV);
 	numSV = 0;
-	
+
 	sv_count = 0;
 	sv_lowqual_count = 0;
 	minimumSupNeeded = params->rp_threshold;
@@ -1345,12 +1384,12 @@ void vh_setcover( bam_info **in_bams, parameters *params, FILE *fpVcf)
 	sprintf(outputscore_path, "%s-%s", params->outprefix, "output.score");
 	cnvscoreFile = safe_fopen(outputscore_path, "w");
 	free(outputscore_path);
-	
+
 	debugsr_path = (char *) getMem(sizeof(char) * (2+strlen("debug.sr")+strlen(params->outprefix)));
 	sprintf(debugsr_path, "%s-%s", params->outprefix, "debug.sr");
 	debugSR = safe_fopen(debugsr_path, "w");
 	free(debugsr_path);
-	
+
 	init( in_bams, params);
 	fprintf( stderr, ".");
 	fflush( stderr);

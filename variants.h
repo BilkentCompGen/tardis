@@ -24,6 +24,7 @@ typedef struct strvar {
 	bool mei_del;
 	int rp[MAX_SAMPLES]; /* RP Support for each individual */
 	int sr[MAX_SAMPLES]; /* SR Support for each individual */
+	char* zygosity[MAX_SAMPLES];
 	double cnv_score[MAX_SAMPLES]; // likelihood score
 	bool low_qual;
 	double homogeneity_score;
@@ -46,7 +47,7 @@ typedef struct chr_index {
 struct strvar ** init_vars(int num_chroms);
 struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, char svtype,
 		bool filtered, bool mei_del, char *mei_name, char* mei_type, double cnv_score[], int rp[], int sr[], double homogeneity_score,
-		float weight_without_homogeneity_score);
+		float weight_without_homogeneity_score, int zygosity[]);
 void add_strvar(struct strvar ** variations, struct strvar* sv);
 void print_strvar(bam_info** in_bams, parameters* params, struct strvar* sv, FILE* fpOut);
 int print_all_vars(struct strvar ** variations, parameters *params, FILE *fpOut);
