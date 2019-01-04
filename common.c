@@ -507,12 +507,13 @@ int32_t calculateInsertSize( int32_t pos_left, int32_t pos_right, uint16_t flag,
 
 void get_working_directory(parameters *params){
   char *directory;
-
+  char *prefix;
   int i;
 
   
   directory = strrchr(params->outprefix, '/');
-
+  prefix = directory + 1;
+  
   if (directory == NULL){
     //set_str(&(params->outdir), "./");
     set_str(&(params->outdir), "");
@@ -527,25 +528,29 @@ void get_working_directory(parameters *params){
   memcpy(params->outdir, params->outprefix, i*sizeof(char));
   params->outdir[i]='/';
   params->outdir[i+1] = 0;
+
+  free( params->outprefix);
+  params->outprefix = NULL;
+  set_str( &(params->outprefix), prefix);
 }
  
 void clean_up_temp_files(parameters *params){
   char *divetfile_path;
 
-  divetfile_path = (char *) getMem(sizeof(char) * (2+strlen("divv.vh")+strlen(params->outprefix)));
-  sprintf(divetfile_path, "%s-%s", params->outprefix, "divv.vh");
+  divetfile_path = (char *) getMem(sizeof(char) * (3+strlen("divv.vh")+strlen(params->outprefix)+strlen(params->outdir)));
+  sprintf(divetfile_path, "%s%s-%s", params->outdir, params->outprefix, "divv.vh");
   remove(divetfile_path);
   free(divetfile_path);
  
   char *outputscore_path;
-  outputscore_path = (char *) getMem(sizeof(char) * (2+strlen("output.score")+strlen(params->outprefix)));
-  sprintf(outputscore_path, "%s-%s", params->outprefix, "output.score");
+  outputscore_path = (char *) getMem(sizeof(char) * (3+strlen("output.score")+strlen(params->outprefix)+strlen(params->outdir)));
+  sprintf(outputscore_path, "%s%s-%s", params->outdir, params->outprefix, "output.score");
   remove(outputscore_path);
   free(outputscore_path);
   
   char *debugsr_path;
-  debugsr_path = (char *) getMem(sizeof(char) * (2+strlen("debug.sr")+strlen(params->outprefix)));
-  sprintf(debugsr_path, "%s-%s", params->outprefix, "debug.sr");
+  debugsr_path = (char *) getMem(sizeof(char) * (3+strlen("debug.sr")+strlen(params->outprefix)+strlen(params->outdir)));
+  sprintf(debugsr_path, "%s%s-%s", params->outdir, params->outprefix, "debug.sr");
   remove(debugsr_path);
   free(debugsr_path);
 }
