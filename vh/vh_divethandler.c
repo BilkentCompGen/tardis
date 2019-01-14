@@ -11,7 +11,7 @@ struct LibraryInfo *g_libInfo = NULL;
 FILE *divet_file;
 
 int scffab = 0, scffba = 0, scfrab = 0, scfrba = 0, scrfab = 0, scrfba = 0;
-long del_cnt_div = 0, ins_cnt_div = 0, inv_cnt_div = 0, tandup_cnt_div = 0, sr_cnt_div = 0, alt_cnt_div = 0;
+long del_cnt_div = 0, ins_cnt_div = 0, inv_cnt_div = 0, invdup_cnt_div = 0, interdup_cnt_div = 0, tandup_cnt_div = 0, sr_cnt_div = 0, alt_cnt_div = 0;
 
 void vh_pruneAndNormalizeDivets( struct LibraryInfo *lib, double preProsPrune, int overMapLimit)
 {
@@ -503,7 +503,7 @@ DivetRow *vh_loadDivetRowFromBamSoftClip( softClip *ptrSoftClip, posMapSoftClip 
 
 int read_Divet_bam( discordantMapping **mapping, parameters *params, LibraryInfo * libInfo, int chr_index, int counterDivetRow)
 {
-        float is_satellite = 0.0;
+	float is_satellite = 0.0;
 	int i;
 
 	struct DivetRow *newRow = NULL;
@@ -514,9 +514,9 @@ int read_Divet_bam( discordantMapping **mapping, parameters *params, LibraryInfo
 		discordantReadPtr = mapping[i];
 		while( discordantReadPtr != NULL)
 		{
-		  is_satellite = sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos1, discordantReadPtr->pos1_End)
-		    + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
-		    + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End);
+			is_satellite = sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos1, discordantReadPtr->pos1_End)
+		    																						+ sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
+																									+ sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End);
 
 			if ( is_satellite == 0 && discordantReadPtr->mQual1 > params->mq_threshold && discordantReadPtr->mQual2 > params->mq_threshold
 					&& !sonic_is_gap( params->this_sonic, params->this_sonic->chromosome_names[chr_index], discordantReadPtr->pos1, discordantReadPtr->pos2)
@@ -525,6 +525,7 @@ int read_Divet_bam( discordantMapping **mapping, parameters *params, LibraryInfo
 					discordantReadPtr->pos2 > 0 && discordantReadPtr->pos2_End < params->this_sonic->chromosome_lengths[chr_index])
 			{
 				newRow = vh_loadDivetRowFromBam( discordantReadPtr, libInfo, counterDivetRow);
+
 				if( newRow == NULL)
 					fprintf( stderr, "ERROR loading divet from bam\n");
 
@@ -556,6 +557,49 @@ int read_Divet_bam( discordantMapping **mapping, parameters *params, LibraryInfo
 				}
 				libInfo->size++;
 				counterDivetRow++;
+
+				if(newRow->svType == INVERSION)
+				{
+					DivetRow *newRow = createDivetRowNew (libInfo->hash, discordantReadPtr->ten_x_barcode, discordantReadPtr->readName, discordantReadPtr->chromosome_name,
+							discordantReadPtr->pos1, discordantReadPtr->pos1_End, discordantReadPtr->orient1,
+							discordantReadPtr->pos2, discordantReadPtr->pos2_End, discordantReadPtr->orient2,
+							INVDUP, NONE, discordantReadPtr->editDistance, discordantReadPtr->mQual1, discordantReadPtr->mQual2, 0, 0, libInfo, counterDivetRow);
+
+					if( libInfo->head == NULL || libInfo->tail == NULL)
+					{
+						libInfo->head = newRow;
+						libInfo->tail = newRow;
+					}
+					else
+					{
+						libInfo->tail->next = newRow;
+						libInfo->tail = newRow;
+					}
+					libInfo->size++;
+					counterDivetRow++;
+					invdup_cnt_div++;
+				}
+				else if(( newRow->svType == DELETION) || ( newRow->svType == TANDEMDUP) || ( newRow->svType == INSERTION))
+				{
+					DivetRow *newRow = createDivetRowNew (libInfo->hash, discordantReadPtr->ten_x_barcode, discordantReadPtr->readName, discordantReadPtr->chromosome_name,
+							discordantReadPtr->pos1, discordantReadPtr->pos1_End, discordantReadPtr->orient1,
+							discordantReadPtr->pos2, discordantReadPtr->pos2_End, discordantReadPtr->orient2,
+							INTERDUP, NONE, discordantReadPtr->editDistance, discordantReadPtr->mQual1, discordantReadPtr->mQual2, 0, 0, libInfo, counterDivetRow);
+
+					if( libInfo->head == NULL || libInfo->tail == NULL)
+					{
+						libInfo->head = newRow;
+						libInfo->tail = newRow;
+					}
+					else
+					{
+						libInfo->tail->next = newRow;
+						libInfo->tail = newRow;
+					}
+					libInfo->size++;
+					counterDivetRow++;
+					interdup_cnt_div++;
+				}
 			}
 			discordantReadPtr = discordantReadPtr->next;
 		}
@@ -566,7 +610,7 @@ int read_Divet_bam( discordantMapping **mapping, parameters *params, LibraryInfo
 int read_Divet_bam_alternative( alternativeMapping **mapping, parameters *params,
 		LibraryInfo *libInfo, int chr_index, int conc_min, int conc_max, int counterDivetRow)
 {
-        float is_satellite = 0.0;
+	float is_satellite = 0.0;
 	int i, insLen;
 
 	struct DivetRow *newRow = NULL;
@@ -582,9 +626,9 @@ int read_Divet_bam_alternative( alternativeMapping **mapping, parameters *params
 			/* Since MT is circular, we need to eliminate the read-pairs at both ends of the chromosome */
 			insLen = abs( discordantReadPtr->pos1 - discordantReadPtr->pos2);
 			is_satellite = sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos1, discordantReadPtr->pos1_End)
-			  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
-			  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End)
-			  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End);
+																									  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
+																									  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End)
+																									  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End);
 
 			if ( is_satellite == 0 && ( discordantReadPtr->mQual1 > params->mq_threshold) &&
 					( !sonic_is_gap( params->this_sonic, params->this_sonic->chromosome_names[chr_index], discordantReadPtr->pos1, discordantReadPtr->pos2)) &&
@@ -629,7 +673,7 @@ int read_Divet_bam_alternative( alternativeMapping **mapping, parameters *params
 
 int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, LibraryInfo * libInfo, int chr_index, int read_len, int divet_row_count)
 {
-       int i; float is_satellite = 0.0;
+	int i; float is_satellite = 0.0;
 	struct DivetRow *newRow = NULL;
 	posMapSoftClip *ptrPosMapSoftClip;
 
@@ -645,12 +689,12 @@ int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, LibraryI
 					&& ptrPosMapSoftClip->mapq > 0 && ptrSoftClip->pos > 0 && ptrPosMapSoftClip->posMap > 0
 					&& ptrSoftClip->pos < params->this_sonic->chromosome_lengths[chr_index] && ptrPosMapSoftClip->posMap < params->this_sonic->chromosome_lengths[chr_index])
 			{
-				for( i = 0; i < 2; i++)
+				for( i = 0; i < 4; i++)
 				{
 					newRow = vh_loadDivetRowFromBamSoftClip( ptrSoftClip, ptrPosMapSoftClip, libInfo, read_len, divet_row_count);
 					if( newRow != NULL)
 					{
-						/* For Inversion and Inverted Duplication */
+						/* For Inversion */
 						if( i == 0 && ( newRow->splitOrientation == FRAB || newRow->splitOrientation == FRBA
 								|| newRow->splitOrientation == RFAB || newRow->splitOrientation == RFBA))
 						{
@@ -666,6 +710,29 @@ int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, LibraryI
 								|| newRow->splitOrientation == RFAB || newRow->splitOrientation == RFBA))
 						{
 							newRow->svType = INVERSION;
+							newRow->orientationLeft = REVERSE;
+							newRow->orientationRight = REVERSE;
+							newRow->locMapLeftStart += SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapLeftEnd += SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapRightStart += SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapRightEnd += SOFTCLIP_WRONGMAP_WINDOW;
+						}
+						/* For Inverted Duplication */
+						else if( i == 2 && ( newRow->splitOrientation == FRAB || newRow->splitOrientation == FRBA
+								|| newRow->splitOrientation == RFAB || newRow->splitOrientation == RFBA) )
+						{
+							newRow->svType = INVDUP;
+							newRow->orientationLeft = FORWARD;
+							newRow->orientationRight = FORWARD;
+							newRow->locMapLeftStart += SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapLeftEnd += SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapRightStart += SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapRightEnd += SOFTCLIP_WRONGMAP_WINDOW;
+						}
+						else if( i == 3 && ( newRow->splitOrientation == FRAB || newRow->splitOrientation == FRBA
+								|| newRow->splitOrientation == RFAB || newRow->splitOrientation == RFBA) )
+						{
+							newRow->svType = INVDUP;
 							newRow->orientationLeft = REVERSE;
 							newRow->orientationRight = REVERSE;
 							newRow->locMapLeftStart += SOFTCLIP_WRONGMAP_WINDOW;
@@ -695,7 +762,28 @@ int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, LibraryI
 							newRow->locMapRightStart += SOFTCLIP_WRONGMAP_WINDOW;
 							newRow->locMapRightEnd += SOFTCLIP_WRONGMAP_WINDOW;
 						}
-						else if( i == 1)
+						/* For Interspersed Duplication */
+						else if( i == 1 && ( newRow->splitOrientation == FFAB))
+						{
+							newRow->svType = INTERDUP;
+							newRow->orientationLeft = FORWARD;
+							newRow->orientationRight = REVERSE;
+							newRow->locMapLeftStart -= SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapLeftEnd -= SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapRightStart += SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapRightEnd += SOFTCLIP_WRONGMAP_WINDOW;
+						}
+						else if( i == 1 && ( newRow->splitOrientation == FFBA))
+						{
+							newRow->svType = INTERDUP;
+							newRow->orientationLeft = REVERSE;
+							newRow->orientationRight = FORWARD;
+							newRow->locMapLeftStart -= SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapLeftEnd -= SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapRightStart += SOFTCLIP_WRONGMAP_WINDOW;
+							newRow->locMapRightEnd += SOFTCLIP_WRONGMAP_WINDOW;
+						}
+						else
 							newRow = NULL;
 					}
 
@@ -725,7 +813,7 @@ int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, LibraryI
 	}
 
 	//fprintf(stderr, "\nThere are %li sc in divets;%d FFAB, %d FFBA, %d FRAB, %d FRBA, %d RFAB, %d RFBA\n",
-		//sr_cnt_div, scffab, scffba, scfrab,scfrba, scrfab, scrfba);
+	//sr_cnt_div, scffab, scffba, scfrab,scfrba, scrfab, scrfba);
 	return divet_row_count;
 }
 
@@ -736,17 +824,17 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 	int j, bam_index, chr, divet_row_count = 0;
 	struct LibraryInfo *newLibInfo, *cursor, *t;
 	char *divetfile_path;
-	
+
 	g_maxListBrkPointIntr = MAXLISTBRKPOINTINTR;
 	g_libInfo = NULL;
 
-	
+
 	divetfile_path = (char *) getMem(sizeof(char) * (2+strlen("divv.vh")+strlen(params->outprefix)));
 	sprintf(divetfile_path, "%s-%s", params->outprefix, "divv.vh");
 
 	divet_file = safe_fopen (divetfile_path, "w");
 	free(divetfile_path);
-	del_cnt_div = 0, ins_cnt_div = 0, inv_cnt_div = 0, tandup_cnt_div = 0, sr_cnt_div = 0, alt_cnt_div = 0;
+	del_cnt_div = 0, ins_cnt_div = 0, inv_cnt_div = 0, tandup_cnt_div = 0, sr_cnt_div = 0, alt_cnt_div = 0, invdup_cnt_div = 0, interdup_cnt_div = 0;
 
 	for( bam_index = 0; bam_index < params->num_bams; bam_index++)
 	{
@@ -944,8 +1032,8 @@ DivetRow *vh_loadDivetFile (LibraryInfo * libInfo, sonic *this_sonic)
 		}
 
 		if (sonic_is_satellite( this_sonic, newRow->chromosome_name, newRow->locMapLeftStart, newRow->locMapLeftEnd) == 0 &&
-		    sonic_is_satellite( this_sonic, newRow->chromosome_name, newRow->locMapRightStart, newRow->locMapRightEnd) == 0 &&
-		    !sonic_is_gap( this_sonic, newRow->chromosome_name, newRow->locMapLeftStart, newRow->locMapRightEnd))
+				sonic_is_satellite( this_sonic, newRow->chromosome_name, newRow->locMapRightStart, newRow->locMapRightEnd) == 0 &&
+				!sonic_is_gap( this_sonic, newRow->chromosome_name, newRow->locMapLeftStart, newRow->locMapRightEnd))
 		{
 			if (libInfo->head == NULL || libInfo->tail == NULL)
 			{

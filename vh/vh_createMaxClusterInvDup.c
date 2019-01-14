@@ -402,7 +402,7 @@ void vh_addToGenomeIndex_InvDup (char *chromosome_name, sonic *this_sonic, int c
 					&& (divetReadMappingPtr->locMapRightStart - divetReadMappingPtr->locMapLeftEnd < maxDuplicationLen))
 			{
 
-				if( divetReadMappingPtr->svType == INVERSION || divetReadMappingPtr->svType == INVDUP)
+				if( divetReadMappingPtr->svType == INVDUP)
 				{
 					newEl = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
 					newEl->readMappingPtr = divetReadMappingPtr;

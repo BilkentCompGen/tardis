@@ -180,8 +180,8 @@ int addToOneSideInitOutputInterDup( Heap *heapName, int breakPointEnd, int brkPo
 		posOfBrkPointOfFR_Cluster[countPosBrkPointFR_Clusters] = breakPointEnd;
 		countPosBrkPointFR_Clusters++;
 		if (countPosBrkPointFR_Clusters > size_of_brkpoint_clusters){
-		  posOfBrkPointOfFR_Cluster = resize_int_array ( posOfBrkPointOfFR_Cluster, size_of_brkpoint_clusters, size_of_brkpoint_clusters+BRKPOINTCLUSTERS);
-		  size_of_brkpoint_clusters += BRKPOINTCLUSTERS;
+			posOfBrkPointOfFR_Cluster = resize_int_array ( posOfBrkPointOfFR_Cluster, size_of_brkpoint_clusters, size_of_brkpoint_clusters+BRKPOINTCLUSTERS);
+			size_of_brkpoint_clusters += BRKPOINTCLUSTERS;
 		}
 	}
 	else if (heapName->heapArray[0].readMappingPtr->orientationLeft == REVERSE
@@ -384,8 +384,7 @@ void vh_addToGenomeIndex_InterDup (char *chromosome_name, sonic *this_sonic, int
 					&& ( divetReadMappingPtr->locMapRightEnd < chroSize) && ( divetReadMappingPtr->locMapLeftStart > 0)
 					&& ( divetReadMappingPtr->locMapRightStart - divetReadMappingPtr->locMapLeftEnd < maxDuplicationLen))
 			{
-				if( divetReadMappingPtr->svType == DELETION || divetReadMappingPtr->svType == INSERTION
-						|| divetReadMappingPtr->svType == TANDEMDUP)
+				if( divetReadMappingPtr->svType == INTERDUP)
 				{
 					newEl = (MappingOnGenome *) getMem (sizeof (MappingOnGenome));
 					newEl->readMappingPtr = divetReadMappingPtr;
@@ -474,7 +473,7 @@ void vh_initializeReadMapping_InterDup (sonic *this_sonic, int chr_index, int in
 
 	size_of_brkpoint_clusters = BRKPOINTCLUSTERS;
 	posOfBrkPointOfFR_Cluster = (int *) getMem(size_of_brkpoint_clusters * sizeof(int));
-	
+
 	countPosBrkPointFR_Clusters = 0;
 
 	for (i = 0; i < max_chromosome_size + 1000; i++)
