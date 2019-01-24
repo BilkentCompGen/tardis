@@ -628,7 +628,6 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			in_bams[bam_index]->bam_file = safe_hts_open( params->bam_file_list[bam_index], "r");
 
 			/* Read in BAM header information */
-			//in_bams[bam_index]->bam_header = bam_hdr_read( ( in_bams[bam_index]->bam_file->fp).bgzf);
 			in_bams[bam_index]->bam_header = sam_hdr_read(in_bams[bam_index]->bam_file);
 
 			/* Load the bam index file */
@@ -670,7 +669,8 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			skip_chromosome = read_bam( in_bams[bam_index], params);
 
 
-			if ( skip_chromosome){
+			if ( skip_chromosome)
+			{
 				/* Close the BAM file */
 				return_value = hts_close( in_bams[bam_index]->bam_file);
 				if( return_value != 0)
@@ -690,7 +690,6 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			if( !params->no_soft_clip)
 			{
 				/* Count the number of softclip reads which are clustering for each read */
-				//fprintf( stderr, "\nCollecting soft clipped read information");
 				fprintf( stderr, "\nReading reference genome");
 				readReferenceSeq( params, chr_index);
 
@@ -723,7 +722,6 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 		if( not_in_bam == 1 || total_read_count == 0)
 			continue;
-
 
 
 		divet_row_count = load_Divet_bam( in_bams, params, chr_index);
@@ -844,8 +842,8 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 				fflush( stderr);
 			}
 		}
-		fprintf( stderr, "\n");
 
+		fprintf( stderr, "\n");
 		findUniqueReads( in_bams, params, outputread);
 
 		/* Free the mappings and libraries */

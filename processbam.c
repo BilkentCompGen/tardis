@@ -95,7 +95,7 @@ void load_bam( parameters *params, configuration *cfg, bam_info* in_bam, char* p
 	if( isRGAvailable == true)
 		get_library_names( in_bam, bam_header->text);
 	else
-		in_bam->libraries[0]->libname = "Lib1";
+		set_str( &(in_bam->libraries[0]->libname), "Lib1");
 
 	/* For SAMPLEFRAG number of alignments, store the template length field.
 	 Performed for each different library */
