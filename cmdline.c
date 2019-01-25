@@ -39,7 +39,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	static int do_remap = 0;
 	static int histogram_only = 0;
 	char *mapping_qual = NULL, *rp_support = NULL, *cluster_of_read = NULL;
-
+	char *work_dir = NULL;
+	
 	static struct option long_options[] = 
 	{
 			{"input"  , required_argument,   0, 'i'},
@@ -49,6 +50,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"reps"   , required_argument,   0, 'r'},
 			{"mei"    , required_argument,   0, 'm'},
 			{"threads", required_argument,   0, 't'},
+			{"working-dir", required_argument,   0, 'w'},
 			{"help"   , no_argument,         0, 'h'},
 			{"hist-only"   , no_argument,    &histogram_only, 'p'},
 			{"version", no_argument,         0, 'v'},
@@ -84,7 +86,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		return 0;
 	}
 
-	while( ( o = getopt_long( argc, argv, "hvb:i:f:g:d:r:o:m:c:s:a:e:n:j:k", long_options, &index)) != -1)
+	while( ( o = getopt_long( argc, argv, "hvb:i:f:g:d:r:o:m:c:s:a:e:n:j:k:w", long_options, &index)) != -1)
 	{
 		switch( o)
 		{
@@ -127,6 +129,10 @@ int parse_command_line( int argc, char** argv, parameters* params)
 
 		case 'r':
 			set_str( &( params->reps), optarg);
+			break;
+
+		case 'w':
+			set_str( &( params->outdir), optarg);
 			break;
 
 		case 'm':
@@ -350,7 +356,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		set_str( &(params->sonic_info), params->ref_genome);
 
 
-	get_working_directory(params);
+	if (params->outdir == NULL)
+	  get_working_directory(params);
 
 	fprintf(stderr, "[TARDIS INFO] Working directory: %s\n", params->outdir); 
 	
