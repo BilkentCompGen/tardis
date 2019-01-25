@@ -188,9 +188,9 @@ All parameters
 
 Converting output VCF file to BED
 ==============
-
+awk '! /\#/' tardis_sim_30.vcf | grep "<INV>" | awk '{print $1"\t"($2-1)"\t"(substr($8,match($8,/END=[0-9]+/)+length("END="),RLENGTH-length("END=")))}'
 	awk '! /\#/' out.vcf |\
-	awk '{print $1"\t"($2-1)"\t"(substr($8,match($8,/SVLEN=[0-9]+/)+length("SVLEN="),RLENGTH-length("SVLEN="))+$2-1)}' > out.bed
+		awk '{print $1"\t"($2-1)"\t"(substr($8,match($8,/END=[0-9]+/)+length("END="),RLENGTH-length("END=")), $5)}' > out.bed
 
 Alternatively, use VCFlib: https://github.com/vcflib/vcflib
 

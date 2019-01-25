@@ -1,6 +1,8 @@
 FROM ubuntu:18.04
 
 RUN apt-get update -y --fix-missing
+RUN apt-get upgrade -y
+
 RUN apt-get install git make gcc zlib1g-dev libbz2-dev liblzma-dev gnuplot-nox -y
 
 RUN mkdir /tardis
@@ -19,7 +21,7 @@ RUN make
 WORKDIR /tardis
 
 ENV PATH="/tardis:/mrfast:${PATH}"
+RUN apt-get remove git
+RUN apt-get autoremove
 VOLUME /input
 VOLUME /output
-ENTRYPOINT ["/tardis/tardis"]
-
