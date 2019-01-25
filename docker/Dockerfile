@@ -22,7 +22,7 @@ WORKDIR /tardis
 
 ENV PATH="/tardis:/mrfast:${PATH}"
 RUN apt-get remove git
-RUN apt-get autoremove
+RUN apt-get autoremove -y
 VOLUME /input
 VOLUME /output
 ENTRYPOINT ["/tardis/tardis"]
