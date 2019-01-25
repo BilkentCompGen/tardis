@@ -25,3 +25,4 @@ RUN apt-get remove git
 RUN apt-get autoremove
 VOLUME /input
 VOLUME /output
+ENTRYPOINT ["/tardis/tardis"]
