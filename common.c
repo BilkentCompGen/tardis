@@ -533,7 +533,17 @@ void get_working_directory(parameters *params){
   params->outprefix = NULL;
   set_str( &(params->outprefix), prefix);
 }
- 
+
+char *get_file_name(char *path)
+{
+  char *ret;
+  ret = strrchr (path, '/');
+  if (ret != NULL)
+    return ret + 1;
+  return path;
+}
+    
+
 void clean_up_temp_files(parameters *params){
   char *divetfile_path;
 

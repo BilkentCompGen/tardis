@@ -179,5 +179,6 @@ unsigned long encode_ten_x_barcode(char* source);
 
 void get_working_directory(parameters *);
 void clean_up_temp_files(parameters *);
-
+char *get_file_name(char *);
+  
 #endif

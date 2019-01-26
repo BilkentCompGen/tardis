@@ -612,6 +612,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 	/* Print all structural variations in .vcf format */
 	sprintf( svfile, "%s%s.vcf", params->outdir, params->outprefix);
+	fprintf( stderr, "Output file: %s\n", svfile);
 	fpVcf = safe_fopen( svfile,"w");
 
 	print_vcf_header( fpVcf, in_bams, params);
