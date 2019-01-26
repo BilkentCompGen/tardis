@@ -280,8 +280,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	/* check if outprefix is given */
 	if( params->outprefix == NULL && !make_sonic)
 	  {
-		char *tmp_output_prefix = (char *) malloc(sizeof (char) * (strlen(params->bam_file_list[0]) + strlen("-output") + 2));
-		sprintf( tmp_output_prefix, "%s-output", get_file_name(params->bam_file_list[0]));
+		char *tmp_output_prefix = (char *) malloc(sizeof (char) * (strlen(params->bam_file_list[0]) + strlen("-tardis") + 2));
+		sprintf( tmp_output_prefix, "%s-tardis", get_file_name(params->bam_file_list[0]));
 		set_str( &( params->outprefix), tmp_output_prefix);
 		fprintf( stderr, "[TARDIS CMDLINE WARNING] Output file name prefix is not entered using the --out option. Using the name of the first BAM file to assign a prefix: %s.\n", tmp_output_prefix);
 		free( tmp_output_prefix);
