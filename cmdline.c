@@ -39,7 +39,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	static int do_remap = 0;
 	static int histogram_only = 0;
 	char *mapping_qual = NULL, *rp_support = NULL, *cluster_of_read = NULL;
-
+	char *work_dir = NULL;
+	
 	static struct option long_options[] = 
 	{
 			{"input"  , required_argument,   0, 'i'},
@@ -49,6 +50,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"reps"   , required_argument,   0, 'r'},
 			{"mei"    , required_argument,   0, 'm'},
 			{"threads", required_argument,   0, 't'},
+			{"working-dir", required_argument,   0, 'w'},
 			{"help"   , no_argument,         0, 'h'},
 			{"hist-only"   , no_argument,    &histogram_only, 'p'},
 			{"version", no_argument,         0, 'v'},
@@ -84,7 +86,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		return 0;
 	}
 
-	while( ( o = getopt_long( argc, argv, "hvb:i:f:g:d:r:o:m:c:s:a:e:n:j:k", long_options, &index)) != -1)
+	while( ( o = getopt_long( argc, argv, "hvb:i:f:g:d:r:o:m:c:s:a:e:n:j:k:w", long_options, &index)) != -1)
 	{
 		switch( o)
 		{
@@ -127,6 +129,10 @@ int parse_command_line( int argc, char** argv, parameters* params)
 
 		case 'r':
 			set_str( &( params->reps), optarg);
+			break;
+
+		case 'w':
+			set_str( &( params->outdir), optarg);
 			break;
 
 		case 'm':
@@ -274,10 +280,10 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	/* check if outprefix is given */
 	if( params->outprefix == NULL && !make_sonic)
 	  {
-		fprintf( stderr, "[TARDIS CMDLINE ERROR] Please enter the output file name prefix using the --out option.\n");
-		char *tmp_output_prefix = (char *) malloc(sizeof (char) * (strlen(params->bam_file_list[0]) + strlen("-output") + 2));
-		sprintf( tmp_output_prefix, "%s-output", params->bam_file_list[0]);
+		char *tmp_output_prefix = (char *) malloc(sizeof (char) * (strlen(params->bam_file_list[0]) + strlen("-tardis") + 2));
+		sprintf( tmp_output_prefix, "%s-tardis", get_file_name(params->bam_file_list[0]));
 		set_str( &( params->outprefix), tmp_output_prefix);
+		fprintf( stderr, "[TARDIS CMDLINE WARNING] Output file name prefix is not entered using the --out option. Using the name of the first BAM file to assign a prefix: %s.\n", tmp_output_prefix);
 		free( tmp_output_prefix);
 		//return EXIT_PARAM_ERROR;
 	}
@@ -350,7 +356,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		set_str( &(params->sonic_info), params->ref_genome);
 
 
-	get_working_directory(params);
+	if (params->outdir == NULL)
+	  get_working_directory(params);
 
 	fprintf(stderr, "[TARDIS INFO] Working directory: %s\n", params->outdir); 
 	

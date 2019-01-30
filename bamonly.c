@@ -607,11 +607,12 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 	FILE *fpVcf = NULL;
 	int skip_chromosome = 0;
 
-	sprintf( outputread, "%s.name", params->outprefix);
-	sprintf( outputfile, "%s.clusters", params->outprefix);
+	sprintf( outputread, "%s%s.name", params->outdir, params->outprefix);
+	sprintf( outputfile, "%s%s.clusters", params->outdir, params->outprefix);
 
 	/* Print all structural variations in .vcf format */
-	sprintf( svfile, "%s.vcf", params->outprefix);
+	sprintf( svfile, "%s%s.vcf", params->outdir, params->outprefix);
+	fprintf( stderr, "Output file: %s\n", svfile);
 	fpVcf = safe_fopen( svfile,"w");
 
 	print_vcf_header( fpVcf, in_bams, params);
@@ -620,8 +621,6 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 	{
 		if( strstr( params->this_sonic->chromosome_names[chr_index], "GL000220") != NULL)
 			continue;
-
-		sprintf( outputfile, "%s.clusters", params->outprefix);
 
 
 		for( bam_index = 0; bam_index < params->num_bams; bam_index++)
