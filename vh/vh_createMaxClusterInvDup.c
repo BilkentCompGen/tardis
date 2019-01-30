@@ -234,6 +234,7 @@ void vh_createBreakPointIntervals_InvDup(int brkPoint, Heap *h, char SVTYPE)
 
 			locBrkPointLeftTemp = divet_row->endPosition + remSegLenMin;
 			locBrkPointRightTemp = divet_row->endPosition + remSegLenMax;
+
 		}
 		else if( divet_row->orientationLeft == REVERSE && divet_row->orientationRight == REVERSE)
 		{
@@ -248,8 +249,17 @@ void vh_createBreakPointIntervals_InvDup(int brkPoint, Heap *h, char SVTYPE)
 				check = false;
 			}
 
-			locBrkPointRightTemp = divet_row->endPosition - remSegLenMin;
+			//locBrkPointRightTemp = divet_row->endPosition - remSegLenMin;
+			//locBrkPointLeftTemp = divet_row->endPosition - remSegLenMax;
+
 			locBrkPointLeftTemp = divet_row->endPosition - remSegLenMax;
+			if(locBrkPointLeftTemp < 0)
+				locBrkPointLeftTemp = 0;
+
+			locBrkPointRightTemp = divet_row->endPosition - remSegLenMin;
+			if(locBrkPointRightTemp < 0)
+				locBrkPointRightTemp = 0;
+
 		}
 		if( check == true)
 		{

@@ -187,7 +187,6 @@ int addToOneSideInitOutputInterDup( Heap *heapName, int breakPointEnd, int brkPo
 	else if (heapName->heapArray[0].readMappingPtr->orientationLeft == REVERSE
 			&& heapName->heapArray[0].readMappingPtr->orientationRight == FORWARD)
 	{
-		//fprintf(stderr, "%d ", countPosOBBrkPointFR_Clusters);
 		if (countPosBrkPointFR_Clusters > 0)
 		{
 			for (count = 0; count < countPosBrkPointFR_Clusters; count++)
@@ -225,7 +224,12 @@ void vh_createBreakPointIntervals_InterDup( int brkPoint, Heap *h, char SVTYPE)
 		}
 
 		locBrkPointLeftTemp = divet_row->endPosition - remSegLenMax;
+		if(locBrkPointLeftTemp < 0)
+			locBrkPointLeftTemp = 0;
+
 		locBrkPointRightTemp = divet_row->endPosition - remSegLenMin;
+		if(locBrkPointRightTemp < 0)
+			locBrkPointRightTemp = 0;
 
 		if( check == true)
 		{
@@ -259,7 +263,9 @@ void vh_createBreakPointIntervals_InterDup( int brkPoint, Heap *h, char SVTYPE)
 		else if( g_listRightBrkPointIntr[count].keyLorR == RIGHT)
 		{
 			if( newElAdded == true)
+			{
 				addToOneSideInitOutputInterDup( g_intersectInterval, g_listRightBrkPointIntr[count].locBrkPointRight, brkPoint, SVTYPE);
+			}
 
 			newElAdded = false;
 			vh_heap_remove_top( g_intersectInterval);
@@ -275,8 +281,6 @@ void vh_createInterDupClusters (int chroSize, int inter_dup_location)
 	g_listRightBrkPointIntrCount = 0;
 	MappingOnGenome *tmp_mapping;
 
-	//	Heap *FRHeap = ( Heap *) getMem ( sizeof ( Heap));
-	//	Heap *RFHeap = ( Heap *) getMem ( sizeof ( Heap));
 	Heap *FRHeap = vh_newHeap();
 	Heap *RFHeap = vh_newHeap();
 
@@ -333,8 +337,6 @@ void vh_createInterDupClusters (int chroSize, int inter_dup_location)
 		if( ( window_start_index > 0) && ( g_genomeIndexStartRF[window_start_index - 1] != NULL))
 			remove_Heap( RFHeap, window_start_index - 1);
 
-		//fprintf(stderr,"%d, %d, %d; Added %d, Removed %d; %d - %d\n", window_start_index, leftBreakPoint, window_end_index, i, j, FRHeap->heapSize, RFHeap->heapSize);
-
 		if( FRHeap->heapSize > 0)
 		{
 			if( inter_dup_location == LEFTSIDE)
@@ -357,11 +359,9 @@ void vh_createInterDupClusters (int chroSize, int inter_dup_location)
 	else if( inter_dup_location == RIGHTSIDE)
 		vh_flushOut( leftBreakPoint - 1, INTERDUPRIGHT);
 
-	//	free( FRHeap)
 	vh_free_heap( FRHeap);
 	FRHeap = NULL;
 
-	//	free( RFHeap);
 	vh_free_heap( RFHeap);       
 	RFHeap = NULL;
 }
