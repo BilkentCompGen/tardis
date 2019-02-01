@@ -198,7 +198,7 @@ Alternatively, use VCFlib: https://github.com/vcflib/vcflib
 Docker Usage
 ============
 
-To build a valor Docker image
+To build a TARDIS Docker image
 
 
 	cd docker
