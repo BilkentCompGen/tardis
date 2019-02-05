@@ -515,8 +515,8 @@ int read_Divet_bam( discordantMapping **mapping, parameters *params, LibraryInfo
 		while( discordantReadPtr != NULL)
 		{
 			is_satellite = sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos1, discordantReadPtr->pos1_End)
-		    																						+ sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
-																									+ sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End);
+		    					+ sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
+								+ sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End);
 
 			if ( is_satellite == 0 && discordantReadPtr->mQual1 > params->mq_threshold && discordantReadPtr->mQual2 > params->mq_threshold
 					&& !sonic_is_gap( params->this_sonic, params->this_sonic->chromosome_names[chr_index], discordantReadPtr->pos1, discordantReadPtr->pos2)
@@ -626,9 +626,9 @@ int read_Divet_bam_alternative( alternativeMapping **mapping, parameters *params
 			/* Since MT is circular, we need to eliminate the read-pairs at both ends of the chromosome */
 			insLen = abs( discordantReadPtr->pos1 - discordantReadPtr->pos2);
 			is_satellite = sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos1, discordantReadPtr->pos1_End)
-																									  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
-																									  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End)
-																									  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End);
+																											  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
+																											  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End)
+																											  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End);
 
 			if ( is_satellite == 0 && ( discordantReadPtr->mQual1 > params->mq_threshold) &&
 					( !sonic_is_gap( params->this_sonic, params->this_sonic->chromosome_names[chr_index], discordantReadPtr->pos1, discordantReadPtr->pos2)) &&
@@ -812,8 +812,6 @@ int read_Divet_bam_softClip( softClip *ptrSoftClip, parameters *params, LibraryI
 		ptrSoftClip = ptrSoftClip->next;
 	}
 
-	//fprintf(stderr, "\nThere are %li sc in divets;%d FFAB, %d FFBA, %d FRAB, %d FRBA, %d RFAB, %d RFBA\n",
-	//sr_cnt_div, scffab, scffba, scfrab,scfrba, scrfab, scrfba);
 	return divet_row_count;
 }
 

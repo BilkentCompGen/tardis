@@ -314,7 +314,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	}
 
 	if( cluster_of_read == NULL)
-		params->cluster_of_read = 100;
+		params->cluster_of_read = 20;
 	else
 	{
 		params->cluster_of_read = atoi(cluster_of_read);
