@@ -55,7 +55,9 @@ Type:
 	cp tardis /path/to/your/favorite/binaries
 
 
-If you do not have root access to install liblzma and/or libbz2, you can compile htslib without CRAM support. Note that lzma and libbz2 are htslib prerequisites, and I am still looking for a way to compile htslib with local installations of these libraries. As a workaround, type:
+If you do not have root access to install liblzma and/or libbz2, you can compile htslib without CRAM support. Note that lzma and libbz2 are htslib prerequisites, and we are looking for a way to compile htslib with local installations of these libraries. 
+
+As a workaround, first remove the "-llzma" flag in the Makefile (line that starts with LDFLAGS). Then type:
 
 	make nocram
 	make
