@@ -34,7 +34,7 @@ HeapNUMT *vh_newHeapNUMT(void)
 }
 
 
-void vh_renewHeap(Heap *h)
+Heap *vh_renewHeap(Heap *h)
 {
        Heap *tmp_heap;
        int new_size = h->current_max_size + MAX_CLUSTER_SIZE;
@@ -44,10 +44,10 @@ void vh_renewHeap(Heap *h)
        tmp_heap->current_max_size = new_size;
        memcpy(tmp_heap->heapArray, h->heapArray, (h->heapSize * sizeof(struct HeapEl)));
        vh_free_heap(h);
-       h = tmp_heap;
+       return tmp_heap;
 }
 
-void vh_renewHeapMEI(HeapMEI *h)
+HeapMEI *vh_renewHeapMEI(HeapMEI *h)
 {
        HeapMEI *tmp_heap;
        int new_size = h->current_max_size + MAX_CLUSTER_SIZE;
@@ -57,10 +57,10 @@ void vh_renewHeapMEI(HeapMEI *h)
        tmp_heap->current_max_size = new_size;
        memcpy(tmp_heap->heapArray, h->heapArray, (h->heapSize * sizeof(struct HeapEl)));
        vh_free_heap_mei(h);
-       h = tmp_heap;
+       return tmp_heap;
 }
 
-void vh_renewHeapNUMT(HeapNUMT *h)
+HeapNUMT *vh_renewHeapNUMT(HeapNUMT *h)
 {
        HeapNUMT *tmp_heap;
        int new_size = h->current_max_size + MAX_CLUSTER_SIZE;
@@ -70,7 +70,7 @@ void vh_renewHeapNUMT(HeapNUMT *h)
        tmp_heap->current_max_size = new_size;
        memcpy(tmp_heap->heapArray, h->heapArray, (h->heapSize * sizeof(struct HeapEl)));
        vh_free_heap_numt(h);
-       h = tmp_heap;
+       return tmp_heap;
 }
 
 
@@ -124,7 +124,7 @@ void vh_push_heap (Heap * heapName, HeapEl * newEl)
 
 	/* HEAP_MEMORY_REALLOCATION */
 	if (heapName->heapSize == heapName->current_max_size)
-	  vh_renewHeap(heapName);
+	  heapName = vh_renewHeap(heapName);
 	
 
 	heapName->heapSize++;
@@ -332,7 +332,7 @@ void push_heap_mei(HeapMEI *heapName, HeapElMEI *newEl)
 
 	/* HEAP_MEMORY_REALLOCATION  */
 	if (heapName->heapSize == heapName->current_max_size)
-	  vh_renewHeapMEI(heapName);
+	  heapName = vh_renewHeapMEI(heapName);
 	
 	
 	heapName->heapSize++;
@@ -355,7 +355,7 @@ void push_heap_numt(HeapNUMT *heapName, HeapElNUMT *newEl)
 
 	/* HEAP_MEMORY_REALLOCATION */
 	if (heapName->heapSize == heapName->current_max_size)
-	  vh_renewHeapNUMT(heapName);
+	  heapName = vh_renewHeapNUMT(heapName);
 	
 
 	heapName->heapSize++;

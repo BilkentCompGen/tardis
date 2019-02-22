@@ -60,9 +60,9 @@ extern Heap *g_intersectInterval;
 Heap *vh_newHeap(void);
 HeapMEI *vh_newHeapMEI(void);
 HeapNUMT *vh_newHeapNUMT(void);
-void vh_renewHeap(Heap *);
-void vh_renewHeapMEI(HeapMEI *);
-void vh_renewHeapNUMT(HeapNUMT *);
+Heap *vh_renewHeap(Heap *);
+HeapMEI *vh_renewHeapMEI(HeapMEI *);
+HeapNUMT *vh_renewHeapNUMT(HeapNUMT *);
   
 void vh_free_heap(Heap *);
 void vh_free_heap_mei(HeapMEI *);
