@@ -281,8 +281,8 @@ void vh_createInterDupClusters (int chroSize, int inter_dup_location)
 	g_listRightBrkPointIntrCount = 0;
 	MappingOnGenome *tmp_mapping;
 
-	Heap *FRHeap = vh_newHeap();
-	Heap *RFHeap = vh_newHeap();
+	Heap *FRHeap = vh_newHeap(MAX_CLUSTER_SIZE);
+	Heap *RFHeap = vh_newHeap(MAX_CLUSTER_SIZE);
 
 
 	g_intersectInterval->heapSize = 0;
@@ -496,6 +496,6 @@ void vh_initializeReadMapping_InterDup (sonic *this_sonic, int chr_index, int in
 	for( i = 0; i < g_maxListBrkPointIntr; i++)
 		g_listRightBrkPointIntr[i].readMappingPtr = NULL;
 
-	g_intersectInterval = vh_newHeap();
+	g_intersectInterval = vh_newHeap(MAX_CLUSTER_SIZE);
 
 }

@@ -171,6 +171,7 @@ int32_t calculateInsertSize( int32_t pos_left, int32_t pos_right,uint16_t flag, 
 
 // Memory allocation/tracking functions
 void* getMem( size_t size);
+void* reallocMem( void* ptr, size_t old_size, size_t new_size);
 void freeMem( void* ptr, size_t size);
 double getMemUsage();
 

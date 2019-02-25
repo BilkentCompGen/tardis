@@ -310,8 +310,8 @@ void vh_createInvDupClusters (int chroSize, int invdup_location)
 	g_listRightBrkPointIntrCount = 0;
 	MappingOnGenome *tmp_mapping;
 
-	Heap *FFHeap = vh_newHeap();
-	Heap *RRHeap = vh_newHeap();
+	Heap *FFHeap = vh_newHeap(MAX_CLUSTER_SIZE);
+	Heap *RRHeap = vh_newHeap(MAX_CLUSTER_SIZE);
 
 
 	g_intersectInterval->heapSize = 0;
@@ -519,6 +519,6 @@ void vh_initializeReadMapping_InvDup ( sonic *this_sonic, int chr_index, int inv
 		g_listRightBrkPointIntr[i].readMappingPtr = NULL;
 
 
-	g_intersectInterval = vh_newHeap();
+	g_intersectInterval = vh_newHeap(MAX_CLUSTER_SIZE);
 
 }

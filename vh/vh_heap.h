@@ -57,13 +57,15 @@ typedef struct HeapNUMT{
 
 extern Heap *g_intersectInterval;
 
-Heap *vh_newHeap(void);
-HeapMEI *vh_newHeapMEI(void);
-HeapNUMT *vh_newHeapNUMT(void);
+Heap *vh_newHeap(int);
+HeapMEI *vh_newHeapMEI(int);
+HeapNUMT *vh_newHeapNUMT(int);
+/*
 Heap *vh_renewHeap(Heap *);
 HeapMEI *vh_renewHeapMEI(HeapMEI *);
 HeapNUMT *vh_renewHeapNUMT(HeapNUMT *);
-  
+*/
+
 void vh_free_heap(Heap *);
 void vh_free_heap_mei(HeapMEI *);
 void vh_free_heap_numt(HeapNUMT *);

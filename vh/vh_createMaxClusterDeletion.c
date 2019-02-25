@@ -65,7 +65,7 @@ void vh_initializeReadMapping_Deletion( sonic *this_sonic, int chr_index)
 	vh_addToGenomeIndex_Deletion( this_sonic, chr_index);
 
 
-	g_intersectInterval = vh_newHeap();
+	g_intersectInterval = vh_newHeap(MAX_CLUSTER_SIZE);
 
 
 	while (libInfoPtr != NULL)

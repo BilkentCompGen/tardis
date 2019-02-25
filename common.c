@@ -383,6 +383,13 @@ void* getMem( size_t size)
 	return ret;
 }
 
+void* reallocMem( void* ptr, size_t old_size, size_t new_size)
+{
+        ptr = realloc( ptr, new_size);
+	memUsage = memUsage - old_size + new_size;
+	return ptr;
+}
+
 void freeMem( void* ptr, size_t size)
 {
 	memUsage = memUsage - size;
