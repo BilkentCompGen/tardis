@@ -159,8 +159,8 @@ All parameters
 	--hist-only                : Generate fragment size histograms only, then quit.
 
         Advanced Parameters:
-	--read-cluster [int]       : # of clusters that a specific read can be involved in (Default is 10).
-        --rp   [int]               : Minimum number of supporting read pairs in initial clustering (Default is 5).
+	--read-cluster [int]       : # of clusters that a specific read can be involved in (Default is 20).
+	--rp   [int]               : Minimum number of supporting read pairs in initial clustering (Default is 5).
 	--mei   ["Alu:L1:SVA"]     : List of mobile element names.
 	--no-soft-clip             : Skip soft clip remapping.
 	--no-interdup              : Skip interspersed duplication clustering.
