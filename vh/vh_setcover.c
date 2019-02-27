@@ -71,21 +71,7 @@ int free_readMappingEl( readMappingEl *ptr)
 	}
 	return 1;
 }
-/*
-int free_readMappingEl( readMappingEl *ptr)
-{
-	readMappingEl *ptr_next;
 
-	while( ptr != NULL)
-	{
-		ptr_next = ptr->next;
-		if(ptr->chromosome_name != NULL)
-			free( ptr->chromosome_name);
-		free( ptr);
-		ptr = ptr_next;
-	}
-	return 1;
-}*/
 
 int free_clusterIdEl( clusterIdEl *ptr)
 {
@@ -745,15 +731,15 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 			in_bams[i]->contribution = true;
 	}
 
-	is_start_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV, listClusterEl[cluster_id].posStartSV + 1);
-	is_end_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posEndSV - 1, listClusterEl[cluster_id].posEndSV);
-	is_mid_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, (int)( listClusterEl[cluster_id].posStartSV + listClusterEl[cluster_id].posEndSV) / 2,
-			(int)( listClusterEl[cluster_id].posStartSV + listClusterEl[cluster_id].posEndSV) / 2 + 1);
+	is_start_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV_Outer + 1);
+	is_end_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posEndSV_Outer - 1, listClusterEl[cluster_id].posEndSV_Outer);
+	is_mid_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, (int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2,
+			(int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2 + 1);
 
-	mei_start = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV, listClusterEl[cluster_id].posStartSV + 1, params->mei);
-	mei_end = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posEndSV - 1, listClusterEl[cluster_id].posEndSV, params->mei);
-	mei_mid = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, (int)( listClusterEl[cluster_id].posStartSV + listClusterEl[cluster_id].posEndSV) / 2,
-			(int)( listClusterEl[cluster_id].posStartSV + listClusterEl[cluster_id].posEndSV) / 2 + 1, params->mei);
+	mei_start = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV_Outer + 1, params->mei);
+	mei_end = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posEndSV_Outer - 1, listClusterEl[cluster_id].posEndSV_Outer, params->mei);
+	mei_mid = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, (int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2,
+			(int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2 + 1, params->mei);
 
 	if( listClusterEl[cluster_id].SVtype == MEIFORWARD)
 	{
@@ -794,7 +780,7 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
 				MEI_Filter, false, listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].mei_type, listClusterEl[cluster_id].CNV_Score,
 				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support, listClusterEl[cluster_id].homogeneity_score,
-				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering, listClusterEl[cluster_id].zygosity);
+				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering, listClusterEl[cluster_id].zygosity, listClusterEl[cluster_id].imprecise);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
@@ -804,7 +790,7 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
 				MEI_Filter, false, listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].mei_type, listClusterEl[cluster_id].CNV_Score,
 				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support, listClusterEl[cluster_id].homogeneity_score,
-				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering, listClusterEl[cluster_id].zygosity);
+				listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering, listClusterEl[cluster_id].zygosity, listClusterEl[cluster_id].imprecise);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
@@ -812,10 +798,11 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 	{
 		var_example = new_strvar( listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV,
 				listClusterEl[cluster_id].posEndSV_Outer, listClusterEl[cluster_id].posEndSV, listClusterEl[cluster_id].SVtype,
-				listClusterEl[cluster_id].LowQual, listClusterEl[cluster_id].MEI_Del,
+				listClusterEl[cluster_id].low_rp, listClusterEl[cluster_id].MEI_Del,
 				listClusterEl[cluster_id].mobileName, listClusterEl[cluster_id].mei_type, listClusterEl[cluster_id].CNV_Score,
 				listClusterEl[cluster_id].indIdCount, listClusterEl[cluster_id].sr_support,
-				listClusterEl[cluster_id].homogeneity_score, listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering, listClusterEl[cluster_id].zygosity);
+				listClusterEl[cluster_id].homogeneity_score, listClusterEl[cluster_id].weight_without_homogeniety_score_at_read_covering,
+				listClusterEl[cluster_id].zygosity, listClusterEl[cluster_id].imprecise);
 
 		print_strvar( in_bams, params, var_example, fpVcf);
 	}
@@ -824,12 +811,14 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 
 void outputPickedCluster( bam_info** in_bams, parameters* params, FILE *fpVcf)
 {
-	int cluster_id, ind_id, total_rp_sup, total_sr_sup;
+	int cluster_id, ind_id, total_rp_sup, total_sr_sup, tmp_start, tmp_end;
+	int same_left, same_right, diff_left, diff_right;
+	readMappingEl *tmp, *tmp2;
 
 	for( cluster_id = 0; cluster_id < sizeListClusterEl; cluster_id++)
 	{
-		if (listClusterEl[cluster_id].indIdCount != NULL){
-
+		if (listClusterEl[cluster_id].indIdCount != NULL)
+		{
 			total_rp_sup = 0;
 			total_sr_sup = 0;
 			for( ind_id = 0; ind_id < multiIndCount; ind_id++)
@@ -838,8 +827,98 @@ void outputPickedCluster( bam_info** in_bams, parameters* params, FILE *fpVcf)
 				total_sr_sup = total_sr_sup + listClusterEl[cluster_id].sr_support[ind_id];
 			}
 
-			if( ( total_rp_sup > params->rp_threshold) || (listClusterEl[cluster_id].LowQual == true && debug_mode))
+			if( total_sr_sup > 5)
+				listClusterEl[cluster_id].low_sr = false;
+
+			if( total_rp_sup > params->rp_threshold)
+			{
+				listClusterEl[cluster_id].low_rp = false;
+
+				if( total_sr_sup > 5)
+				{
+					tmp = listClusterEl[cluster_id].next;
+					while( tmp != NULL)
+					{
+						if( strcmp( multiLibs[read_names[tmp->readId].libId].libName, "SplitRead") == 0)
+						{
+							tmp_start = tmp->posMapLeft;
+							tmp_end = tmp->posMapRight;
+							same_left = -1, same_right = -1, diff_left = 0, diff_right = 0;
+
+							tmp2 = listClusterEl[cluster_id].next;
+							while( tmp2 != NULL)
+							{
+								if( strcmp( multiLibs[read_names[tmp2->readId].libId].libName, "SplitRead") == 0)
+								{
+									if( ( tmp2->posMapLeft == tmp_start) || (tmp2->posMapRight == tmp_end))
+									{
+										same_left++;
+										same_right++;
+									}
+									else if( tmp2->posMapLeft == tmp_start)
+									{
+										same_left++;
+										diff_right++;
+									}
+									else if( tmp2->posMapRight == tmp_end)
+									{
+										same_right++;
+										diff_left++;
+									}
+									else
+									{
+										diff_left++;
+										diff_right++;
+									}
+								}
+								tmp2 = tmp2->next;
+							}
+
+							if( (same_left + same_right) >= (diff_left + diff_right))
+							{
+								/* Modify the breakpoints */
+								if( listClusterEl[cluster_id].SVtype == DELETION || listClusterEl[cluster_id].SVtype == TANDEMDUP ||
+										listClusterEl[cluster_id].SVtype == INVERSION || listClusterEl[cluster_id].SVtype == MEIFORWARD ||
+										listClusterEl[cluster_id].SVtype == MEIREVERSE)
+								{
+									listClusterEl[cluster_id].imprecise = NOT_IMPRECISE;
+									listClusterEl[cluster_id].posStartSV = tmp_start;
+									listClusterEl[cluster_id].posStartSV_Outer = tmp_start;
+									listClusterEl[cluster_id].posEndSV = tmp_end;
+									listClusterEl[cluster_id].posEndSV_Outer = tmp_end;
+								}
+							}
+							else if( same_left >= diff_left)
+							{
+								/* Modify the breakpoints */
+								if( listClusterEl[cluster_id].SVtype == DELETION || listClusterEl[cluster_id].SVtype == TANDEMDUP ||
+										listClusterEl[cluster_id].SVtype == INVERSION || listClusterEl[cluster_id].SVtype == MEIFORWARD ||
+										listClusterEl[cluster_id].SVtype == MEIREVERSE)
+								{
+									listClusterEl[cluster_id].imprecise = END_IMPRECISE;
+									listClusterEl[cluster_id].posStartSV = tmp_start;
+									listClusterEl[cluster_id].posStartSV_Outer = tmp_start;
+								}
+							}
+							else if( same_right >= diff_right)
+							{
+								/* Modify the breakpoints */
+								if( listClusterEl[cluster_id].SVtype == DELETION || listClusterEl[cluster_id].SVtype == TANDEMDUP ||
+										listClusterEl[cluster_id].SVtype == INVERSION || listClusterEl[cluster_id].SVtype == MEIFORWARD ||
+										listClusterEl[cluster_id].SVtype == MEIREVERSE)
+								{
+									listClusterEl[cluster_id].imprecise = START_IMPRECISE;
+									listClusterEl[cluster_id].posEndSV = tmp_end;
+									listClusterEl[cluster_id].posEndSV_Outer = tmp_end;
+								}
+							}
+						}
+						tmp = tmp->next;
+					}
+				}
+
 				outputCluster( in_bams, params, cluster_id, fpVcf);
+			}
 		}
 	}
 }
@@ -1088,7 +1167,9 @@ void processTheSV( bam_info **in_bams, parameters *params, int listClusterId, in
 
 	listClusterEl[listClusterId].clusterId = listClusterId;
 	listClusterEl[listClusterId].MEI_Del = false;
-	listClusterEl[listClusterId].LowQual = false;
+	listClusterEl[listClusterId].low_sr = true;
+	listClusterEl[listClusterId].low_rp = true;
+	listClusterEl[listClusterId].imprecise = IMPRECISE;
 	listClusterEl[listClusterId].readMappingSelected = NULL;
 
 	listClusterEl[listClusterId].chromosome_name = NULL;

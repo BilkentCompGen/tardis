@@ -25,6 +25,10 @@
 #define FALSE 0
 #define true 1
 #define false 0
+#define NOT_IMPRECISE 0
+#define IMPRECISE 1
+#define START_IMPRECISE 2
+#define END_IMPRECISE 3
 
 extern int cluster_count;
 extern int multiIndCount;
@@ -135,7 +139,9 @@ typedef struct clusterEl{
     double weight_without_homogeniety_score;
 	double homogeneity_score;
 	bool MEI_Del;
-	bool LowQual;
+	bool low_rp;
+	bool low_sr;
+	int imprecise; /* 0 not imprecise, 1 imprecise, 2 imprecise, 3 right imprecise */
 
     double weight_without_homogeniety_score_at_read_covering;
 }clusterEl;

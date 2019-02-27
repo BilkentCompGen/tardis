@@ -9,7 +9,10 @@
 #define add_to_beginning 0
 //#define  totalNumInd MAX_SAMPLES
 #define  strSize 200 //maximum size of a constant string, such as readName length
-
+#define NOT_IMPRECISE 0
+#define IMPRECISE 1
+#define START_IMPRECISE 2
+#define END_IMPRECISE 3
 
 typedef struct strvar {
 	char *chr_name; /*chromosome name*/
@@ -22,6 +25,7 @@ typedef struct strvar {
 	char *mei_type; /* the name of the mobile element */
 	bool filtered; /* True if the variation is filtered in the filtering stage */
 	bool mei_del;
+	bool imprecise; /* Is the variant imprecise or not */
 	int rp[MAX_SAMPLES]; /* RP Support for each individual */
 	int sr[MAX_SAMPLES]; /* SR Support for each individual */
 	char* zygosity[MAX_SAMPLES];
@@ -47,7 +51,7 @@ typedef struct chr_index {
 struct strvar ** init_vars(int num_chroms);
 struct strvar* new_strvar(char *chrName, int outer_start, int inner_start, int outer_end, int inner_end, char svtype,
 		bool filtered, bool mei_del, char *mei_name, char* mei_type, double cnv_score[], int rp[], int sr[], double homogeneity_score,
-		float weight_without_homogeneity_score, int zygosity[]);
+		float weight_without_homogeneity_score, int zygosity[], bool imprecise);
 void add_strvar(struct strvar ** variations, struct strvar* sv);
 void print_strvar(bam_info** in_bams, parameters* params, struct strvar* sv, FILE* fpOut);
 int print_all_vars(struct strvar ** variations, parameters *params, FILE *fpOut);
