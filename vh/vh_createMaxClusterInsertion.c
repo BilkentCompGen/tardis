@@ -59,7 +59,7 @@ void vh_initializeReadMapping_Insertion (sonic *this_sonic, int chr_index)
 	g_listRightBrkPointIntrCount = 0;
 	vh_addToGenomeIndex_Insertion (this_sonic, chr_index);
 
-	g_intersectInterval = vh_newHeap();
+	g_intersectInterval = vh_newHeap(MAX_CLUSTER_SIZE);
 
 
 	while (libInfoPtr != NULL)

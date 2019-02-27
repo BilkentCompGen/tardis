@@ -1,11 +1,11 @@
 /*
- *  weighted_SetCover_MultiColor_W_ConflictResghted_SetCover_MultiColor_W_ConflictRes2_W_EditEdit.cpp2.h
- *  
- *
- *  Created by Fereydoun Hormozdiari on 24/10/11.
- *  Copyright 2011 Simon Fraser University. All rights reserved.
- *
- */
+  *  weighted_SetCover_MultiColor_W_ConflictResghted_SetCover_MultiColor_W_ConflictRes2_W_EditEdit.cpp2.h
+  *  
+  *
+  *  Created by Fereydoun Hormozdiari on 24/10/11.
+  *  Copyright 2011 Simon Fraser University. All rights reserved.
+  *
+  */
 #ifndef __WEIGHTED_SETCOVER_MULTICOLOR__
 #define __WEIGHTED_SETCOVER_MULTICOLOR__
 

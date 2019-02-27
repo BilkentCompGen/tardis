@@ -271,6 +271,7 @@ void vh_new_conflict_list(int current_conflict_size)
 void vh_enlarge_conflict_list(int old_conflict_size, int current_conflict_size)
 {
 	int i;
+	/* DEPRECATED FEB 25, 2019
 	struct SV_selected **tmp;
 	tmp = (struct SV_selected **) getMem(sizeof(struct SV_selected *) * current_conflict_size);
 	for (i=0; i<old_conflict_size; i++){
@@ -279,8 +280,9 @@ void vh_enlarge_conflict_list(int old_conflict_size, int current_conflict_size)
 	}
 	for (i=old_conflict_size; i<current_conflict_size; i++)
 		tmp[i] = NULL;
-
 	listSelectedSV = tmp;
+	*/
+	listSelectedSV = (struct SV_selected **) reallocMem(listSelectedSV, sizeof(struct SV_selected *) * old_conflict_size, sizeof(struct SV_selected *) * current_conflict_size);
 }
 
 SV_selected *vh_new_conflict_item(void)

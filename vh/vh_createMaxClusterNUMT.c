@@ -420,8 +420,8 @@ void initializeReadMapping_NUMT( bam_info** in_bams, parameters *params, int chr
 	for( i = 0; i < params->this_sonic->chromosome_lengths[chr_index]; i++)
 		numtReads[i] = NULL;
 
-	Heap_F = vh_newHeapNUMT();
-	Heap_R = vh_newHeapNUMT();
+	Heap_F = vh_newHeapNUMT(MAX_CLUSTER_SIZE);
+	Heap_R = vh_newHeapNUMT(MAX_CLUSTER_SIZE);
 
 	numt_count = addToGenomeIndex_NUMT( in_bams, params, chr_index);
 }
