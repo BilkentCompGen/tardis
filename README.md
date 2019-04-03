@@ -82,7 +82,7 @@ To test, simply type:
 SONIC file (annotations container)
 ==================================
 
-SONIC files for some human genome reference versions are available at external repo: https://github.com/BilkentCompGen/sonic-prebuilt
+SONIC files for some human and mouse genome reference versions are available at external repo: https://github.com/BilkentCompGen/sonic-prebuilt
 
  * human_g1k_v37.sonic: SONIC file for Human Reference Genome GRCh37 (1000 Genomes Project version)
 	* Also download the reference genome at: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz. 
@@ -90,6 +90,10 @@ SONIC files for some human genome reference versions are available at external r
 	* Also download the reference genome at: http://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz. Deflate the tar archive and concatenate all chromosomes into a single FASTA file.
  * ucsc_hg38.sonic: SONIC file for the human reference genome build 38.
 	* Also download the reference genome at: http://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.chromFa.tar.gz. Deflate the tar archive and concatenate all chromosomes into a single FASTA file.
+ * mm9.sonic: SONIC file for the mouse reference genome version mm9.
+	* Also download the reference genome at: http://hgdownload.cse.ucsc.edu/goldenPath/mm9/bigZips/chromFa.tar.gz. Deflate the tar archive and concatenate all chromosomes into a single FASTA file.
+ * mm10.sonic: SONIC file for the mouse reference genome version mm10.
+	* Also download the reference genome at: http://hgdownload.cse.ucsc.edu/goldenPath/mm10/bigZips/chromFa.tar.gz. Deflate the tar archive and concatenate all chromosomes into a single FASTA file.
 
 Make sure that the same reference was used to align the reads beforehand (BAM file) and to create the SONIC file. The SONIC files and the reference FASTA files linked above are compatible.
 
@@ -98,14 +102,8 @@ Building the SONIC file
 
 Please refer to the SONIC development repository: https://github.com/calkan/sonic/
 
-However, you can still build the SONIC file using TARDIS:
+The README.md file includes documentation on how to obtain the necessary files for different genomes from the UCSC Genome Browser.
 
-	tardis --ref human_g1k_v37.fasta --make-sonic human_g1k_v37.sonic \
-		--dups human_g1k_v37.segmental_duplications.bed \
-		--gaps human_g1k_v37.assembly_gaps.bed \
-		--reps human_g1k_v37.repeatmasker.out 
-
-	
 
 Running TARDIS - QUICK mode
 ===========================
