@@ -827,14 +827,14 @@ void outputPickedCluster( bam_info** in_bams, parameters* params, FILE *fpVcf)
 				total_sr_sup = total_sr_sup + listClusterEl[cluster_id].sr_support[ind_id];
 			}
 
-			if( total_sr_sup > 5)
+			if( total_sr_sup > 3)
 				listClusterEl[cluster_id].low_sr = false;
 
 			if( total_rp_sup > params->rp_threshold)
 			{
 				listClusterEl[cluster_id].low_rp = false;
 
-				if( total_sr_sup > 5)
+				if( total_sr_sup > 3)
 				{
 					tmp = listClusterEl[cluster_id].next;
 					while( tmp != NULL)
