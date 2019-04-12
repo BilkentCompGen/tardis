@@ -302,48 +302,48 @@ void vh_addToPotentialOutput (int leftBreakPoint, Heap *heapName, char SVtype)
 
 int **create_list_of_reads(int list_size)
 {
-  int **ret;
-  int i;
+	int **ret;
+	int i;
 
-  ret = (int **) getMem(list_size * sizeof (int *));
+	ret = (int **) getMem(list_size * sizeof (int *));
 
-  for (i=0; i<list_size; i++){
-    ret[i] = (int *) getMem(3 * sizeof (int));
-  }
+	for (i=0; i<list_size; i++){
+		ret[i] = (int *) getMem(3 * sizeof (int));
+	}
 
-  return ret;
-  
+	return ret;
+
 }
 
 int **recreate_list_of_reads(int **old_list, int list_size, int new_list_size)
 {
-  int **ret;
-  int i;
+	int **ret;
+	int i;
 
-  ret = (int **) getMem(new_list_size * sizeof (int *));
+	ret = (int **) getMem(new_list_size * sizeof (int *));
 
-  for (i=0; i<list_size; i++){
-    ret[i] = (int *) getMem(3 * sizeof (int));
-    ret[i][0] = old_list[i][0];
-    ret[i][1] = old_list[i][1];
-    ret[i][2] = old_list[i][2];
-    freeMem (old_list[i], (3 * sizeof(int *)));
-  }
-  
-  for (i=list_size; i<new_list_size; i++){
-    ret[i] = (int *) getMem(3 * sizeof (int));
-  }
-  
+	for (i=0; i<list_size; i++){
+		ret[i] = (int *) getMem(3 * sizeof (int));
+		ret[i][0] = old_list[i][0];
+		ret[i][1] = old_list[i][1];
+		ret[i][2] = old_list[i][2];
+		freeMem (old_list[i], (3 * sizeof(int *)));
+	}
 
-  freeMem (old_list, list_size * sizeof (int *));
-  
-  return ret;
-  
+	for (i=list_size; i<new_list_size; i++){
+		ret[i] = (int *) getMem(3 * sizeof (int));
+	}
+
+
+	freeMem (old_list, list_size * sizeof (int *));
+
+	return ret;
+
 }
 
 int vh_outputCluster (ClustersFound * cluster, char SVtype)
 {
-        int **list_of_written_reads;//[MAXCLUSTERLIST][3];
+	int **list_of_written_reads;//[MAXCLUSTERLIST][3];
 	// [0]:locMapLeftEnd, [1]: locMapRightStart, [2]: edit distance. This is used to remove the duplicated reads (clonal) as a result of PCR duplication from each cluster.
 	int totalAddedToList = 0;
 	int clonalRead = 0;
@@ -355,8 +355,8 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 
 	int cnt = 0;
 	int list_size = MAXCLUSTERLIST;
-	
-	
+
+
 	/* Count number of read-pairs inside the clusters excluding the ones >= cluster_of_reads */
 	for (readMapCount = 0; readMapCount < cluster->clusterSize; readMapCount++)
 	{
@@ -514,8 +514,8 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 				list_of_written_reads[totalAddedToList][2] = (int) cluster->readMappingPtrArray[readMapCount]->editDistance;
 				totalAddedToList++;
 				if (totalAddedToList >= list_size) {
-				  list_of_written_reads = recreate_list_of_reads(list_of_written_reads, list_size, list_size+MAXCLUSTERLIST);
-				  list_size+=MAXCLUSTERLIST;
+					list_of_written_reads = recreate_list_of_reads(list_of_written_reads, list_size, list_size+MAXCLUSTERLIST);
+					list_size+=MAXCLUSTERLIST;
 				}
 			}
 		}
@@ -528,11 +528,11 @@ int vh_outputCluster (ClustersFound * cluster, char SVtype)
 	}
 
 	for (cnt=0; cnt<list_size; cnt++){
-	  freeMem (list_of_written_reads[cnt], (3 * sizeof(int *)));
+		freeMem (list_of_written_reads[cnt], (3 * sizeof(int *)));
 	}
-	
+
 	freeMem (list_of_written_reads, list_size * sizeof (int *));
-	
+
 }
 
 void vh_createIntersectingIntervals (int leftBreakPoint, char SVtype)

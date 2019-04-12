@@ -553,7 +553,7 @@ int read_bam( bam_info* in_bam, parameters* params)
 	for( i = 0; i < in_bam->bam_header->n_targets; i++)
 		bamToRefIndex[i] = sonic_refind_chromosome_index( params->this_sonic, in_bam->bam_header->target_name[i]);
 
-	//while( bam_itr_next( in_bam->bam_file, in_bam->iter, bam_alignment) > 0)
+
 	while( sam_itr_next( in_bam->bam_file, in_bam->iter, bam_alignment) > 0)
 	{
 		bam_alignment_core = bam_alignment->core;
@@ -607,8 +607,8 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 	FILE *fpVcf = NULL;
 	int skip_chromosome = 0;
 
-	sprintf( outputread, "%s%s.name", params->outdir, params->outprefix);
-	sprintf( outputfile, "%s%s.clusters", params->outdir, params->outprefix);
+	sprintf( outputread, "%s%s_name.log", params->outdir, params->outprefix);
+	sprintf( outputfile, "%s%s_clusters.log", params->outdir, params->outprefix);
 
 	/* Print all structural variations in .vcf format */
 	sprintf( svfile, "%s%s.vcf", params->outdir, params->outprefix);
@@ -616,6 +616,10 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 	fpVcf = safe_fopen( svfile,"w");
 
 	print_vcf_header( fpVcf, in_bams, params);
+
+	/* Open the .clusters file if running in debug mode */
+	if( debug_mode)
+		fileOutput = safe_fopen( outputfile, "w");
 
 	for( chr_index = params->first_chr; chr_index <= params->last_chr; chr_index++)
 	{
@@ -724,12 +728,8 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 		if( not_in_bam == 1 || total_read_count == 0)
 			continue;
 
-
 		divet_row_count = load_Divet_bam( in_bams, params, chr_index);
 
-		/* Open the .clusters file if running in debug mode */
-		if( debug_mode)
-			fileOutput = safe_fopen( outputfile, "w");
 
 		/* Make all clusters NULL */
 		for( i = 0; i < MaxClusterCount; i++)
@@ -863,7 +863,6 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			// free_HashIndex();
 			free_hash_table( params);
 		}
-
 
 		free_the_rest( in_bams, params);
 	}
