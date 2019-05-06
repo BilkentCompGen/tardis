@@ -135,6 +135,7 @@ void free_libraries()
 	struct LibraryInfo *cursor, *t;
 	LibraryInfo *libInfo, *libInfoNext;
 	DivetRow *tmp, *tmp_next;
+	ReadName *tmp2, *tmp2_next;
 
 	libInfo = g_libInfo;
 	while( libInfo != NULL)
@@ -143,8 +144,16 @@ void free_libraries()
 		for( i = 0; i < NHASH; i++)
 		{
 			if( libInfo->hash != NULL)
-				if( libInfo->hash[i] != NULL)
-					free( libInfo->hash[i]);
+
+				tmp2 = libInfo->hash[i];
+				while( tmp2 != NULL)
+				{
+					tmp2_next = tmp2->next;
+					if( tmp2->readName != NULL)
+						free( tmp2->readName);
+					free( tmp2);
+					tmp2 = tmp2_next;
+				}
 		}
 		if( libInfo->hash != NULL)
 			free( libInfo->hash);

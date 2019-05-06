@@ -230,7 +230,7 @@ void load_bam( parameters *params, configuration *cfg, bam_info* in_bam, char* p
 		fprintf( stderr, "\nLibrary %s\n\tMean: %f\n\tStdev: %f\n\n", ( in_bam->libraries)[i]->libname, ( in_bam->libraries)[i]->frag_avg, ( in_bam->libraries)[i]->frag_std);
 		fprintf( logFile, "\nLibrary %s\n\tMean: %f\n\tStdev: %f\n\tRead Length: %d\n\n", ( in_bam->libraries)[i]->libname, ( in_bam->libraries)[i]->frag_avg, ( in_bam->libraries)[i]->frag_std, ( in_bam->libraries)[i]->read_length);
 		set_library_min_max( ( in_bam->libraries)[i]);
-		plot_histogram  ( params, cfg, in_bam->sample_name, in_bam->libraries[i]->libname, second_test_pass[i], second_pass_fragments[i], in_bam->libraries[i]->frag_avg, in_bam->libraries[i]->frag_std);
+		plot_histogram( params, cfg, in_bam->sample_name, in_bam->libraries[i]->libname, second_test_pass[i], second_pass_fragments[i], in_bam->libraries[i]->frag_avg, in_bam->libraries[i]->frag_std);
 	}
 
 	/* Close the BAM file */

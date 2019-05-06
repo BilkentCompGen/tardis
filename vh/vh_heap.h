@@ -11,10 +11,8 @@
 
 typedef struct PEAlistEl {
         int brkPoint;
-        //int priorityValue;
         struct DivetRow *readMappingPtr;
         struct PEAlistEl *next;
-        struct PEAlistEl *prev;
 } PEAlistEls;
 
 typedef struct HeapEl

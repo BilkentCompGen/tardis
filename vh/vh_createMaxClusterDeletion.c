@@ -106,7 +106,6 @@ void vh_reevaluate_Deletion (int id, int brkPointLeft)
 int vh_createBreakPointIntervals_Deletion (int brkPointLeft)
 {
 	int newElAdded = 0;
-	int genomeId;
 	int maxDeltaTemp, minDeltaTemp;
 	int locBrkPointLeftTemp, locBrkPointRightTemp;	// These the left and right loci of the interval of the breakpoint on the right
 	int count = 0, tempListRightBrkPointIntrId = 0;
