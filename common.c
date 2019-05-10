@@ -520,8 +520,9 @@ void get_working_directory(parameters *params){
   
   directory = strrchr(params->outprefix, '/');
   prefix = NULL;
-  set_str( &prefix, directory + 1);
-  if ( debug_mode)
+  if (directory != NULL)
+    set_str( &prefix, directory + 1);
+  if ( debug_mode && prefix != NULL)
     fprintf (stderr, "prefix: %s\n", prefix);
   
   if (directory == NULL){
@@ -539,13 +540,15 @@ void get_working_directory(parameters *params){
   params->outdir[i]='/';
   params->outdir[i+1] = 0;
 
-  free( params->outprefix);
-  params->outprefix = NULL;
-  if ( debug_mode)
+  if ( debug_mode && prefix != NULL)
     fprintf (stderr, "prefix2: %s\n", prefix);
-  
-  set_str( &(params->outprefix), prefix);
-  free (prefix);
+
+  if (prefix!=NULL){
+    free( params->outprefix);
+    params->outprefix = NULL;
+    set_str( &(params->outprefix), prefix);
+    free (prefix);
+  }
 }
 
 char *get_file_name(char *path)
