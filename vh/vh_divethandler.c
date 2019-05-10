@@ -371,9 +371,9 @@ DivetRow *vh_loadDivetRowFromBamAlternative( alternativeMapping *discordantReadP
 
 
 	//fprintf( divet_file, "%s\t%s\t%d\t%d\t%c\t=\t%d\t%d\t%c\t%c\t%d\t%d\t%d\n", discordantReadPtr->readName, discordantReadPtr->chromosome_name,
-		//	discordantReadPtr->pos1, discordantReadPtr->pos1_End, orientLeft, discordantReadPtr->pos2,
-			//discordantReadPtr->pos2_End, orientRight, SV, discordantReadPtr->editDistance,
-			//discordantReadPtr->mQual1, discordantReadPtr->mQual2);
+	//	discordantReadPtr->pos1, discordantReadPtr->pos1_End, orientLeft, discordantReadPtr->pos2,
+	//discordantReadPtr->pos2_End, orientRight, SV, discordantReadPtr->editDistance,
+	//discordantReadPtr->mQual1, discordantReadPtr->mQual2);
 
 	DivetRow *newRow = createDivetRowNew (libInfo->hash, discordantReadPtr->ten_x_barcode,
 			discordantReadPtr->readName, discordantReadPtr->chromosome_name, discordantReadPtr->pos1,
@@ -515,8 +515,8 @@ int read_Divet_bam( discordantMapping **mapping, parameters *params, LibraryInfo
 		while( discordantReadPtr != NULL)
 		{
 			is_satellite = sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos1, discordantReadPtr->pos1_End)
-		    					+ sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
-								+ sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End);
+		    									+ sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
+												+ sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End);
 
 			if ( is_satellite == 0 && discordantReadPtr->mQual1 > params->mq_threshold && discordantReadPtr->mQual2 > params->mq_threshold
 					&& !sonic_is_gap( params->this_sonic, params->this_sonic->chromosome_names[chr_index], discordantReadPtr->pos1, discordantReadPtr->pos2)
@@ -626,9 +626,9 @@ int read_Divet_bam_alternative( alternativeMapping **mapping, parameters *params
 			/* Since MT is circular, we need to eliminate the read-pairs at both ends of the chromosome */
 			insLen = abs( discordantReadPtr->pos1 - discordantReadPtr->pos2);
 			is_satellite = sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos1, discordantReadPtr->pos1_End)
-																											  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
-																											  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End)
-																											  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End);
+																															  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End)
+																															  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name , discordantReadPtr->pos2, discordantReadPtr->pos2_End)
+																															  + sonic_is_satellite( params->this_sonic, discordantReadPtr->chromosome_name, discordantReadPtr->pos2, discordantReadPtr->pos2_End);
 
 			if ( is_satellite == 0 && ( discordantReadPtr->mQual1 > params->mq_threshold) &&
 					( !sonic_is_gap( params->this_sonic, params->this_sonic->chromosome_names[chr_index], discordantReadPtr->pos1, discordantReadPtr->pos2)) &&
@@ -826,13 +826,13 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 	g_maxListBrkPointIntr = MAXLISTBRKPOINTINTR;
 	g_libInfo = NULL;
 
-/*
+	/*
 	divetfile_path = (char *) getMem(sizeof(char) * (2+strlen("divv.vh")+strlen(params->outprefix)));
 	sprintf(divetfile_path, "%s-%s", params->outprefix, "divv.vh");
 
 	divet_file = safe_fopen (divetfile_path, "w");
 	free(divetfile_path);
-	*/
+	 */
 
 	del_cnt_div = 0, ins_cnt_div = 0, inv_cnt_div = 0, tandup_cnt_div = 0, sr_cnt_div = 0, alt_cnt_div = 0, invdup_cnt_div = 0, interdup_cnt_div = 0;
 
@@ -840,6 +840,9 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 	{
 		for( lib_cnt = 0; lib_cnt < in_bams[bam_index]->num_libraries; lib_cnt++)
 		{
+			if( in_bams[bam_index]->libraries[lib_cnt]->is_valid == false)
+				continue;
+
 			newLibInfo = ( struct LibraryInfo *) getMem( sizeof( struct LibraryInfo));
 			strcpy( newLibInfo->libName, in_bams[bam_index]->libraries[lib_cnt]->libname);
 			strcpy( newLibInfo->indName, in_bams[bam_index]->sample_name);
@@ -882,6 +885,9 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 		{
 			for( lib_cnt = 0; lib_cnt < in_bams[bam_index]->num_libraries; lib_cnt++)
 			{
+				if( in_bams[bam_index]->libraries[lib_cnt]->is_valid == false)
+					continue;
+
 				newLibInfo = ( struct LibraryInfo *) getMem( sizeof( struct LibraryInfo));
 				strcpy( newLibInfo->libName, "Alternative\0");
 				strcpy( newLibInfo->indName, in_bams[bam_index]->sample_name);
@@ -926,6 +932,9 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 		{
 			for( lib_cnt = 0; lib_cnt < in_bams[bam_index]->num_libraries; lib_cnt++)
 			{
+				if( in_bams[bam_index]->libraries[lib_cnt]->is_valid == false)
+					continue;
+
 				newLibInfo = ( struct LibraryInfo *) getMem( sizeof( struct LibraryInfo));
 				strcpy( newLibInfo->libName, "SplitRead\0");
 				strcpy( newLibInfo->indName, in_bams[bam_index]->sample_name);

@@ -36,6 +36,7 @@ typedef struct library_properties
 	char *divet; /* file name for the DIVET file post mrfast mapping */
 	int read_length; /* length of reads for this library */
 	int num_sequences; /* number of paired-end sequences for this library */
+	bool is_valid; /* Checks if the library is valid, i.e., mean, conc_min, conc_max, etc. */
 
 	struct softClip *listSoftClip;
 	struct discordantMapping **mappings_discordant;

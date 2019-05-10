@@ -28,8 +28,9 @@ void load_bam( parameters *params, configuration *cfg, bam_info* in_bam, char* p
 	int* fragment_size_total;
 	float* variance;
 	char* library_name = NULL;
-	int i, j, library_index, diff, return_value;
+	int i, j, k, library_index, diff, return_value, temp;
 	char fai_file[MAX_SEQ];
+	double count;
 
 	fprintf( stderr, "Processing BAM file %s.\n", path);
 
@@ -100,10 +101,10 @@ void load_bam( parameters *params, configuration *cfg, bam_info* in_bam, char* p
 	/* For SAMPLEFRAG number of alignments, store the template length field.
 	 Performed for each different library */
 	fragment_size = ( int**) getMem( in_bam->num_libraries * sizeof( int*));
-	
+
 	for( i = 0; i < in_bam->num_libraries; i++)
 	{
-	        fragment_size[i] = NULL;
+		fragment_size[i] = NULL;
 		fragment_size[i] = ( int*) getMem( SAMPLEFRAG * sizeof( int));
 	}
 
@@ -163,8 +164,23 @@ void load_bam( parameters *params, configuration *cfg, bam_info* in_bam, char* p
 		/* Sort the fragment sizes */
 		qsort( fragment_size[i], SAMPLEFRAG, sizeof( int), compare_size_int);
 
+		/* When the library does not have sufficient number of reads, we discard the leading 0s when calculating the median */
+		count = 0;
+		if( fragments_sampled[i] < SAMPLEFRAG)
+		{
+			for( k = 0; k < SAMPLEFRAG; k++)
+			{
+				if( fragment_size[i][k] == 0)
+					count++;
+				else
+					break;
+			}
+		}
 		/* Get the medians */
-		( in_bam->libraries)[i]->frag_med = fragment_size[i][( SAMPLEFRAG / 2) - 1];
+		temp = ( fragments_sampled[i] / 2) - 1 + (int) count;
+		( in_bam->libraries)[i]->frag_med = fragment_size[i][temp];
+
+		//fprintf(stderr,"There are %d 0s, %d fragments, index %d and median is %d\n", (int) count, fragments_sampled[i], temp, ( in_bam->libraries)[i]->frag_med);
 	}
 
 	/* Find the fragment sizes which pass the second test, and will contribute to the avg and std */
@@ -195,7 +211,6 @@ void load_bam( parameters *params, configuration *cfg, bam_info* in_bam, char* p
 				second_test_pass[i] = second_test_pass[i] + 1;
 			}
 		}
-
 	}
 
 	for( i = 0; i < in_bam->num_libraries; i++)
@@ -403,6 +418,15 @@ void create_fastq( bam_info* in_bam, char* bam_path, parameters* params)
 		create_fastq_library( ( in_bam->libraries)[i], in_bam->sample_name, bam_path, params);
 	}
 }
+
+void is_library_valid( struct library_properties* in_lib)
+{
+	if( in_lib->frag_avg >=0 && in_lib->frag_std >=0 && in_lib->read_length >= 0 && in_lib->conc_min>=0 && in_lib->conc_max >=0)
+		in_lib->is_valid = true;
+	else
+		in_lib->is_valid = false;
+}
+
 
 void set_library_min_max( struct library_properties* in_lib)
 {
