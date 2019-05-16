@@ -57,6 +57,11 @@ int main( int argc, char** argv)
 	fprintf( logFile, "#CreationDate=%d.%d.%d\n\n", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday);
 	free(log_file_path);
 
+	fprintf( logFile, "Command line:\n \t%s ", argv[0]);
+	for ( i = 1; i < argc; i++)
+	  fprintf( logFile, "%s ", argv[i]);
+	fprintf( logFile, "\n\n");	
+	
 	/* Load configuration file (created if it does not exist) */
 	cfg = ( configuration*) getMem( sizeof( configuration));
 	load_config( cfg, params);

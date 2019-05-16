@@ -9,7 +9,7 @@
 #include "config.h"
 
 /* Sample this many fragments to calculate avg/median/std per library */
-#define SAMPLEFRAG 1000000 
+#define SAMPLEFRAG 100000 
 
 /* Maximum sequence/quality length */
 #define MAX_SEQ 1000
