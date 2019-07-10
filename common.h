@@ -7,6 +7,7 @@
 #include <zlib.h>
 #include <stdbool.h>
 #include "sonic/sonic.h"
+#include <htslib/faidx.h>
 
 //#define MAIN_DELETION_CLUSTER
 #define INVERSION 'V'
@@ -56,6 +57,7 @@
 #define EXIT_BAM_INDEX 8
 #define EXIT_ITERATOR_LOAD 9
 #define EXIT_BAM_CLOSE 10
+#define EXIT_WRONG_SONIC 11
 
 /* Return Codes */
 #define RETURN_SUCCESS 1
@@ -181,5 +183,8 @@ unsigned long encode_ten_x_barcode(char* source);
 void get_working_directory(parameters *);
 void clean_up_temp_files(parameters *);
 char *get_file_name(char *);
+
+int compare_sonic_ref(parameters *);
   
+
 #endif

@@ -581,3 +581,24 @@ void clean_up_temp_files(parameters *params){
   remove(debugsr_path);
   free(debugsr_path);
 }
+
+
+int compare_sonic_ref(parameters *params){
+
+  faidx_t* ref_fai;
+  int is_present = 0;
+  int i;
+  
+  ref_fai = fai_load( params->ref_genome);
+
+  for( i = params->first_chr; i <= params->last_chr; i++)
+    {
+      is_present = faidx_has_seq(ref_fai, params->this_sonic->chromosome_names[i]);
+      if ( is_present)
+	break;
+    }
+  
+  fai_destroy( ref_fai);
+
+  return is_present;
+}

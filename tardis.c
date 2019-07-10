@@ -76,6 +76,13 @@ int main( int argc, char** argv)
 	if (params->last_chr < params->first_chr)
 		params->last_chr = params->this_sonic->number_of_chromosomes - 1;
 
+	if (! compare_sonic_ref(params))
+	  {
+	        fprintf(stderr, "Reference FASTA and SONIC file do not match. Check if you are using the same version.\n"); 
+		exit(EXIT_WRONG_SONIC);	    
+	  }
+	
+	
 	if ( TARDIS_DEBUG)
 		print_params( params);
 

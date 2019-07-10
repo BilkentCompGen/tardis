@@ -606,6 +606,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 	char svfile[MAX_SEQ];
 	FILE *fpVcf = NULL;
 	int skip_chromosome = 0;
+	int any_in_bam = 0;
 
 	sprintf( outputread, "%s%s_name.log", params->outdir, params->outprefix);
 	sprintf( outputfile, "%s%s_clusters.log", params->outdir, params->outprefix);
@@ -639,7 +640,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			in_bams[bam_index]->bam_file_index = sam_index_load( in_bams[bam_index]->bam_file, params->bam_file_list[bam_index]);
 			if( in_bams[bam_index]->bam_file_index == NULL)
 			{
-				fprintf( stderr, "Error: Sam Index cannot be loaded (sam_index_load): %s\n", params->bam_file_list[bam_index]);
+				fprintf( stderr, "\nError: BAM/CRAM Index cannot be loaded (sam_index_load): %s\n", params->bam_file_list[bam_index]);
 				exit( EXIT_BAM_INDEX);
 			}
 
@@ -647,10 +648,12 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			not_in_bam = 0;
 			if( chr_index_bam == -1)
 			{
-				fprintf( stderr, "\nCannot find chromosome name %s in bam %s", params->this_sonic->chromosome_names[chr_index], in_bams[bam_index]->sample_name);
+				fprintf( stderr, "\nCannot find chromosome name %s in BAM/CRAM %s", params->this_sonic->chromosome_names[chr_index], in_bams[bam_index]->sample_name);
 				not_in_bam = 1;
 				continue;
 			}
+			else
+			        any_in_bam = 1;
 
 			in_bams[bam_index]->iter = sam_itr_queryi( in_bams[bam_index]->bam_file_index, chr_index_bam, 0, params->this_sonic->chromosome_lengths[chr_index]);
 			if( in_bams[bam_index]->iter == NULL)
@@ -866,9 +869,19 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 
 		free_the_rest( in_bams, params);
 	}
+
+	
 	fprintf( stderr, "\n");
 	fclose( fpVcf);
 
+	if ( !any_in_bam)
+	  {
+	    fprintf( stderr, "No chromosome is found in the input BAM/CRAM. Your SONIC and/or reference FASTA files do not match the reference used to generate the alignment file(s).\n");
+	    fprintf( stderr, "Check the reference genome versions and make sure you use the correct SONIC and reference FASTA files.\n");
+	    exit(EXIT_WRONG_SONIC);
+	  }
+
+	
 	if( debug_mode)
 		fclose( fileOutput);
 
