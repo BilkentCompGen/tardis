@@ -573,7 +573,14 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 			"##FORMAT=<ID=RP,Number=1,Type=Integer,Description=\"Read Pair Support\">\n"
 			"##FORMAT=<ID=SR,Number=1,Type=Integer,Description=\"Split Read Support\">\n";
 
-	char header_alt[]="##ALT=<ID=DEL,Description=\"Deletion\">\n";
+	char header_alt[]="##ALT=<ID=DEL,Description=\"Deletion\">\n"
+			"##ALT=<ID=DEL:ME,Description=\"Deletion of mobile element\">\n"
+			"##ALT=<ID=INS,Description=\"Novel sequence insertion\">\n"
+			"##ALT=<ID=INS:ME,Description=\"Mobile element insertion\">\n"
+			"##ALT=<ID=MT,Description=\"Nuclear mitochondrial insertion\">\n"
+			"##ALT=<ID=DUP:TANDEM,Description=\"Tandem duplication\">\n"
+			"##ALT=<ID=DUP:ISP,Description=\"Interspersed duplication\">\n"
+			"##ALT=<ID=INV,Description=\"Inversion\">\n";
 	time_t rawtime;
 	struct tm * timeinfo;
 
