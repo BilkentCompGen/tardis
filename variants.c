@@ -530,7 +530,7 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 {
 	int i;
-	char header_info[]="##INFO=<ID=BKPTID,Number=.,Type=String,Description=\"ID of the assembled alternate allele in the assembly file\">\n"
+	/*char header_info[]="##INFO=<ID=BKPTID,Number=.,Type=String,Description=\"ID of the assembled alternate allele in the assembly file\">\n"
 			"##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">\n"
 			"##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">\n"
 			"##INFO=<ID=SAMPLE,Number=1,Type=String,Description=\"Sample ID\">\n"
@@ -546,25 +546,32 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 			"##INFO=<ID=SVLEN,Number=.,Type=Integer,Description=\"Difference in length between REF and ALT alleles\">\n"
 			"##INFO=<ID=SVMETHOD,Number=.,Type=String,Description=\"Type of approach used to detect SV: RP (read pair), RD (read depth), SR (split read), or AS (assembly)\">\n"
 			"##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">\n";
-
+	 */
+	char header_info[]="##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">\n"
+			"##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">\n"
+			"##INFO=<ID=SAMPLE,Number=1,Type=String,Description=\"Sample ID\">\n"
+			"##INFO=<ID=SVALG,Number=1,Type=String,Description=\"SV discovery algorithm\">\n"
+			"##INFO=<ID=RPSUP,Number=1,Type=Integer,Description=\"Number of supporting read pairs\">\n"
+			"##INFO=<ID=SRSUP,Number=1,Type=Integer,Description=\"Number of supporting split reads\">\n"
+			"##INFO=<ID=END,Number=1,Type=Integer,Description=\"End coordinate of this variant\">\n"
+			"##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description=\"Imprecise structural variation\">\n"
+			"##INFO=<ID=PRECISE,Number=0,Type=Flag,Description=\"Precise structural variation\">\n"
+			"##INFO=<ID=MEINFO,Number=4,Type=String,Description=\"Mobile element info of the form NAME\">\n"
+			"##INFO=<ID=SVLEN,Number=.,Type=Integer,Description=\"Difference in length between REF and ALT alleles\">\n"
+			"##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">\n"
+			"##INFO=<ID=POS2,Number=1,Type=Integer,Description=\"Insertion loci of the duplicated segment\">\n"
+			"##INFO=<ID=ISINV,Number=0,Type=Flag,Description=\"Duplicated segment is in inverted orientation\">\n";
 
 
 	char header_filter[]="##FILTER=<ID=LowQual,Description=\"Genotype call confidence below LOD 1.3\">\n"
-			"##FILTER=<ID=dpr5,Description=\"Read Depth probability below 5%\">\n";
+			"##FILTER=<ID=mfilt,Description=\"Mobile element filter\">\n";
 
-	char header_format[] = "##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">\n"
-			"##FORMAT=<ID=CNQ,Number=1,Type=Float,Description=\"Copy number genotype quality for imprecise events\">\n"
-			"##FORMAT=<ID=DL,Number=1,Type=String,Description=\"Deletion Likelihood\">\n"
-			"##FORMAT=<ID=DUPL,Number=1,Type=String,Description=\"Duplication Likelihood\">\n"
-			"##FORMAT=<ID=FT,Number=.,Type=String,Description=\"Per-sample genotype filter, PASS for called genotypes or list of excluding filters\">\n"
-			"##FORMAT=<ID=GL,Number=3,Type=Float,Description=\"Genotype Likelihoods\">\n"
-			"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">\n"
-			"##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
-			"##FORMAT=<ID=CNVL,Number=1,Type=Integer,Description=\"CNV Likelihood\">\n"
+	char header_format[] = "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"
+			"##FORMAT=<ID=CNVL,Number=1,Type=Float,Description=\"CNV Likelihood\">\n"
 			"##FORMAT=<ID=HS,Number=1,Type=Float,Description=\"10x Barcode Homogeneity Score\">\n"
-			"##FORMAT=<ID=RD,Number=1,Type=String,Description=\"Read Depth\">\n"
-			"##FORMAT=<ID=RP,Number=1,Type=String,Description=\"Read Pair Support\">\n"
-			"##FORMAT=<ID=SR,Number=1,Type=String,Description=\"Split Read Support\">\n";
+			"##FORMAT=<ID=WE,Number=1,Type=Float,Description=\"SV Weight\">\n"
+			"##FORMAT=<ID=RP,Number=1,Type=Integer,Description=\"Read Pair Support\">\n"
+			"##FORMAT=<ID=SR,Number=1,Type=Integer,Description=\"Split Read Support\">\n";
 
 	char header_alt[]="##ALT=<ID=DEL,Description=\"Deletion\">\n";
 	time_t rawtime;
@@ -573,11 +580,16 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 	time ( &rawtime );
 	timeinfo = localtime ( &rawtime );
 
-	fprintf(fpOut,"##fileformat=VCFv4.1\n");
+	fprintf(fpOut,"##fileformat=VCFv4.3\n");
 	fprintf(fpOut, "##fileDate=%d%s%d%s%d\n", timeinfo->tm_year+1900, (timeinfo->tm_mon+1<10 ? "0" : ""), timeinfo->tm_mon+1, (timeinfo->tm_mday<10 ? "0" : ""), timeinfo->tm_mday);
-	/* TODO. Fix this with the SONIC info field */
-	fprintf(fpOut,"##reference=%s\n", params->ref_genome);
+	//fprintf(fpOut,"##reference=%s\n", params->ref_genome);
+	fprintf(fpOut,"##reference=%s\n", params->sonic_file);
 	fprintf(fpOut, "%s%s%s%s", header_info,header_filter,header_format,header_alt);
+
+	/* Contig field */
+	for( i = params->first_chr; i <= params->last_chr; i++)
+		fprintf(fpOut, "##contig=<ID=%s,length=%d>\n", params->this_sonic->chromosome_names[i], params->this_sonic->chromosome_lengths[i]);
+
 	fprintf(fpOut, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s","#CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT");
 
 	for( i = 0; i < params->num_bams; i++)
