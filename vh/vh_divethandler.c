@@ -848,10 +848,11 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 			strcpy( newLibInfo->indName, in_bams[bam_index]->sample_name);
 			newLibInfo->minDelta = in_bams[bam_index]->libraries[lib_cnt]->conc_min - 2 * in_bams[bam_index]->libraries[lib_cnt]->read_length;
 			newLibInfo->maxDelta = in_bams[bam_index]->libraries[lib_cnt]->conc_max - 2 * in_bams[bam_index]->libraries[lib_cnt]->read_length;
+
 			if( newLibInfo->minDelta < 0)
 				newLibInfo->minDelta = 0;
 			if( newLibInfo->maxDelta < 0)
-				newLibInfo->maxDelta = 0;
+				newLibInfo->maxDelta = 20;
 			newLibInfo->readLen = in_bams[bam_index]->libraries[lib_cnt]->read_length;
 
 			/* We store the reads in hash[] based on the hash values of read names */
@@ -896,7 +897,7 @@ int load_Divet_bam( bam_info** in_bams, parameters *params, int chr_index)
 				if( newLibInfo->minDelta < 0)
 					newLibInfo->minDelta = 0;
 				if( newLibInfo->maxDelta < 0)
-					newLibInfo->maxDelta = 0;
+					newLibInfo->maxDelta = 20;
 				newLibInfo->readLen = in_bams[bam_index]->libraries[lib_cnt]->read_length;
 
 				/* We store the reads in hash[] based on the hash values of read names */

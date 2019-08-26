@@ -59,9 +59,9 @@ int main( int argc, char** argv)
 
 	fprintf( logFile, "Command line:\n \t%s ", argv[0]);
 	for ( i = 1; i < argc; i++)
-	  fprintf( logFile, "%s ", argv[i]);
+		fprintf( logFile, "%s ", argv[i]);
 	fprintf( logFile, "\n\n");	
-	
+
 	/* Load configuration file (created if it does not exist) */
 	cfg = ( configuration*) getMem( sizeof( configuration));
 	load_config( cfg, params);
@@ -77,12 +77,12 @@ int main( int argc, char** argv)
 		params->last_chr = params->this_sonic->number_of_chromosomes - 1;
 
 	if (! compare_sonic_ref(params))
-	  {
-	        fprintf(stderr, "Reference FASTA and SONIC file do not match. Check if you are using the same version.\n"); 
+	{
+		fprintf(stderr, "Reference FASTA and SONIC file do not match. Check if you are using the same version.\n");
 		exit(EXIT_WRONG_SONIC);	    
-	  }
-	
-	
+	}
+
+
 	if ( TARDIS_DEBUG)
 		print_params( params);
 

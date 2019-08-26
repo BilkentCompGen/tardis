@@ -567,7 +567,6 @@ void vh_createIntersectingIntervals (int leftBreakPoint, char SVtype)
 		}
 	}
 	g_intersectInterval->heapSize = 0;
-
 }
 
 int vh_notBothDirections (ClustersFound * cluster)
