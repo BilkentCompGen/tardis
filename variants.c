@@ -500,22 +500,23 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		fprintf( fpOut, "GT:CNVL:RP:SR");
 
 	control = 0;
-	fprintf( fpOut, "\t");
+
 	for( j = 0; j < params->num_bams; j++)
 	{
+		fprintf( fpOut, "\t");
 		if( in_bams[j]->contribution == false)
 		{
 			if (params->ten_x || params->output_hs)
-				fprintf( fpOut, "0/0:%2.6lf:%d:%d:%8.6f:%8.10f\t", sv->cnv_score[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
+				fprintf( fpOut, "0/0:%2.6lf:%d:%d:%8.6f:%8.10f", sv->cnv_score[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
 			else 
-				fprintf( fpOut, "0/0:%2.6lf:%d:%d\t", sv->cnv_score[j], sv->rp[j], sv->sr[j]);
+				fprintf( fpOut, "0/0:%2.6lf:%d:%d", sv->cnv_score[j], sv->rp[j], sv->sr[j]);
 		}
 		else
 		{
 			if (params->ten_x || params->output_hs)
-				fprintf( fpOut, "%s:%2.6lf:%d:%d:%8.6f:%8.10f\t", sv->zygosity[j], sv->cnv_score[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
+				fprintf( fpOut, "%s:%2.6lf:%d:%d:%8.6f:%8.10f", sv->zygosity[j], sv->cnv_score[j], sv->rp[j], sv->sr[j], sv->homogeneity_score, sv->weight);
 			else
-				fprintf( fpOut, "%s:%2.6f:%d:%d\t", sv->zygosity[j], sv->cnv_score[j], sv->rp[j], sv->sr[j]);
+				fprintf( fpOut, "%s:%2.6f:%d:%d", sv->zygosity[j], sv->cnv_score[j], sv->rp[j], sv->sr[j]);
 		}
 	}
 	fprintf( fpOut, "\n");
