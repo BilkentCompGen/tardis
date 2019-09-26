@@ -5,7 +5,7 @@ Toolkit for Automated and Rapid DIscovery of Structural variants
 
 Soylev, A., Kockan, C., Hormozdiari, F., & Alkan, C. (2017). Toolkit for automated and rapid discovery of structural variants. Methods, 129, 3-7. https://doi.org/10.1016/j.ymeth.2017.05.030
 
-Soylev, A., Le, T., Amini, H., Alkan, C., & Hormozdiari, F. (2018). Discovery of tandem and interspersed segmental duplications using high throughput sequencing. bioRxiv, posted August 16, 2018. https://doi.org/10.1101/393694
+Soylev, A., Le, T., Amini, H., Alkan, C., & Hormozdiari, F. (2018). Discovery of tandem and interspersed segmental duplications using high throughput sequencing. Bioinformatics, [epub Apr 1; doi: 10.1093/bioinformatics/btz237], 2019.
 
 TARDIS is developed and tested using Linux operating system (mostly Ubuntu flavors), and gcc versions 5.4 and 7.3. If it does not run as intended in other operating systems, we recommend to use the Docker container available at https://hub.docker.com/r/alkanlab/tardis/. We provide a sample script for Docker usage in this repository.
 
