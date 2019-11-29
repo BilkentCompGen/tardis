@@ -965,11 +965,12 @@ float calWeight( bam_info **in_bams, parameters *params, int clusterId, int *cou
 	{
 		if( read_names[ptrReadMapping->readId].readCovered == 0 && listClusterEl[clusterId].indIdCount[ptrReadMapping->indId] > -1)
 		{
-			supOfIndSeen[ptrReadMapping->indId]++;
 
 			/* Count the number of split reads supporting this cluster */
 			if( strcmp( multiLibs[read_names[ptrReadMapping->readId].libId].libName, "SplitRead") == 0)
 				listClusterEl[clusterId].sr_support[ptrReadMapping->indId]++;
+
+			supOfIndSeen[ptrReadMapping->indId]++;
 
 			//////////////////////////////////////THE HUERISTIC//////////////////////////
 			//Instead of taking the total support as number of reads in each cluster, we use summation of
