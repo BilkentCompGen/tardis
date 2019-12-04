@@ -111,6 +111,7 @@ typedef struct _params
 	int alt_mapping; /* check the alternative mapping locations from the xa field in bwa */
 	int seq_resolved; /* whether to output sequence resolved calls */
 	int no_interdup; /* whether to cluster interspersed duplications */
+	int no_mei; /* whether to cluster mobile element insertions */
 	char skip_mrfast; /* boolean stand-in to skip mrFast mapping (If you already have the divet file created) */
 	int threads; /* number of threads to use for parallel mrFAST, and maybe future parallelization of TARDIS */
 	int num_bams; /* number of input BAM files */

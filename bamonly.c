@@ -653,7 +653,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 				continue;
 			}
 			else
-			        any_in_bam = 1;
+				any_in_bam = 1;
 
 			in_bams[bam_index]->iter = sam_itr_queryi( in_bams[bam_index]->bam_file_index, chr_index_bam, 0, params->this_sonic->chromosome_lengths[chr_index]);
 			if( in_bams[bam_index]->iter == NULL)
@@ -787,16 +787,19 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 		fflush( stderr);
 
 		/* Mei */
-		fprintf( stderr, "\nPreparing MEI clusters");
-		initializeReadMapping_MEI( in_bams, params, chr_index);
-		fprintf( stderr, "..");
-		fflush( stderr);
-		MEICluster_Region( params, chr_index);
-		fprintf( stderr, "..");
-		fflush( stderr);
-		vh_finalizeReadMapping_Mei( params->this_sonic->chromosome_lengths[chr_index]);
-		fprintf( stderr, "..");
-		fflush( stderr);
+		if( params->no_interdup == 0)
+		{
+			fprintf( stderr, "\nPreparing MEI clusters");
+			initializeReadMapping_MEI( in_bams, params, chr_index);
+			fprintf( stderr, "..");
+			fflush( stderr);
+			MEICluster_Region( params, chr_index);
+			fprintf( stderr, "..");
+			fflush( stderr);
+			vh_finalizeReadMapping_Mei( params->this_sonic->chromosome_lengths[chr_index]);
+			fprintf( stderr, "..");
+			fflush( stderr);
+		}
 
 		/* NumT */
 		if( ( strcmp( params->this_sonic->chromosome_names[chr_index], "MT") != 0)
@@ -870,18 +873,18 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 		free_the_rest( in_bams, params);
 	}
 
-	
+
 	fprintf( stderr, "\n");
 	fclose( fpVcf);
 
 	if ( !any_in_bam)
-	  {
-	    fprintf( stderr, "No chromosome is found in the input BAM/CRAM. Your SONIC and/or reference FASTA files do not match the reference used to generate the alignment file(s).\n");
-	    fprintf( stderr, "Check the reference genome versions and make sure you use the correct SONIC and reference FASTA files.\n");
-	    exit(EXIT_WRONG_SONIC);
-	  }
+	{
+		fprintf( stderr, "No chromosome is found in the input BAM/CRAM. Your SONIC and/or reference FASTA files do not match the reference used to generate the alignment file(s).\n");
+		fprintf( stderr, "Check the reference genome versions and make sure you use the correct SONIC and reference FASTA files.\n");
+		exit(EXIT_WRONG_SONIC);
+	}
 
-	
+
 	if( debug_mode)
 		fclose( fileOutput);
 
