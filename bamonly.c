@@ -787,7 +787,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 		fflush( stderr);
 
 		/* Mei */
-		if( params->no_interdup == 0)
+		if( params->no_mei == 0)
 		{
 			fprintf( stderr, "\nPreparing MEI clusters");
 			initializeReadMapping_MEI( in_bams, params, chr_index);
