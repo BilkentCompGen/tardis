@@ -1,5 +1,5 @@
-TARDIS_VERSION := "1.0.6"
-TARDIS_UPDATE := "December 04, 2019"
+TARDIS_VERSION := "1.0.7"
+TARDIS_UPDATE := "December 08, 2019"
 TARDIS_DEBUG := 0
 BUILD_DATE := "$(shell date)"
 CC=gcc

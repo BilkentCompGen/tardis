@@ -33,7 +33,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	int index;
 	int o;
 	static int sensitive = 0, no_soft_clip = 0, debug = 0, no_interdup = 0, no_mei = 0;
-	static int skip_mrfast = 0, quick = 0, ten_x = 0, output_hs = 0, alt_mapping = 0, resolved = 0;
+	static int skip_mrfast = 0, quick = 1, ten_x = 0, output_hs = 0, alt_mapping = 0, resolved = 0;
 	static int make_sonic = 0;
 	static int load_sonic = 0;
 	static int do_remap = 0;
@@ -73,7 +73,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"xa", no_argument, &alt_mapping, 1 },
 			{"resolved", no_argument, &resolved, 1 },
 			{"sensitive", no_argument, &sensitive,    1 },
-			{"skip-mrfast", no_argument, &skip_mrfast,  1 },
+			{"skip-mrfast", no_argument, &skip_mrfast,  1 }, 
 			{"quick" , no_argument, &quick,  1 },
 			{"remap" , no_argument, &do_remap,  1 },
 			{"10x", no_argument, &ten_x, 1},
@@ -190,14 +190,15 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		}
 	}
 
-	/* check quick vs remap mode */
+	// check quick vs remap mode 
 	if ( quick && do_remap){
 		fprintf(stderr, "Cannot run both in quick and remap mode. Resetting to default (quick mode).\n");
 		do_remap = 0;
 	}
 	else if ( do_remap){
 		quick = 0;
-	}
+		} 
+	
 
 	/* histogram only mode */
 	if ( histogram_only)
@@ -347,10 +348,10 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		params->quick = 1;
 
 	if( params->quick)
-		running_mode = QUICK;
+		running_mode = QUICK;	
 	else
-		running_mode = SENSITIVE;
-
+		running_mode = SENSITIVE;	
+	
 	if (load_sonic)
 		params->load_sonic = load_sonic;
 
@@ -390,11 +391,13 @@ void print_help( void)
 	fprintf( stdout, "\t--first-chr [chr_index]	   : Start running from a specific chromosome [0-based index in reference file].\n");
 	fprintf( stdout, "\t--last-chr [chr_index]	   : Run up to a specific chromosome [0-based index in reference file].\n");
 
+	/*
 	fprintf( stdout, "\n\tAdditional parameters for sensitive mode:\n\n");
 	fprintf( stdout, "\t--sensitive                : Sensitive mode that uses all map locations. Requires mrFAST remapping.\n");
 	fprintf( stdout, "\t--skip-mrfast              : Skip mrFAST mapping. Use this only if you already have the correct divet file. Sensitive mode only\n");
 	fprintf( stdout, "\t--threads                  : Number of threads for mrFAST to remap discordant reads.\n");
-
+	*/
+	
 	fprintf( stdout, "\n\tAdditional parameters to build SONIC file within TARDIS:\n\n");
 	fprintf( stdout, "\t--make-sonic [sonic file]  : SONIC file that will contain the assembly annotations.\n");
 	fprintf( stdout, "\t--sonic-info [\"string\"]    : SONIC information string to be used as the reference genome name.\n");

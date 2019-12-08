@@ -5,7 +5,7 @@ Toolkit for Automated and Rapid DIscovery of Structural variants
 
 Soylev, A., Kockan, C., Hormozdiari, F., & Alkan, C. (2017). Toolkit for automated and rapid discovery of structural variants. Methods, 129, 3-7. https://doi.org/10.1016/j.ymeth.2017.05.030
 
-Soylev, A., Le, T., Amini, H., Alkan, C., & Hormozdiari, F. (2018). Discovery of tandem and interspersed segmental duplications using high throughput sequencing. Bioinformatics, [epub Apr 1; doi: 10.1093/bioinformatics/btz237], 2019.
+Soylev, A., Le, T., Amini, H., Alkan, C., & Hormozdiari, F. (2018). Discovery of tandem and interspersed segmental duplications using high throughput sequencing. Bioinformatics, Oct 15; 35(20): 3923–3930, 2019.
 
 TARDIS is developed and tested using Linux operating system (mostly Ubuntu flavors), and gcc versions 5.4 and 7.3. If it does not run as intended in other operating systems, we recommend to use the Docker container available at https://hub.docker.com/r/alkanlab/tardis/. We provide a sample script for Docker usage in this repository.
 
@@ -32,7 +32,6 @@ htslib also requires:
 
 Optional dependencies
 =====================
- * mrFAST (https://github.com/BilkentCompGen/mrfast) - sensitive mode only.
  * gnuplot http://www.gnuplot.info) - for plotting fragment size distributions.
 
 Fetching TARDIS
@@ -107,24 +106,11 @@ Please refer to the SONIC development repository: https://github.com/calkan/soni
 The README.md file includes documentation on how to obtain the necessary files for different genomes from the UCSC Genome Browser.
 
 
-Running TARDIS - QUICK mode
+Running TARDIS
 ===========================
 
 	tardis -i myinput.bam --ref human_g1k_v37.fasta --sonic human_g1k_v37.sonic  \
 		--out myoutput
-
-
-Running TARDIS - SENSITIVE mode (mrFAST Mappings)
-=================================================
-
-Sensitive mode uses mrFAST mappings (all possible mappings) with read-pair and read-depth signatures. 
-
-	tardis -i myinput.bam --ref human_g1k_v37.fasta --sonic human_g1k_v37.sonic  \
-		--sensitive --out myoutput
-
-This command first runs mrFAST and creates the DIVET file that contains all possible mappings of the reads in your BAM file. However, if you already have the DIVET files (there should be as many DIVET files as there are libraries in your BAM files), you can use --skip-mrfast
-
-DIVET files should be inside the TARDIS directory or under the divet/ folder
 
 
 Running TARDIS - Multiple BAM/CRAM files
@@ -164,16 +150,11 @@ All parameters
 	--mei   ["Alu:L1:SVA"]     : List of mobile element names.
 	--no-soft-clip             : Skip soft clip remapping.
 	--no-interdup              : Skip interspersed duplication clustering.
+	--no-mei                   : Skip mobile element insertion (MEI) clustering.
 	--resolved                 : Output sequence resolved vcf calls.
 	--xa                       : Look for the alternative mapping locations in BWA.
 	--first-chr [chr_index]	   : Start running from a specific chromosome [0-based index in reference file]
 	--last-chr  [chr_index]	   : Run up to a specific chromosome [0-based index in reference file]
-
-	Additional parameters for sensitive mode:
-
-	--sensitive                : Sensitive mode that uses all map locations. Requires mrFAST remapping.
-	--skip-mrfast              : Skip mrFAST mapping. Use this only if you already have the correct divet file. Sensitive mode only
-	--threads                  : Number of threads for mrFAST to remap discordant reads.
 
 	Additional parameters to build SONIC file within TARDIS:
 
