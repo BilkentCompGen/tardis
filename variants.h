@@ -60,4 +60,5 @@ void free_chr(struct strvar ** variations, char* chr_);
 void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params);
 int print_chr(struct strvar ** variations, parameters *params, char* chr_, FILE *fpOut);
 void print_sv_stats();
+char* readRefAltSeqMEI( parameters *params, char* chr_name, char *mei_string);
 #endif

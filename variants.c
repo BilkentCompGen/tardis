@@ -139,14 +139,14 @@ char* reverseComplement( char* str)
 
 void print_sv_stats()
 {
-	fprintf(logFile,"\n\nTARDIS found %d SVs total\n", del_cnt + ins_cnt + inv_cnt + tandup_cnt + mei_cnt + interdup_cnt + invdup_cnt);
+	fprintf(logFile,"\n\nTARDIS found %d SVs total\n", del_cnt + ins_cnt + inv_cnt + tandup_cnt + mei_cnt - mei_cnt_filtered + interdup_cnt + invdup_cnt);
 	fprintf(logFile,"\tDeletion: %d\n", del_cnt);
 	fprintf(logFile,"\tInsertion: %d\n", ins_cnt);
 	fprintf(logFile,"\tInversion: %d\n", inv_cnt);
 	fprintf(logFile,"\tTandem Duplication: %d\n", tandup_cnt);
 	fprintf(logFile,"\tInterspersed Duplication: %d\n", interdup_cnt);
 	fprintf(logFile,"\tInterspersed (Inverted) Duplication: %d\n", invdup_cnt);
-	fprintf(logFile,"\tMEI: %d (%d filtered)\n", mei_cnt, mei_cnt_filtered);
+	fprintf(logFile,"\tMEI: %d (%d filtered)\n", mei_cnt - mei_cnt_filtered, mei_cnt_filtered);
 	fprintf(logFile,"\tNUMT: %d\n", numt_cnt);
 
 	fprintf(stderr,"\n\nTARDIS is complete. Found %d SVs total\n", del_cnt + ins_cnt + inv_cnt + tandup_cnt + mei_cnt + interdup_cnt + invdup_cnt);
@@ -156,7 +156,7 @@ void print_sv_stats()
 	fprintf(stderr,"\tTandem Duplication: %d\n", tandup_cnt);
 	fprintf(stderr,"\tInterspersed Duplication: %d\n", interdup_cnt);
 	fprintf(stderr,"\tInterspersed (Inverted) Duplication: %d\n", invdup_cnt);
-	fprintf(stderr,"\tMEI: %d (%d filtered)\n", mei_cnt, mei_cnt_filtered);
+	fprintf(stderr,"\tMEI: %d (%d filtered)\n", mei_cnt - mei_cnt_filtered, mei_cnt_filtered);
 	fprintf(stderr,"\tNUMT: %d\n", numt_cnt);
 }
 
@@ -250,6 +250,9 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		if( seq != NULL)
 			free( seq);
 
+		if( sv->filtered != false)
+			mei_cnt_filtered++;
+
 		sv_len = abs( ( sv->inner_end - sv->inner_start + 1));
 		total_inv_length += sv_len;
 	}
@@ -258,7 +261,9 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		seq = readRefAltSeqMEI( params, sv->chr_name, sv->mei_name);
 
 		if( seq != NULL)
-			sv_len = strlen(seq);
+			sv_len = strlen(seq) + abs(sv->inner_start - sv->outer_start);
+		else
+			sv_len = abs(sv->inner_end - sv->inner_start) + abs(sv->inner_start - sv->outer_start);
 
 		if( params->seq_resolved != 0 || sv->imprecise == NOT_IMPRECISE)
 		{
@@ -266,9 +271,6 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 				fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_mei_", ++mei_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "mfilt");
 			else
 				fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_mei_", ++mei_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
-
-			if( sv->filtered)
-				mei_cnt_filtered++;
 		}
 		else if( seq != NULL)
 			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_mei_", ++mei_cnt, seq[0], "<", "INS:ME:", sv->mei_name, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
@@ -278,26 +280,30 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		if( seq != NULL)
 			free( seq);
 
-		//sv_len = abs( ( sv->outer_end - sv->inner_end + 1));
+		if( sv->filtered != false)
+			mei_cnt_filtered++;
+
 		total_mei_length += sv_len;
 	}
 	else if( sv->svtype == MEIREVERSE)
 	{
 		seq = readRefAltSeqMEI( params, sv->chr_name, sv->mei_name);
 		if(seq != NULL)
-			sv_len = strlen(seq);
+			sv_len = strlen(seq) + abs(sv->inner_start - sv->outer_start);
+		else
+			sv_len = abs(sv->inner_end - sv->inner_start) + abs(sv->inner_start - sv->outer_start);
 
 		if( params->seq_resolved != 0 || sv->imprecise == NOT_IMPRECISE)
 		{
 			if( seq != NULL)
 			{
 				seq_rev = reverseComplement( seq);
-				fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_end) + 1, "vh_mei_", ++mei_cnt, seq[0], seq_rev, 255, ( sv->filtered == false) ? "PASS" : "mfilt");
+				fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_mei_", ++mei_cnt, seq[0], seq_rev, 255, ( sv->filtered == false) ? "PASS" : "mfilt");
 			}
 			else
 			{
 				seq_rev = NULL;
-				fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_end) + 1, "vh_mei_", ++mei_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
+				fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_mei_", ++mei_cnt, ".", ".", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
 			}
 			if( sv->filtered)
 				mei_cnt_filtered++;
@@ -306,14 +312,13 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 				free( seq_rev);
 		}
 		else if( seq != NULL)
-			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_end) + 1, "vh_mei_", ++mei_cnt, seq[0], "<", "INS:ME:", sv->mei_name, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
+			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_mei_", ++mei_cnt, seq[0], "<", "INS:ME:", sv->mei_name, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
 		else
-			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_end) + 1, "vh_mei_", ++mei_cnt, ".", "<", "INS:ME:", sv->mei_name, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
+			fprintf( fpOut, "%s\t%i\t%s%d\t%s\t%s%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1, "vh_mei_", ++mei_cnt, ".", "<", "INS:ME:", sv->mei_name, ">", 255, ( sv->filtered == false) ? "PASS" : "mfilt");
 
 		if( seq != NULL)
 			free( seq);
 
-		//sv_len = abs( ( sv->outer_end - sv->inner_end + 1));
 		total_mei_length += sv_len;
 	}
 	else if( sv->svtype == NUMTFORWARD || sv->svtype == NUMTREVERSE)
@@ -445,8 +450,8 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 
 	if( sv->svtype == MEIFORWARD)
 		fprintf( fpOut, "END=%d;SVLEN=%d;MEINFO=%s;RPSUP=%d;SRSUP=%d;", (sv->outer_start) + sv_len + 1, sv_len, sv->mei_name, rp_total, sr_total);
-	if( sv->svtype == MEIREVERSE)
-		fprintf( fpOut, "END=%d;SVLEN=%d;MEINFO=%s;RPSUP=%d;SRSUP=%d;", (sv->outer_end) + sv_len + 1, sv_len, sv->mei_name, rp_total, sr_total);
+	else if( sv->svtype == MEIREVERSE)
+		fprintf( fpOut, "END=%d;SVLEN=%d;MEINFO=%s;RPSUP=%d;SRSUP=%d;", (sv->outer_start) + sv_len + 1, sv_len, sv->mei_name, rp_total, sr_total);
 	else if( sv->svtype == INVERSION)
 		fprintf( fpOut, "END=%d;SVLEN=%d;RPSUP=%d;SRSUP=%d;", (sv->outer_end) + 1, sv_len, rp_total, sr_total);
 	else if( sv->svtype == INVDUPLEFT || sv->svtype == INTERDUPLEFT)
@@ -478,7 +483,7 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 		fprintf( fpOut, "SVTYPE=DEL:ME:%s\t", sv->mei_type);
 	else if( sv->svtype == DELETION)
 		fprintf( fpOut, "SVTYPE=DEL\t");
-	else if( sv->svtype == MEIFORWARD || sv->svtype == MEIREVERSE)
+	else if(sv->svtype == MEIREVERSE || sv->svtype == MEIFORWARD)
 		fprintf( fpOut, "SVTYPE=INS:ME:%s\t", sv->mei_type);
 	else if( sv->svtype == NUMTFORWARD || sv->svtype == NUMTREVERSE)
 		fprintf( fpOut, "SVTYPE=INS:MT\t");

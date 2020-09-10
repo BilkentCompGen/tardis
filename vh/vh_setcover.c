@@ -716,9 +716,8 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 {
 	int i;
 	char mobileName[strSize];
-
-	float is_start_satellite, is_end_satellite, is_mid_satellite;
-	sonic_repeat *mei_start, *mei_end, *mei_mid;
+	float is_start_satellite, is_end_satellite, is_mid_satellite, is_all_satellite;
+	sonic_repeat *mei_start, *mei_end, *mei_mid, *mei_all;
 	bool MEI_Filter = false;
 	struct strvar* var_example = NULL;
 
@@ -731,19 +730,32 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 			in_bams[i]->contribution = true;
 	}
 
-	is_start_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV_Outer + 1);
-	is_end_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posEndSV_Outer - 1, listClusterEl[cluster_id].posEndSV_Outer);
-	is_mid_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, (int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2,
-			(int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2 + 1);
+	if( listClusterEl[cluster_id].SVtype == MEIFORWARD ||  listClusterEl[cluster_id].SVtype == MEIREVERSE)
+	{
 
-	mei_start = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV_Outer + 1, params->mei);
-	mei_end = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posEndSV_Outer - 1, listClusterEl[cluster_id].posEndSV_Outer, params->mei);
-	mei_mid = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, (int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2,
-			(int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2 + 1, params->mei);
+		is_all_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posEndSV_Outer);
+		is_start_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV_Outer + 1);
+		is_end_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posEndSV_Outer - 1, listClusterEl[cluster_id].posEndSV_Outer);
+		is_mid_satellite = sonic_is_satellite(params->this_sonic, listClusterEl[cluster_id].chromosome_name, (int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2,
+				(int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2 + 1);
 
+		mei_start = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer, listClusterEl[cluster_id].posStartSV_Outer + 1, params->mei);
+		mei_end = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posEndSV_Outer - 1, listClusterEl[cluster_id].posEndSV_Outer, params->mei);
+		mei_mid = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, (int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2,
+				(int)( listClusterEl[cluster_id].posStartSV_Outer + listClusterEl[cluster_id].posEndSV_Outer) / 2 + 1, params->mei);
+
+		mei_all = sonic_is_mobile_element( params->this_sonic, listClusterEl[cluster_id].chromosome_name, listClusterEl[cluster_id].posStartSV_Outer - 1, listClusterEl[cluster_id].posEndSV_Outer, params->mei);
+	}
 	if( listClusterEl[cluster_id].SVtype == MEIFORWARD)
 	{
+
 		strcpy( mobileName, listClusterEl[cluster_id].mobileName);
+		//if(mei_all != NULL)
+			//fprintf(stderr, "FORWARD: %s, %s - %s, %s, %d\n", mobileName, listClusterEl[cluster_id].mei_type, mei_all->repeat_type, mei_all->repeat_class, mei_all->strand);
+
+		if( ( mei_all != NULL && strcmp( mei_all->repeat_class, listClusterEl[cluster_id].mei_type) == 0 &&
+				mei_all->strand == SONIC_STRAND_FWD) || ( is_all_satellite != 0))
+			MEI_Filter = true;
 
 		if( ( mei_start != NULL && strcmp( mei_start->repeat_type, mobileName) == 0 &&
 				mei_start->strand == SONIC_STRAND_FWD) || ( is_start_satellite != 0))
@@ -760,7 +772,8 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 	else if( listClusterEl[cluster_id].SVtype == MEIREVERSE)
 	{
 		strcpy( mobileName, listClusterEl[cluster_id].mobileName);
-
+		//if(mei_all != NULL)
+			//fprintf(stderr, "REVERSE: %s, %s - %s, %s, %d\n", mobileName, listClusterEl[cluster_id].mei_type, mei_all->repeat_type, mei_all->repeat_class, mei_all->strand);
 		if( ( mei_start != NULL && strcmp( mei_start->repeat_type, mobileName) == 0 &&
 				mei_start->strand == SONIC_STRAND_REV) || ( is_start_satellite != 0))
 			MEI_Filter = true;
@@ -771,6 +784,10 @@ void outputCluster( bam_info** in_bams, parameters* params, int cluster_id, FILE
 
 		if( ( mei_mid != NULL && strcmp( mei_mid->repeat_type, mobileName) == 0 &&
 				mei_mid->strand == SONIC_STRAND_REV) || ( is_mid_satellite != 0))
+			MEI_Filter = true;
+
+		if( ( mei_all != NULL && strcmp( mei_all->repeat_class, listClusterEl[cluster_id].mei_type) == 0 &&
+				mei_all->strand == SONIC_STRAND_REV) || ( is_all_satellite != 0))
 			MEI_Filter = true;
 	}
 
@@ -1299,6 +1316,15 @@ void processTheSV( bam_info **in_bams, parameters *params, int listClusterId, in
 			tmp_cluster = tmp_cluster->next;
 		}
 	}
+	/*if(listClusterEl[listClusterId].SVtype == MEIREVERSE)
+	{
+		fprintf(stderr,"REVERSE: %d - %d - %d - %d\n", posStartSV_Outer, posStartSV, posEndSV, posEndSV_Outer);
+	}
+	else if(listClusterEl[listClusterId].SVtype == MEIFORWARD)
+	{
+		fprintf(stderr,"FORWARD: %d - %d - %d - %d\n", posStartSV_Outer, posStartSV, posEndSV, posEndSV_Outer);
+	}*/
+
 	listClusterEl[listClusterId].posStartSV = posStartSV;
 	listClusterEl[listClusterId].posStartSV_Outer = posStartSV_Outer;
 	listClusterEl[listClusterId].posEndSV = posEndSV;
