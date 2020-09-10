@@ -30,9 +30,11 @@ htslib also requires:
 	* Ubuntu example:
 	sudo apt-get install liblzma-dev
 
+Note that your BAM/CRAM files should be PCR free, otherwise you might get inaccurate results. Please eliminate PCR duplicates before running TARDIS with either Sambamba (https://lomereiter.github.io/sambamba/) or Picard (https://broadinstitute.github.io/picard/).
+
 Optional dependencies
 =====================
- * gnuplot http://www.gnuplot.info) - for plotting fragment size distributions.
+ * gnuplot (http://www.gnuplot.info) - for plotting fragment size distributions.
 
 Fetching TARDIS
 ===============
