@@ -600,7 +600,7 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 	fprintf(fpOut, "%s%s%s%s", header_info,header_filter,header_format,header_alt);
 
 	/* Contig field */
-	for( i = params->first_chr; i <= params->last_chr; i++)
+	for( i = params->first_chr; i < params->last_chr; i++)
 		fprintf(fpOut, "##contig=<ID=%s,length=%d>\n", params->this_sonic->chromosome_names[i], params->this_sonic->chromosome_lengths[i]);
 
 	fprintf(fpOut, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s","#CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT");
