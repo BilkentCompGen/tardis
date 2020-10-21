@@ -339,12 +339,12 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 
 		if( ( params->seq_resolved != 0 || sv->imprecise == NOT_IMPRECISE) && seq != NULL)
 		{
-			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut, "%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1,"vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else if( seq != NULL)
-			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, seq[0], "<", "DUP:TANDEM", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1,"vh_dup_", ++dup_cnt, seq[0], "<", "DUP:TANDEM", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:TANDEM", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1,"vh_dup_", ++dup_cnt, ".", "<", "DUP:TANDEM", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		if( seq != NULL)
 			free( seq);
@@ -362,12 +362,12 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 
 		if( ( params->seq_resolved != 0 || sv->imprecise == NOT_IMPRECISE) && seq != NULL)
 		{
-			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1,"vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else if( seq != NULL)
-			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, seq[0], "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1,"vh_dup_", ++dup_cnt, seq[0], "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1,"vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		if( seq != NULL)
 			free( seq);
@@ -385,12 +385,12 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 
 		if( ( params->seq_resolved != 0 || sv->imprecise == NOT_IMPRECISE) && seq != NULL)
 		{
-			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1,"vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else if( seq != NULL)
-			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, seq[0], "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1,"vh_dup_", ++dup_cnt, seq[0], "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1,"vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		if( seq != NULL)
 			free( seq);
@@ -408,12 +408,12 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 
 		if( ( params->seq_resolved != 0 || sv->imprecise == NOT_IMPRECISE) && seq != NULL)
 		{
-			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1,"vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else if( seq!= NULL)
-			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, seq[0], "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1,"vh_dup_", ++dup_cnt, seq[0], "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->outer_start) + 1,"vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		if( seq != NULL)
 			free( seq);
@@ -431,12 +431,12 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 
 		if( ( params->seq_resolved != 0 || sv->imprecise == NOT_IMPRECISE) && seq != NULL)
 		{
-			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1,"vh_dup_", ++dup_cnt, seq[0], seq, 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		}
 		else if( seq != NULL)
-			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, seq[0], "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%c\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1,"vh_dup_", ++dup_cnt, seq[0], "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 		else
-			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1," vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
+			fprintf( fpOut,"%s\t%i\t%s%d\t%s\t%s%s%s\t%d\t%s\t", sv->chr_name, ( sv->inner_end) + 1,"vh_dup_", ++dup_cnt, ".", "<", "DUP:ISP", ">", 255, ( sv->filtered == false) ? "PASS" : "LowQual");
 
 		if( seq != NULL)
 			free( seq);
@@ -536,23 +536,6 @@ void print_strvar( bam_info** in_bams, parameters* params, struct strvar* sv, FI
 void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 {
 	int i;
-	/*char header_info[]="##INFO=<ID=BKPTID,Number=.,Type=String,Description=\"ID of the assembled alternate allele in the assembly file\">\n"
-			"##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">\n"
-			"##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">\n"
-			"##INFO=<ID=SAMPLE,Number=1,Type=String,Description=\"Sample ID\">\n"
-			"##INFO=<ID=SVALG,Number=1,Type=String,Description=\"SV discovery algorithm\">\n"
-			"##INFO=<ID=RPSUP,Number=1,Type=Integer,Description=\"Number of supporting read pairs\">\n"
-			"##INFO=<ID=SRSUP,Number=1,Type=Integer,Description=\"Number of supporting split reads\">\n"
-			"##INFO=<ID=END,Number=1,Type=Integer,Description=\"End coordinate of this variant\">\n"
-			"##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description=\"Imprecise structural variation\">\n"
-			"##INFO=<ID=PRECISE,Number=0,Type=Flag,Description=\"Precise structural variation\">\n"
-			"##INFO=<ID=MEINFO,Number=4,Type=String,Description=\"Mobile element info of the form NAME\">\n"
-			"##INFO=<ID=METRANS,Number=4,Type=String,Description=\"Mobile element transduction info of the form CHR\">\n"
-			"##INFO=<ID=NOVEL,Number=0,Type=Flag,Description=\"Indicates a novel structural variation\">\n"
-			"##INFO=<ID=SVLEN,Number=.,Type=Integer,Description=\"Difference in length between REF and ALT alleles\">\n"
-			"##INFO=<ID=SVMETHOD,Number=.,Type=String,Description=\"Type of approach used to detect SV: RP (read pair), RD (read depth), SR (split read), or AS (assembly)\">\n"
-			"##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">\n";
-	 */
 	char header_info[]="##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">\n"
 			"##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">\n"
 			"##INFO=<ID=SAMPLE,Number=1,Type=String,Description=\"Sample ID\">\n"
@@ -562,7 +545,7 @@ void print_vcf_header( FILE *fpOut, bam_info** in_bams, parameters *params)
 			"##INFO=<ID=END,Number=1,Type=Integer,Description=\"End coordinate of this variant\">\n"
 			"##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description=\"Imprecise structural variation\">\n"
 			"##INFO=<ID=PRECISE,Number=0,Type=Flag,Description=\"Precise structural variation\">\n"
-			"##INFO=<ID=MEINFO,Number=4,Type=String,Description=\"Mobile element info of the form NAME\">\n"
+			"##INFO=<ID=MEINFO,Number=1,Type=String,Description=\"Mobile element info of the form NAME\">\n"
 			"##INFO=<ID=SVLEN,Number=.,Type=Integer,Description=\"Difference in length between REF and ALT alleles\">\n"
 			"##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">\n"
 			"##INFO=<ID=POS2,Number=1,Type=Integer,Description=\"Insertion loci of the duplicated segment\">\n"
