@@ -68,7 +68,7 @@ int main( int argc, char** argv)
 
 	/* make_sonic is standalone. Execute and return.  */
 	if ( params->make_sonic)
-		return sonic_build(params->ref_genome, params->gaps, params->reps, params->dups, params->sonic_info, params->sonic_file);
+		sonic_build(params->ref_genome, params->gaps, params->reps, params->dups, params->sonic_info, params->sonic_file);
 
 	/* Load SONIC */
 	params->this_sonic = sonic_load(params->sonic_file);
