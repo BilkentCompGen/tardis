@@ -160,7 +160,6 @@ All parameters
 	--rp   [int]               : Minimum number of supporting read pairs in initial clustering (Default is 5).
 	--mei   [string	]          : List of mobile element names separated by colon (Default is ["Alu:L1:SVA"])
 	--no-soft-clip             : Skip soft clip remapping.
-	--no-interdup              : Skip interspersed duplication clustering.
 	--no-mei                   : Skip mobile element insertion (MEI) clustering.
 	--resolved                 : Output sequence resolved vcf calls.
 	--first-chr [int]	   : Start running from a specific chromosome [0-based index in reference file]
