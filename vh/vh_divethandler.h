@@ -1,4 +1,3 @@
-
 #ifndef VH_DIVET_HANDLER__
 #define VH_DIVET_HANDLER__
 

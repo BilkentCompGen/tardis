@@ -5,7 +5,7 @@
 #include "external.h"
 #include "processfq.h"
 
-int remap_mrfast( parameters *params, bam_info ** in_bams, configuration *cfg)
+/*int remap_mrfast( parameters *params, bam_info ** in_bams, configuration *cfg)
 {
 	int i, j;
 	char cmdline[4096];
@@ -52,7 +52,7 @@ int remap_mrfast( parameters *params, bam_info ** in_bams, configuration *cfg)
 	}  
 
 	return RETURN_SUCCESS;
-}
+}*/
 
 
 void plot_histogram  ( parameters *params, configuration *cfg, char *sample_name, char *libname, int sample_size, int *fragment_lengths, float average, float stdev)

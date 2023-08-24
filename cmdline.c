@@ -32,7 +32,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 {
 	int index;
 	int o;
-	static int sensitive = 0, no_soft_clip = 0, debug = 0, no_interdup = 0, no_mei = 0;
+	static int sensitive = 0, no_soft_clip = 0, debug = 0, interdup = 0, no_mei = 0;
 	static int skip_mrfast = 0, quick = 1, ten_x = 0, output_hs = 0, alt_mapping = 0, resolved = 0;
 	static int make_sonic = 0;
 	static int load_sonic = 0;
@@ -49,7 +49,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"dups"   , required_argument,   0, 'd'},
 			{"reps"   , required_argument,   0, 'r'},
 			{"mei"    , required_argument,   0, 'm'},
-			{"threads", required_argument,   0, 't'},
+			//{"threads", required_argument,   0, 't'},
 			{"working-dir", required_argument,   0, 'w'},
 			{"help"   , no_argument,         0, 'h'},
 			{"hist-only"   , no_argument,    &histogram_only, 'p'},
@@ -67,7 +67,7 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			{"rp", required_argument, 0, 'j'},
 			{"read-cluster", required_argument, 0, 'k'},
 			{"no-soft-clip", no_argument, &no_soft_clip, 1 },
-			{"no-interdup", no_argument, &no_interdup, 1 },
+			{"interdup", no_argument, &interdup, 1 },
 			{"no-mei", no_argument, &no_mei, 1 },
 			{"debug", no_argument, &debug, 1 },
 			{"xa", no_argument, &alt_mapping, 1 },
@@ -148,9 +148,9 @@ int parse_command_line( int argc, char** argv, parameters* params)
 			set_str( &( params->outprefix), optarg);
 			break;
 
-		case 't':
+		/*case 't':
 			params->threads = atoi( optarg);
-			break;
+			break;*/
 
 		case 'l':
 			params->force_read_length = atoi( optarg);
@@ -263,11 +263,11 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	}
 
 	/* check if threads>0 */
-	if( params->threads <= 0)
+	/*if( params->threads <= 0)
 	{
 		fprintf( stderr, "[TARDIS CMDLINE WARNING] Invalid number of threads was entered (%d). Resetted to 1.\n", params->threads);
 		params->threads = 1;
-	}
+	}*/
 
 	/* check if both --input and --bamlist are invoked */
 	if ( params->bam_list_path != NULL && params->bam_file_list[0] != NULL && !make_sonic)
@@ -289,7 +289,6 @@ int parse_command_line( int argc, char** argv, parameters* params)
 		free( tmp_output_prefix);
 		//return EXIT_PARAM_ERROR;
 	}
-
 
 
 	/* check forced read length to be a positive integer or zero */
@@ -326,15 +325,15 @@ int parse_command_line( int argc, char** argv, parameters* params)
 
 	/* set flags */
 	params->no_soft_clip = no_soft_clip;
-	params->skip_mrfast = skip_mrfast;
+	//params->skip_mrfast = skip_mrfast;
 	params->quick = quick; 
 	params->ten_x = ten_x;
 	params->output_hs = output_hs | ten_x;
 	params->make_sonic = make_sonic;
-	params->sensitive = sensitive;
+	//params->sensitive = sensitive;
 	params->number_of_different_mei_types = count_mei_columns( params->mei);
 	params->alt_mapping = alt_mapping;
-	params->no_interdup = no_interdup;
+	params->interdup = interdup;
 	params->no_mei = no_mei;
 	params->seq_resolved = resolved;
 
@@ -344,8 +343,8 @@ int parse_command_line( int argc, char** argv, parameters* params)
 	if( debug_mode)
 		fprintf(stderr, "\n\n*** DEBUG MODE is on, you can check .NAME and .CLUSTER files ***\n\n");
 
-	if( params->sensitive == 0)
-		params->quick = 1;
+	//if( params->sensitive == 0)
+	params->quick = 1;
 
 	if( params->quick)
 		running_mode = QUICK;	
@@ -373,23 +372,22 @@ void print_help( void)
 	fprintf( stdout, "\nTARDIS: Toolkit for Automated and Rapid DIscovery of Structural variants.\n");
 	fprintf( stdout, "Version %s\n\tLast update: %s, build date: %s\n\n", TARDIS_VERSION, TARDIS_UPDATE, BUILD_DATE);
 	fprintf( stdout, "\tBasic Parameters:\n\n");
-	fprintf( stdout, "\t--bamlist   [bamlist file] : A text file that lists input BAM files one file per line.\n");
+	fprintf( stdout, "\t--bamlist [bamlist file]   : A text file that lists input BAM files one file per line.\n");
 	fprintf( stdout, "\t--input/-i [BAM files]     : Input files in sorted and indexed BAM format. You can pass multiple BAMs using multiple --input parameters.\n");
-	fprintf( stdout, "\t--out   [output prefix]    : Prefix for the output file names.\n");
-	fprintf( stdout, "\t--ref   [reference genome] : Reference genome in FASTA format.\n");
+	fprintf( stdout, "\t--out [output prefix]      : Prefix for the output file names.\n");
+	fprintf( stdout, "\t--ref [reference genome]   : Reference genome in FASTA format.\n");
 	fprintf( stdout, "\t--sonic [sonic file]       : SONIC file that contains assembly annotations.\n");
 	fprintf( stdout, "\t--hist-only                : Generate fragment size histograms only, then quit.\n\n");
 	fprintf( stdout, "\tAdvanced Parameters:\n\n");
+	fprintf( stdout, "\t--interdup                 : Run interspersed duplication clustering.\n");
 	fprintf( stdout, "\t--read-cluster [int]       : # of clusters that a specific read can be involved in (Default is 20).\n");
-	fprintf( stdout, "\t--rp   [int]		   : Minimum number of supporting read pairs in initial clustering (Default is 5).\n");
-	fprintf( stdout, "\t--mei   [\"Alu:L1:SVA\"]     : List of mobile element names.\n");
+	fprintf( stdout, "\t--rp [int]                 : Minimum number of supporting read pairs in initial clustering (Default is 5).\n");
+	fprintf( stdout, "\t--mei [string]             : List of mobile element names separated by colon (Default is [\"Alu:L1:SVA\"]).\n");
 	fprintf( stdout, "\t--no-soft-clip             : Skip soft clip remapping.\n");
-	fprintf( stdout, "\t--no-interdup              : Skip interspersed duplication clustering.\n");
 	fprintf( stdout, "\t--no-mei              	   : Skip mobile element insertion (MEI) clustering.\n");
 	fprintf( stdout, "\t--resolved                 : Output sequence resolved vcf calls.\n");
-	//fprintf( stdout, "\t--xa                       : Look for the alternative mapping locations in BWA.\n");
-	fprintf( stdout, "\t--first-chr [chr_index]	   : Start running from a specific chromosome [0-based index in reference file].\n");
-	fprintf( stdout, "\t--last-chr [chr_index]	   : Run up to a specific chromosome [0-based index in reference file].\n");
+	fprintf( stdout, "\t--first-chr [int]          : Start running from a specific chromosome [0-based index in reference file].\n");
+	fprintf( stdout, "\t--last-chr [int]           : Run up to a specific chromosome [0-based index in reference file].\n");
 
 	/*
 	fprintf( stdout, "\n\tAdditional parameters for sensitive mode:\n\n");
@@ -400,10 +398,10 @@ void print_help( void)
 	
 	fprintf( stdout, "\n\tAdditional parameters to build SONIC file within TARDIS:\n\n");
 	fprintf( stdout, "\t--make-sonic [sonic file]  : SONIC file that will contain the assembly annotations.\n");
-	fprintf( stdout, "\t--sonic-info [\"string\"]    : SONIC information string to be used as the reference genome name.\n");
-	fprintf( stdout, "\t--gaps  [gaps file]        : Assembly gap coordinates in BED3 format.\n");
-	fprintf( stdout, "\t--dups  [dups file]        : Segmental duplication coordinates in BED3 format.\n"); 
-	fprintf( stdout, "\t--reps  [reps file]        : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.\n");
+	fprintf( stdout, "\t--sonic-info [string]      : SONIC information string to be used as the reference genome name, e.g., hg19.\n");
+	fprintf( stdout, "\t--gaps [gaps file]         : Assembly gap coordinates in BED3 format.\n");
+	fprintf( stdout, "\t--dups [dups file]         : Segmental duplication coordinates in BED3 format.\n"); 
+	fprintf( stdout, "\t--reps [reps file]         : RepeatMasker annotation coordinates in RepeatMasker format. See manual for details.\n");
 
 	/* hidden
 	fprintf( stdout, "\n\tAdditional parameters for 10X Genomics Linked Reads (under development):\n\n");

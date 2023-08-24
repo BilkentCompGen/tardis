@@ -22,15 +22,12 @@ void load_config( configuration* cfg, parameters* params)
 	cfg->path_megablast = NULL;
 
 
-	
-	
 	/* this function will be deprecated - CAN ALKAN - September 21, 2018*/
-
 
 	/* pre-deprecation code */
 
 	/* get mrfast path */
-	pipe = popen( "which mrfast 2>/dev/null", "r");
+	/*pipe = popen( "which mrfast 2>/dev/null", "r");
 	if( pipe == NULL)
 	{
 		fprintf( stderr, "Error opening pipe\n");
@@ -41,17 +38,17 @@ void load_config( configuration* cfg, parameters* params)
 		{
 			fprintf( stderr, "mrfast not found in PATH. Sensitive mode will not work.\n");
 			params->quick = 1;
-			params->sensitive = 0;			
+			//params->sensitive = 0;			
 		}
 		else
 		{
-		        if(executable_path[strlen(executable_path)-1] == '\n'|| executable_path[strlen(executable_path)-1] == '\r')
-			      executable_path[strlen(executable_path)-1] = 0;
+		    if(executable_path[strlen(executable_path)-1] == '\n'|| executable_path[strlen(executable_path)-1] == '\r')
+				executable_path[strlen(executable_path)-1] = 0;
 			set_str( &( cfg->path_mrfast), executable_path);
 			fprintf(stderr, "[TARDIS EXTERNAL] mrFAST found at %s\n", executable_path);
 		}
 		pclose( pipe);
-	}
+	}*/
 
 	/* get gnuplot path */
 	pipe = popen( "which gnuplot 2>/dev/null", "r");
@@ -78,24 +75,24 @@ void load_config( configuration* cfg, parameters* params)
 	return;
 
 	/* remainder code will be deprecated */
-	
-	/* Combine the home directory path with the name of the configuration file */
+	/*
+	// Combine the home directory path with the name of the configuration file
 	sprintf( config_filename, "%s/%s", getenv( "HOME"), CONFIG_FILE);
 
-	/* Open the configuration file for reading. Do not use safe_fopen here, we will create if it doesn't exist */
+	// Open the configuration file for reading. Do not use safe_fopen here, we will create if it doesn't exist
 	config = fopen( config_filename, "r");
 	if( config == NULL)
 	{
-		/* Create new config file */
+		// Create new config file
 		create_config( cfg, config_filename);
 	}
 	else
 	{
-		/* Get the paths from the pre-existing configuration file */
+		// Get the paths from the pre-existing configuration file
 		i = 0;
 		while( ( bytes_read = getline( &next_line, &len, config)) != -1)
 		{
-			/* Ignore comments, which begin with the '#' character */
+			// Ignore comments, which begin with the '#' character
 			if( next_line[0] != '#')
 			{
 				next_line[strlen(next_line)-1] = 0; // get rid of \n
@@ -120,40 +117,28 @@ void load_config( configuration* cfg, parameters* params)
 				{
 					set_str( &( cfg->path_megablast), next_line + strlen("MEGABLAST = "));
 				}
-				/*else
-				{
+				//else
 					fprintf( stderr, "Configuration file has wrong format or unspecified external tools used.\n");
-				}*/
 				i = i + 1;
 			} 
 		}
 
-		/* Free memory allocated internally by getline */
+		// Free memory allocated internally by getline
 		free( next_line);
 
-		/* If the paths are still NULL, then they are either not installed, or not in the PATH. */
+		// If the paths are still NULL, then they are either not installed, or not in the PATH.
 
-		/*
-		if( cfg->path_samtools == NULL)
-		{
-			fprintf( stderr, "Warning: samtools path is not in the configuration file.\n");
-		}
-		else
-		{
-			fprintf( stderr, "samtools path: %s\n", cfg->path_samtools);
-		}
-		 */
+		//
+		//if( cfg->path_samtools == NULL)
+		//	fprintf( stderr, "Warning: samtools path is not in the configuration file.\n");
+		//else
+		//	fprintf( stderr, "samtools path: %s\n", cfg->path_samtools);
 
-		/*
-		if( cfg->path_bcftools == NULL)
-		{
-			fprintf( stderr, "Warning: bcftools path is not in the configuration file.\n");
-		}
-		else
-		{
-			fprintf( stderr, "bcftools path: %s\n", cfg->path_bcftools);
-		}
-		 */
+		
+		//if( cfg->path_bcftools == NULL)
+		//	fprintf( stderr, "Warning: bcftools path is not in the configuration file.\n");
+		//else
+		//	fprintf( stderr, "bcftools path: %s\n", cfg->path_bcftools);
 		if( ( running_mode == SENSITIVE) && ( params->skip_mrfast == 0))
 		{
 			if( cfg->path_mrfast == NULL)
@@ -165,27 +150,18 @@ void load_config( configuration* cfg, parameters* params)
 				fprintf( stderr, "mrfast path: %s\n", cfg->path_mrfast);
 			}
 		}
-		/*
-		if( cfg->path_gnuplot == NULL)
-		{
-			fprintf( stderr, "Warning: gnuplot path is not in the configuration file.\n");
-		}
-		else
-		{
-			fprintf( stderr, "gnuplot path: %s\n", cfg->path_gnuplot);
-		}*/
+		//if( cfg->path_gnuplot == NULL)
+		//	fprintf( stderr, "Warning: gnuplot path is not in the configuration file.\n");
+		//else
+		//	fprintf( stderr, "gnuplot path: %s\n", cfg->path_gnuplot);
 
-		/*
-		if( cfg->path_megablast == NULL)
-		{
-			fprintf( stderr, "Warning: megablast path is not in the configuration file.\n");
-		}
-		else
-		{
-			fprintf( stderr, "megablast path: %s\n", cfg->path_megablast);
-		}
-		 */
-	}
+		
+		//if( cfg->path_megablast == NULL)
+		//	fprintf( stderr, "Warning: megablast path is not in the configuration file.\n");
+		//else
+		//	fprintf( stderr, "megablast path: %s\n", cfg->path_megablast);
+	
+	}*/
 }
 
 void create_config( configuration* cfg, char* config_filename)

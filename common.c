@@ -37,12 +37,12 @@ void init_params( parameters** params)
 	( *params)->gaps = NULL;
 	( *params)->mei = NULL;
 	( *params)->force_read_length = 0;
-	( *params)->threads = 1;
+	//( *params)->threads = 1;
 	( *params)->num_bams = 0;
 	( *params)->num_samples = 0;
 	( *params)->sample_names = NULL;
 	( *params)->size_samples_array = MAX_SAMPLES;
-	( *params)->skip_mrfast = 0;
+	//( *params)->skip_mrfast = 0;
 	( *params)->ten_x = 0;
 	( *params)->output_hs = 0;
 	( *params)->first_chr = 0;
@@ -80,7 +80,7 @@ void print_params( parameters* params)
 	fprintf( logFile, "%-30s%s\n","Reference genome:", params->ref_genome);
 	fprintf( logFile, "%-30s%s\n","SONIC file:", params->sonic_file);
 	fprintf( logFile, "%-30s%s\n","Mobile Elements:", params->mei);
-	fprintf( logFile, "%-30s%d\n","10x Tag:", params->ten_x);
+	//fprintf( logFile, "%-30s%d\n","10x Tag:", params->ten_x);
 	fprintf( logFile, "%-30s%d\n","First chrom:", params->first_chr);
 	fprintf( logFile, "%-30s%d\n","Last chrom:", params->last_chr);
 }

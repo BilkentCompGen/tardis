@@ -817,7 +817,7 @@ void bamonly_vh_clustering( bam_info** in_bams, parameters *params)
 			fflush( stderr);
 		}
 
-		if( params->no_interdup == 0)
+		if( params->interdup)
 		{
 			/* Interspersed Direct Duplication */
 			fprintf( stderr, "\nPreparing Interspersed Duplication clusters");

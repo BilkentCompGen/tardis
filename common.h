@@ -110,16 +110,16 @@ typedef struct _params
 	char no_soft_clip; /* boolean stand-in to skip soft clip */
 	int alt_mapping; /* check the alternative mapping locations from the xa field in bwa */
 	int seq_resolved; /* whether to output sequence resolved calls */
-	int no_interdup; /* whether to cluster interspersed duplications */
+	int interdup; /* whether to cluster interspersed duplications */
 	int no_mei; /* whether to cluster mobile element insertions */
-	char skip_mrfast; /* boolean stand-in to skip mrFast mapping (If you already have the divet file created) */
-	int threads; /* number of threads to use for parallel mrFAST, and maybe future parallelization of TARDIS */
+	//char skip_mrfast; /* boolean stand-in to skip mrFast mapping (If you already have the divet file created) */
+	//int threads; /* number of threads to use for parallel mrFAST, and maybe future parallelization of TARDIS */
 	int num_bams; /* number of input BAM files */
 	int num_samples; /* number of samples */
-        char **sample_names; /* sample names -- maybe first count through a linked list, then convert to this array */
-        int size_samples_array; /* current size of the samples array */
+	char **sample_names; /* sample names -- maybe first count through a linked list, then convert to this array */
+    int size_samples_array; /* current size of the samples array */
 	int quick; /* boolean stand-in to work in bam-only mode (no divet) */
-	int sensitive; /* boolean stand-in to work in sensitive mode (divet) */
+	//int sensitive; /* boolean stand-in to work in sensitive mode (divet) */
 	int ten_x; /*boolean for whether we're using 10x data*/
 	int output_hs; /*boolean for whether to record the homogeneity score (HS) in VCF regardless whether HS is used in set cover or not*/
 	int make_sonic; /*make SONIC file and exit*/
@@ -133,9 +133,9 @@ typedef struct _params
 	int cluster_of_read; /* Number of clusters that a read can be involved. 10 by default */
 	char *sonic_file; /* SONIC file name */
 	sonic *this_sonic; /* SONIC */
-        char *ref_seq; /* reference sequence per chromosome */
-        int hash_size; /* size of the hash table for split read mapping */
-        char histogram_only; /* boolean for generating histogram only */
+	char *ref_seq; /* reference sequence per chromosome */
+	int hash_size; /* size of the hash table for split read mapping */
+	char histogram_only; /* boolean for generating histogram only */
 } parameters;
 
 
